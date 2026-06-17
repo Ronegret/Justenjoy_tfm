@@ -41,7 +41,10 @@ leerlo, confirma que tu contexto es coherente y reanuda.
 | `n8n/workflows/` | JSONs de workflows de n8n (versionados) | Siempre que toques la lógica del planificador |
 | `n8n/docs/` | Documentación de arquitectura de cada workflow | Al trabajar en n8n |
 | `n8n/examples/` | JSONs de entrada/salida de ejemplo para testing | Al probar el workflow |
-| `frontend/` | Portal web del viajero (pendiente de añadir) | Cuando llegue el código frontend |
+| `frontend/` | Portal web del viajero (Next.js 16 + Firebase Auth + Tailwind CSS) | Al tocar UI, auth o la ruta `/api/plan-trip` |
+| `frontend/src/lib/firebase.ts` | Inicialización de Firebase App, Auth y GoogleAuthProvider | Al tocar autenticación |
+| `frontend/src/context/AuthContext.tsx` | Contexto de auth (onAuthStateChanged, signInWithPopup, etc.) | Al tocar flujo de login |
+| `frontend/src/app/api/plan-trip/route.ts` | Endpoint que llama a n8n → OpenAI → Claude → mock | Al tocar la integración backend |
 | `botpress/` | Configuración del agente conversacional (pendiente) | Cuando llegue el código Botpress |
 | `docs/ARCHITECTURE.md` | Visión general del sistema completo | Al arrancar cualquier tarea nueva |
 | `docs/adr/` | Registro de decisiones de arquitectura | Al evaluar decisiones técnicas |
@@ -69,8 +72,11 @@ pre-commit run --all-files
 Get-Content n8n/workflows/Planificador_de_Viajes_v24.json | ConvertFrom-Json
 ```
 
-> **Frontend / Botpress:** los comandos de lint, tests y build se añadirán aquí
-> cuando llegue ese código. Por ahora `[COMPLETAR-INFO]`.
+# Frontend (Next.js 16 — directorio frontend/)
+cd frontend
+npm run dev      # servidor de desarrollo en http://localhost:3000
+npm run build    # compilación de producción (verifica tipos y páginas estáticas)
+npm run lint     # ESLint
 
 ---
 

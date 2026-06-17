@@ -29,7 +29,7 @@ repos:
 
       # Evita subir ficheros muy grandes accidentalmente
       - id: check-added-large-files
-        args: [--maxkb=3000]
+        args: [--maxkb=500]
 
       # Asegura salto de línea al final de cada fichero
       - id: end-of-file-fixer

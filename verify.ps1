@@ -101,7 +101,7 @@ if (Test-Path ".env.example") {
 Write-Step "Comprobando el guardian de secretos (gitleaks via pre-commit)"
 
 $precommitOk = $false
-$toolPresent = ($null -ne (Get-Command pre-commit -ErrorAction SilentlyContinue)) -or ($null -ne (Get-ChildItem -Path "$env:APPDATA\Python" -Filter "pre-commit.exe" -Recurse -ErrorAction SilentlyContinue))
+$toolPresent = $null -ne (Get-Command pre-commit -ErrorAction SilentlyContinue)
 $hookPath = ".git/hooks/pre-commit"
 $hookInstalled = (Test-Path $hookPath) -and (Select-String -Path $hookPath -Pattern "pre-commit" -Quiet -ErrorAction SilentlyContinue)
 

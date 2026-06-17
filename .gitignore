@@ -89,3 +89,5 @@ n8n_data/
 botpress_data/
 # docker-compose.override.yml SÍ puede versionarse si es conveniente
 # pero .env nunca (ya está arriba)
+
+.vercel
