@@ -1,0 +1,36 @@
+# Normalización de saltos de línea para equipos Windows/cross-platform.
+# Regla: los ficheros de texto se almacenan con LF en el repo;
+# los scripts PowerShell/Batch mantienen CRLF en checkout Windows.
+#
+# IMPORTANTE: configura tu cliente con:
+#   git config --global core.autocrlf input
+# (NO usar 'true': reescribiría LF a CRLF y rompería scripts en WSL/contenedores)
+
+* text=auto eol=lf
+
+# PowerShell y scripts Windows → CRLF en checkout
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Shell scripts → LF siempre
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Ficheros binarios → sin conversión
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.svg    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.tar    binary
+*.gz     binary
+*.7z     binary
+*.ttf    binary
+*.woff   binary
+*.woff2  binary

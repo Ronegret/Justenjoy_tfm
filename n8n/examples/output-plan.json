@@ -1,0 +1,96 @@
+[
+  {
+    "session_id": "session_1781453789763_xyq3j2837",
+    "status": "plan_ready",
+    "revision_count": 0,
+    "revision_snapshot": 0,
+    "generated_at": "2026-06-14T16:17:08.322Z",
+    "steps_executed": "all",
+    "warnings": [],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Amsterdam",
+          "destination": "Paris",
+          "flights": {
+            "outbound": {
+              "airline": "Air France",
+              "flight_no": "AF 1741",
+              "origin": "AMS",
+              "destination": "CDG",
+              "departure_datetime": "2026-07-01T14:40:00",
+              "arrival_datetime": "2026-07-01T16:00:00",
+              "layovers": [],
+              "price_usd": 214,
+              "booking_url": ""
+            },
+            "return": {
+              "airline": "Air France",
+              "flight_no": "AF 1641",
+              "origin": "CDG",
+              "destination": "AMS",
+              "departure_datetime": "2026-07-15T14:10:00",
+              "arrival_datetime": "2026-07-15T15:35:00",
+              "layovers": [],
+              "price_usd": 214,
+              "booking_url": ""
+            }
+          },
+          "hotel": {
+            "name": "Votre Maison Lointaine",
+            "address": "48.8919654, 2.4093141",
+            "stars": 0,
+            "rating": 4.9,
+            "check_in": "2026-07-01",
+            "check_out": "2026-07-15",
+            "price_per_night_usd": 96,
+            "total_usd": 1338,
+            "booking_url": "https://votre-maison-lointaine.com/"
+          },
+          "activities": [
+            { "name": "Le Colimacon", "date": "2026-07-02", "start_time": "10:00", "duration_hours": 3, "price_usd": 0, "booking_url": "", "category": "French restaurant", "source": "google_maps" },
+            { "name": "Sacree Fleur Montmartre", "date": "2026-07-04", "start_time": "10:00", "duration_hours": 3, "price_usd": 0, "booking_url": "", "category": "French restaurant", "source": "google_maps" },
+            { "name": "Pink Mamma", "date": "2026-07-06", "start_time": "10:00", "duration_hours": 3, "price_usd": 0, "booking_url": "", "category": "Italian restaurant", "source": "google_maps" }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 428,
+        "hotel_usd": 1338,
+        "activities_usd": 0,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": 0,
+        "local_transport_data_source": "null",
+        "total_usd": 1766,
+        "budget_total_usd": 2200,
+        "budget_remaining_usd": 434
+      },
+      "daily_itinerary": [
+        { "day": 1, "date": "2026-07-01", "title": "Dia de llegada a Paris", "summary": "Llegada a Paris a las 16:00, traslado al hotel y check-in.", "activities": [] },
+        { "day": 2, "date": "2026-07-02", "title": "Le Colimacon", "summary": "Visita al restaurante Le Colimacon para disfrutar de la gastronomia francesa.", "activities": [{ "time": "10:00", "name": "Le Colimacon", "duration_hours": 3, "price_usd": 0, "booking_url": "" }] },
+        { "day": 15, "date": "2026-07-15", "title": "Ultimo dia en Paris - Regreso a Amsterdam", "summary": "Check-out del hotel. Vuelo de regreso a las 14:10.", "activities": [] }
+      ],
+      "plan_notes": [
+        "Visa: No requerido para ciudadanos de Amsterdam.",
+        "Clima: Verano calido con temperaturas agradables.",
+        "Transporte local: Opciones de metro y taxi disponibles."
+      ],
+      "revision_snapshot": 0
+    },
+    "error_detail": "",
+    "_debug": {
+      "token_usage": null,
+      "execution_time_ms": 19,
+      "plan_metrics": {
+        "activities_found": 3,
+        "itinerary_days": 3,
+        "plan_notes": 3,
+        "warnings": 0,
+        "has_flights": true,
+        "has_hotel": true,
+        "tools_called": "all"
+      }
+    }
+  }
+]

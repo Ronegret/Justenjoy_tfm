@@ -1,0 +1,22 @@
+{
+  "origin_city": "Amsterdam",
+  "destination_city": ["Paris"],
+  "departure_date": "2026-07-01",
+  "return_date": "2026-07-15",
+  "travelers": {
+    "adults": 2,
+    "children": []
+  },
+  "budget_total_usd": 2200,
+  "accommodation_type": "mid-range",
+  "flight_preferences": {
+    "cabin_class": "economy",
+    "max_layover_hours": 4,
+    "preferred_airlines": []
+  },
+  "activity_interests": ["food", "culture", "museums"],
+  "special_requirements": "ninguno",
+  "flexible_dates": false,
+  "hotel_location_preference": "city center",
+  "car_rental_needed": false
+}

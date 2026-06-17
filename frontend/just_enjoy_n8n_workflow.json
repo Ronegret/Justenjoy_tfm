@@ -1,0 +1,133 @@
+{
+  "name": "JUST ENJOY - Orquestador de Viajes Inteligente (TFM)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "plan-trip",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "webhook-node-id",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        260,
+        200
+      ],
+      "id": "openai-chat-model-id",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el motor de orquestación de viajes de \"JUST ENJOY\". Tu tarea es actuar como un agente de viajes experto y automatizado, generando un itinerario completo, justificado y optimizado basado en las preferencias de viaje del usuario.\nDebes devolver ÚNICAMENTE un objeto JSON estructurado que cumpla exactamente con la interfaz TypeScript 'TripData' (con trip_id, user_preferences, justgo_score, best_option, alternatives, flights, hotels, activities, events, itinerary, budget, share). No agregues explicaciones fuera del JSON, devuelve solo el objeto JSON puro listo para parsear. El JSON debe estar en español.\n\nPreferencias del usuario:\nDestino: {{ $json.body.destination }}\nOrigen: {{ $json.body.origin }}\nPresupuesto: {{ $json.body.budget }}\nFechas: {{ $json.body.dates.start }} al {{ $json.body.dates.end }}\nViajeros: {{ $json.body.travelers.adults }} adultos y {{ $json.body.travelers.children }} niños\nRitmo: {{ $json.body.pace }}\nEstilos: {{ $json.body.style.join(', ') }}\nRestricciones: {{ $json.body.restrictions.join(', ') }}",
+        "hasSystemMessage": true,
+        "systemMessage": "Eres el asistente experto de viajes de la web JUST ENJOY. Tu respuesta debe ser exclusivamente un objeto JSON válido y completo que contenga un itinerario detallado día a día con actividades reales en el destino, hoteles reales acordes al presupuesto, vuelos de aerolíneas reales, desgloses financieros y justificaciones del match score."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainBasicLlm",
+      "typeVersion": 1.4,
+      "position": [
+        220,
+        -80
+      ],
+      "id": "basic-llm-chain-id",
+      "name": "Orquestador IA Just Enjoy"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        -80
+      ],
+      "id": "respond-node-id",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tripData = JSON.parse($input.first().json.text);\nconst generatedId = `justenjoy-${(tripData.best_option?.destination || $node[\"Webhook\"].json.body.destination || 'viaje').toLowerCase().replace(/\\s+/g, '-')}-${Date.now()}`;\n\ntripData.trip_id = generatedId;\ntripData.share = {\n  private_url: `/trip/${generatedId}`,\n  pdf_enabled: true,\n  calendar_enabled: true\n};\n\nreturn tripData;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        80
+      ],
+      "id": "code-formatter-id",
+      "name": "Post-Procesado JSON"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Orquestador IA Just Enjoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Orquestador IA Just Enjoy",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orquestador IA Just Enjoy": {
+      "main": [
+        [
+          {
+            "node": "Post-Procesado JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post-Procesado JSON": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "just-enjoy-tfm-orchestrator",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -1,0 +1,25 @@
+# CODEOWNERS — Just Enjoy (TFM Grupo 7)
+#
+# Define quién debe revisar cambios en el repositorio.
+# GitHub solicita automáticamente la revisión de estos usuarios en cada PR.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Handles de GitHub de los tres integrantes (verificados como cuentas existentes):
+#       Roberto Barrios  ->  @robrt2
+#       Enrique Izquierdo ->  @enriqueizquierdo-lab
+#       Rodrigo Negrete  ->  @Ronegret
+#
+# IMPORTANTE: para que GitHub solicite su revisión, los tres deben ser
+# colaboradores del repositorio. A 2026-06-16 el único colaborador es
+# @enriqueizquierdo-lab; añade a @robrt2 y @Ronegret en
+# Settings → Collaborators para que CODEOWNERS surta efecto sobre ellos.
+#
+# Referencia: https://docs.github.com/articles/about-code-owners
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Política del grupo: TODOS revisan TODO.
+# Los tres integrantes son propietarios de la totalidad del repositorio, así que
+# cualquiera puede revisar y aprobar cualquier cambio. Sin zonas huérfanas si
+# alguien no está disponible.
+
+*  @robrt2  @enriqueizquierdo-lab  @Ronegret

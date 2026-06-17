@@ -1,0 +1,68 @@
+# .pre-commit-config.yaml — Guardarraíles automáticos para Just Enjoy
+#
+# Instalación (una sola vez por máquina):
+#   pip install pre-commit
+#   pre-commit install
+#
+# Ejecución manual sobre todos los ficheros:
+#   pre-commit run --all-files
+#
+# NOTA SOBRE VERSIONES:
+# Las 'rev' se fijan a la última versión estable de cada hook (verificadas 2026-06-16).
+# Al actualizar, consulta:
+#   - pre-commit-hooks: https://github.com/pre-commit/pre-commit-hooks/releases
+#   - gitleaks:         https://github.com/gitleaks/gitleaks/releases
+
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # ── Hooks universales de pre-commit ────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0  # ultima estable verificada 2026-06-16
+    hooks:
+      # Bloquea commits directos a main
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+      # Detecta claves privadas hardcodeadas (primera capa, rápida)
+      - id: detect-private-key
+
+      # Evita subir ficheros muy grandes accidentalmente
+      - id: check-added-large-files
+        args: [--maxkb=3000]
+
+      # Asegura salto de línea al final de cada fichero
+      - id: end-of-file-fixer
+
+      # Elimina espacios en blanco al final de línea
+      - id: trailing-whitespace
+
+      # Detecta conflictos de merge no resueltos
+      - id: check-merge-conflict
+
+      # Valida sintaxis YAML
+      - id: check-yaml
+        args: [--unsafe]  # Necesario para YAMLs con etiquetas personalizadas
+
+      # Valida sintaxis JSON
+      - id: check-json
+
+  # ── Gitleaks — escáner de secretos ────────────────────────────────────────
+  # Escanea TODOS los cambios staged buscando claves de API, tokens, contraseñas.
+  # Es la protección principal contra filtrado de secretos a GitHub.
+  #
+  # NOTA DE INSTALACIÓN (importante en este equipo):
+  # Usamos gitleaks NATIVO (no la descarga vía Python de pre-commit) porque el
+  # antivirus Norton 360 intercepta el SSL y su certificado no es válido para
+  # Python 3.13, lo que rompe la descarga del hook estándar. Solución:
+  #   1. Instalar gitleaks nativo:  winget install Gitleaks.Gitleaks
+  #   2. Asegurarse de que 'gitleaks' está en el PATH (reiniciar la terminal)
+  # Este hook 'language: system' invoca ese binario directamente.
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (escáner de secretos, binario nativo)
+        entry: gitleaks
+        args: ["protect", "--staged", "--redact", "--verbose"]
+        language: system
+        pass_filenames: false

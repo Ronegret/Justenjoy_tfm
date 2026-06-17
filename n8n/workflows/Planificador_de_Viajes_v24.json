@@ -1,0 +1,731 @@
+{
+  "name": "Planificador de Viajes - v24",
+  "nodes": [
+    {
+      "id": "51504354-b5ca-4ed4-936b-31e96562db4a",
+      "name": "Webhook - Formulario",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        96
+      ],
+      "webhookId": "travel-planner-form-submit",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "travel-planner",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "RUTA A - Envio del formulario web. URL: POST /webhook/travel-planner"
+    },
+    {
+      "id": "0fa47595-3670-4497-bb82-4538d7836dc3",
+      "name": "Webhook - Refinamiento",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        352
+      ],
+      "webhookId": "travel-planner-refine-submit",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "travel-refine",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "RUTA B - Caja de feedback. URL: POST /webhook/travel-refine"
+    },
+    {
+      "id": "7910aa3a-4994-477d-857e-31144c07d076",
+      "name": "Validar Formulario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        96
+      ],
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Validar Formulario\" (Ruta A)\n// ---------------------------------------------------------------------------\n// Normaliza la entrada (body/query/raiz), genera session_id, valida los 8\n// campos obligatorios y construye session_state con defaults. Persiste en\n// $getWorkflowStaticData('global') indexado por session_id.\n// Ver doc de arquitectura, seccion 4.2.\n//\n// Output OK:    { session_id, session_state, route, _error: false }\n// Output Error: { _error: true, error_detail, session_id }\n\nconst incoming = $input.first().json;\n\n// 1) Normalizar: aceptar datos en body, query o en la raiz del JSON.\nconst src = incoming.body || incoming.query || incoming;\n\n// 2) Generar session_id unico: session_[timestamp]_[9 chars alfanumericos].\nconst rand9 = Math.random().toString(36).slice(2, 11).padEnd(9, '0');\nconst session_id = `session_${Date.now()}_${rand9}`;\n\n// 3) Validar 8 campos obligatorios.\nconst required = [\n  'origin_city',\n  'destination_city',\n  'departure_date',\n  'return_date',\n  'travelers',\n  'budget_total_usd',\n  'accommodation_type',\n  'activity_interests',\n];\n\nconst missing = [];\nfor (const field of required) {\n  const v = src[field];\n  const empty =\n    v === undefined ||\n    v === null ||\n    v === '' ||\n    (Array.isArray(v) && v.length === 0);\n  if (empty) missing.push(field);\n}\n\nif (missing.length > 0) {\n  return [\n    {\n      json: {\n        _error: true,\n        error_detail: `Campos faltantes: ${missing.join(', ')}`,\n        session_id,\n      },\n    },\n  ];\n}\n\n// 4) Normalizar destino a array (acepta string o array).\nconst destination_city = Array.isArray(src.destination_city)\n  ? src.destination_city\n  : [src.destination_city];\n\n// 5) Construir travel_brief con defaults para campos opcionales.\nconst flightPrefsIn = src.flight_preferences || {};\nconst travel_brief = {\n  origin_city: src.origin_city,\n  destination_city,\n  departure_date: src.departure_date,\n  return_date: src.return_date,\n  travelers: {\n    adults: Number(src.travelers?.adults ?? 1),\n    children: Array.isArray(src.travelers?.children) ? src.travelers.children : [],\n  },\n  budget_total_usd: Number(src.budget_total_usd),\n  accommodation_type: src.accommodation_type,\n  flight_preferences: {\n    cabin_class: flightPrefsIn.cabin_class || 'economy',\n    max_layover_hours: Number(flightPrefsIn.max_layover_hours ?? 4),\n    preferred_airlines: Array.isArray(flightPrefsIn.preferred_airlines)\n      ? flightPrefsIn.preferred_airlines\n      : [],\n  },\n  activity_interests: Array.isArray(src.activity_interests)\n    ? src.activity_interests\n    : [src.activity_interests],\n  special_requirements: src.special_requirements || 'ninguno',\n  flexible_dates: src.flexible_dates === true,\n  hotel_location_preference: src.hotel_location_preference || '',\n  car_rental_needed: src.car_rental_needed === true,\n};\n\n// 6) Session state inicial.\nconst session_state = {\n  session_id,\n  status: 'awaiting_search',\n  revision_count: 0,\n  created_at: new Date().toISOString(),\n  travel_brief,\n  current_plan: null,\n};\n\n// 7) Persistir en static data global, indexado por session_id.\nconst store = $getWorkflowStaticData('global');\nif (!store.sessions) store.sessions = {};\nstore.sessions[session_id] = session_state;\n\nreturn [\n  {\n    json: {\n      _error: false,\n      route: 'plan_inicial',\n      session_id,\n      session_state,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "fe789212-3e11-4a97-89c2-c7fec6b6f734",
+      "name": "Cargar Sesion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        352
+      ],
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Cargar Sesion\" (Ruta B - refinamiento)\n// ---------------------------------------------------------------------------\n// Normaliza la entrada, recupera el session_state existente por session_id,\n// valida que la sesion exista y que feedback_text no este vacio.\n// Ver doc de arquitectura, seccion 4.3.\n//\n// Output OK:    { _error: false, session_id, feedback_text, current_session,\n//                 current_plan }\n// Output Error: { _error: true, error_detail, session_id }\n\nconst incoming = $input.first().json;\nconst src = incoming.body || incoming.query || incoming;\n\nconst session_id = (src.session_id || '').trim();\nconst feedback_text = (src.feedback_text || '').trim();\n\n// Validar campos minimos de la ruta de refinamiento.\nif (!session_id) {\n  return [\n    {\n      json: {\n        _error: true,\n        error_detail: 'Falta session_id en la peticion de refinamiento',\n        session_id: '',\n      },\n    },\n  ];\n}\n\nif (!feedback_text) {\n  return [\n    {\n      json: {\n        _error: true,\n        error_detail: 'feedback_text vacio: no hay instruccion de refinamiento',\n        session_id,\n      },\n    },\n  ];\n}\n\n// Recuperar sesion del static data.\nconst store = $getWorkflowStaticData('global');\nconst sessions = store.sessions || {};\nconst current_session = sessions[session_id];\n\nif (!current_session) {\n  return [\n    {\n      json: {\n        _error: true,\n        error_detail: `Sesion no encontrada: ${session_id}. Puede haberse perdido si n8n se reinicio (static data volatil).`,\n        session_id,\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      _error: false,\n      route: 'refinamiento',\n      session_id,\n      feedback_text,\n      current_session,\n      current_plan: current_session.current_plan || null,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "4cf464ac-2fdd-482b-b26f-3f198f26c403",
+      "name": "Error Formulario",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -320,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-error-form",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "06eddbc2-c14b-44f5-8198-843becc89b12",
+      "name": "Error Refinamiento",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -336,
+        352
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-error-refine",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "37d16b33-2e0b-4332-b64a-16a54ded90aa",
+      "name": "Agente de Refinamiento",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -128,
+        368
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza la siguiente instrucción de refinamiento del usuario y determina qué campos del travel_brief deben actualizarse y qué pasos del planificador deben volver a ejecutarse.\n\nINSTRUCCIÓN DEL USUARIO:\n{{ $json.feedback_text }}\n\nSESSION STATE ACTUAL:\n{{ JSON.stringify($json.current_session) }}\n\nPLAN ACTUAL:\n{{ JSON.stringify($json.current_plan) }}",
+        "options": {
+          "systemMessage": "Eres un intérprete de instrucciones de refinamiento para un planificador de viajes automatizado.\n\nNo hablas con el usuario. No produces texto libre. Devuelves ÚNICAMENTE un objeto JSON válido.\n\nTu trabajo es:\n1. Leer la instrucción de refinamiento del usuario\n2. Identificar qué campos del travel_brief deben cambiar\n3. Determinar qué pasos del planificador deben volver a ejecutarse\n4. Devolver el session_state actualizado con los nuevos valores y los pasos a ejecutar\n\n────────────────────────────────────────\nREGLAS DE MAPEO — instrucción → campos → pasos\n────────────────────────────────────────\n\nInstrucciones sobre vuelos → actualiza flight_preferences → steps_to_run: 'flights'\nEjemplos: 'vuelo más barato', 'prefiero vuelo directo', 'clase business', 'sin escalas', 'aerolínea preferida'\n\nInstrucciones sobre hotel → actualiza accommodation_type o hotel_location_preference → steps_to_run: 'hotels'\nEjemplos: 'hotel más barato', 'quiero hotel de lujo', 'hotel cerca del centro', 'cambiar a mid-range', 'hotel en la playa'\n\nInstrucciones sobre actividades → actualiza activity_interests → steps_to_run: 'activities'\nEjemplos: 'añadir más gastronomía', 'quitar playa', 'más cultura', 'actividades para niños', 'quiero visitar museos'\n\nInstrucciones sobre presupuesto → actualiza budget_total_usd → steps_to_run: 'all'\nEjemplos: 'aumentar presupuesto a 5000', 'reducir gastos', 'tengo más presupuesto'\n\nInstrucciones sobre fechas o destino → actualiza departure_date, return_date o destination_city → steps_to_run: 'all'\nEjemplos: 'salir un día antes', 'extender el viaje 2 días', 'cambiar destino a Roma'\n\nInstrucciones que afectan vuelos Y hotel simultáneamente → steps_to_run: 'all'\n\n────────────────────────────────────────\nOUTPUT — devolver SOLO este JSON, sin texto adicional, sin markdown\n────────────────────────────────────────\n\n{\n  \"session_id\": \"string — copiar exactamente del session_state actual\",\n  \"revision_count\": 0,\n  \"status\": \"awaiting_search\",\n  \"steps_to_run\": \"all | flights | hotels | activities | validation\",\n  \"feedback_instruction\": \"resumen en una frase de lo que el usuario pidió\",\n  \"travel_brief\": {\n    \"origin_city\": \"string — copiar sin cambiar\",\n    \"destination_city\": [\"string — copiar sin cambiar\"],\n    \"departure_date\": \"YYYY-MM-DD — copiar o actualizar si el usuario lo cambió\",\n    \"return_date\": \"YYYY-MM-DD — copiar o actualizar si el usuario lo cambió\",\n    \"travelers\": { \"adults\": 0, \"children\": [] },\n    \"budget_total_usd\": 0,\n    \"accommodation_type\": \"budget | mid-range | luxury\",\n    \"flight_preferences\": {\n      \"cabin_class\": \"economy | business | first\",\n      \"max_layover_hours\": 4,\n      \"preferred_airlines\": []\n    },\n    \"activity_interests\": [\"string\"],\n    \"special_requirements\": \"string\",\n    \"flexible_dates\": false,\n    \"hotel_location_preference\": \"string\",\n    \"car_rental_needed\": false\n  }\n}\n\nREGLAS CRÍTICAS:\n- Actualiza SOLO los campos afectados por la instrucción del usuario. Copia el resto exactamente.\n- Incrementa revision_count en 1 respecto al valor actual del session_state recibido.\n- Si la instrucción no es clara o no mapea a ningún campo conocido, devuelve steps_to_run: 'all' sin cambiar ningún campo del travel_brief.\n- NUNCA inventes datos ni valores que el usuario no haya mencionado explícitamente.\n- NUNCA elimines campos del travel_brief — cópialos todos aunque no cambien.\n- NUNCA añadas texto fuera del objeto JSON.\n- El campo status debe ser siempre 'awaiting_search'."
+        }
+      }
+    },
+    {
+      "id": "54964221-23c9-4863-afdf-406eea146042",
+      "name": "OpenAI GPT-4o-mini (Refinamiento)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        544
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "maxTokens": 1024,
+          "temperature": 0.1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "yBJhPxLB2X9hamNc",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "id": "4bb10817-f1c1-49ab-ae83-38970320fba0",
+      "name": "Parsear Refinamiento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        368
+      ],
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Parsear Refinamiento\" (Ruta B)\n// ---------------------------------------------------------------------------\n// Limpia markdown fences del output del Agente de Refinamiento, parsea el JSON\n// con fallback a steps_to_run='all', incrementa revision_count y persiste el\n// session_state actualizado. Ver doc de arquitectura, seccion 4.3.\n\nconst incoming = $input.first().json;\n\n// El agente (toolsAgent) deja su salida en .output (string) o, segun version,\n// directamente como objeto. Soportamos ambos.\nlet raw = incoming.output ?? incoming.text ?? incoming.response ?? incoming;\n\n// Recuperar contexto previo: el item entrante deberia arrastrar session_id /\n// current_session, pero por robustez los recuperamos tambien del static data.\nconst store = $getWorkflowStaticData('global');\nconst sessions = store.sessions || {};\n\n// Intentar localizar session_id desde el input o desde el JSON del agente.\nlet session_id = incoming.session_id || null;\n\nfunction stripFences(s) {\n  if (typeof s !== 'string') return s;\n  return s\n    .replace(/^\\s*```(?:json)?\\s*/i, '')\n    .replace(/\\s*```\\s*$/i, '')\n    .trim();\n}\n\nlet parsed = null;\nlet parseFailed = false;\n\nif (typeof raw === 'string') {\n  try {\n    parsed = JSON.parse(stripFences(raw));\n  } catch (e) {\n    parseFailed = true;\n  }\n} else if (raw && typeof raw === 'object') {\n  parsed = raw;\n}\n\n// Recuperar la sesion previa para tener una base sobre la que aplicar cambios.\nif (!session_id && parsed && parsed.session_id) session_id = parsed.session_id;\nconst prev = session_id ? sessions[session_id] : null;\nconst prevBrief = prev?.travel_brief || {};\nconst prevRevision = Number(prev?.revision_count ?? 0);\n\n// Fallback: si el parse fallo o el agente no devolvio un travel_brief usable,\n// re-ejecutamos todo conservando el brief anterior.\nif (parseFailed || !parsed || typeof parsed !== 'object') {\n  parsed = {\n    session_id,\n    steps_to_run: 'all',\n    feedback_instruction: 'fallback: no se pudo interpretar la instruccion',\n    travel_brief: prevBrief,\n    revision_count: prevRevision + 1,\n  };\n}\n\n// Normalizar campos esperados.\nconst steps_to_run = parsed.steps_to_run || 'all';\nconst feedback_instruction =\n  parsed.feedback_instruction || incoming.feedback_text || 'refinamiento';\nconst travel_brief = parsed.travel_brief || prevBrief;\nsession_id = parsed.session_id || session_id;\n\n// Construir session_state actualizado y persistirlo.\nconst updated = {\n  session_id,\n  status: 'awaiting_search',\n  revision_count: prevRevision + 1,\n  updated_at: new Date().toISOString(),\n  travel_brief,\n  current_plan: prev?.current_plan || null,\n};\n\nif (session_id) {\n  if (!store.sessions) store.sessions = {};\n  store.sessions[session_id] = updated;\n}\n\nreturn [\n  {\n    json: {\n      _error: false,\n      route: 'refinamiento',\n      session_id,\n      session_state: updated,\n      steps_to_run,\n      feedback_instruction,\n      existing_plan: updated.current_plan,\n      revision_count: updated.revision_count,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "547ebc1d-2bfd-4ed8-8f57-cd052f907f42",
+      "name": "Preparar Motor Planificador",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        112
+      ],
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Preparar Motor Planificador\" (compartido Ruta A + Ruta B)\n// ---------------------------------------------------------------------------\n// Unifica la entrada de ambas rutas. Construye segments[] (soporta multi-\n// destino). Extrae steps_to_run, existing_plan y feedback_instruction para\n// pasarlos al Agente Motor. Ver doc de arquitectura, seccion 4.4.\n\nconst incoming = $input.first().json;\n\n// session_state puede venir de \"Validar Formulario\" (Ruta A) o de\n// \"Parsear Refinamiento\" (Ruta B).\nconst session_state = incoming.session_state;\nif (!session_state || !session_state.travel_brief) {\n  throw new Error('Preparar Motor: falta session_state.travel_brief en la entrada');\n}\n\nconst brief = session_state.travel_brief;\nconst session_id = session_state.session_id;\n\n// Ruta A => ejecucion inicial completa. Ruta B => valores del refinamiento.\nconst isRefine = incoming.route === 'refinamiento';\nconst steps_to_run = isRefine ? incoming.steps_to_run || 'all' : 'all';\nconst feedback_instruction = isRefine\n  ? incoming.feedback_instruction || 'refinamiento'\n  : '';\nconst existing_plan = isRefine ? incoming.existing_plan || null : null;\nconst revision_count = Number(\n  isRefine ? incoming.revision_count ?? session_state.revision_count ?? 0 : 0,\n);\n\n// Construir segments[] (un segmento por destino para soporte multi-ciudad).\nconst destinations = Array.isArray(brief.destination_city)\n  ? brief.destination_city\n  : [brief.destination_city];\n\nconst segments = destinations.map((dest, idx) => ({\n  segment_index: idx,\n  origin: idx === 0 ? brief.origin_city : destinations[idx - 1],\n  destination: dest,\n}));\n\n// Lista de destinos unicos para las consultas Tavily.\nconst unique_destinations = [...new Set(destinations)];\n\nreturn [\n  {\n    json: {\n      session_id,\n      session_state,\n      segments,\n      unique_destinations,\n      steps_to_run,\n      feedback_instruction,\n      existing_plan,\n      revision_count,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "da350887-d5b9-43c5-ba76-dd8ca4009fe9",
+      "name": "Convertir Ciudades a IATA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        112
+      ],
+      "notes": "Convierte ciudad->IATA, anade coordenadas GPS (destination_city_ll) para Google Maps y nombre del aeropuerto para Directions. 3 tablas de ~60 ciudades.",
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Convertir Ciudades a IATA\"\n// ---------------------------------------------------------------------------\n// Mantiene 3 tablas (~60 ciudades) y enriquece el session_state con:\n//   - origin_city_iata, destination_city_iata        (Tabla 1: cityToIata)\n//   - destination_city_ll  \"@lat,lng,15z\"            (Tabla 2: cityToGps)\n//   - destination_airport_name                        (Tabla 3: iataToAirportName)\n// Fallbacks: IATA -> primeros 3 chars en mayuscula; GPS -> null.\n// Ver doc de arquitectura, secciones 4.4 y 12.\n\nconst incoming = $input.first().json;\nconst session_state = incoming.session_state;\nconst brief = session_state.travel_brief;\n\n// ── Tabla 1: ciudad -> codigo IATA ─────────────────────────────────────────\nconst cityToIata = {\n  amsterdam: 'AMS', paris: 'CDG', london: 'LHR', barcelona: 'BCN',\n  madrid: 'MAD', rome: 'FCO', berlin: 'BER', munich: 'MUC',\n  frankfurt: 'FRA', vienna: 'VIE', zurich: 'ZRH', geneva: 'GVA',\n  brussels: 'BRU', lisbon: 'LIS', porto: 'OPO', dublin: 'DUB',\n  copenhagen: 'CPH', stockholm: 'ARN', oslo: 'OSL', helsinki: 'HEL',\n  prague: 'PRG', budapest: 'BUD', warsaw: 'WAW', athens: 'ATH',\n  istanbul: 'IST', moscow: 'SVO', milan: 'MXP', venice: 'VCE',\n  florence: 'FLR', naples: 'NAP', nice: 'NCE', valencia: 'VLC',\n  seville: 'SVQ', malaga: 'AGP', bilbao: 'BIO', manchester: 'MAN',\n  edinburgh: 'EDI',\n  'new york': 'JFK', newyork: 'JFK', miami: 'MIA', 'los angeles': 'LAX',\n  losangeles: 'LAX', chicago: 'ORD', 'san francisco': 'SFO',\n  sanfrancisco: 'SFO', boston: 'BOS', washington: 'IAD', toronto: 'YYZ',\n  vancouver: 'YVR', 'mexico city': 'MEX', mexicocity: 'MEX', cancun: 'CUN',\n  'buenos aires': 'EZE', buenosaires: 'EZE', bogota: 'BOG', lima: 'LIM',\n  santiago: 'SCL', 'sao paulo': 'GRU', saopaulo: 'GRU', 'rio de janeiro': 'GIG',\n  riodejaneiro: 'GIG',\n  tokyo: 'NRT', osaka: 'KIX', seoul: 'ICN', beijing: 'PEK', shanghai: 'PVG',\n  'hong kong': 'HKG', hongkong: 'HKG', singapore: 'SIN', bangkok: 'BKK',\n  'kuala lumpur': 'KUL', kualalumpur: 'KUL', jakarta: 'CGK', mumbai: 'BOM',\n  delhi: 'DEL', dubai: 'DXB', 'abu dhabi': 'AUH', abudhabi: 'AUH',\n  doha: 'DOH', 'tel aviv': 'TLV', telaviv: 'TLV',\n  cairo: 'CAI', 'cape town': 'CPT', capetown: 'CPT', johannesburg: 'JNB',\n  marrakech: 'RAK', casablanca: 'CMN', nairobi: 'NBO',\n  sydney: 'SYD', melbourne: 'MEL', auckland: 'AKL',\n};\n\n// ── Tabla 2: ciudad -> coordenadas GPS \"@lat,lng,15z\" ──────────────────────\nconst cityToGps = {\n  amsterdam: '@52.3676,4.9041,15z', paris: '@48.8566,2.3522,15z',\n  london: '@51.5074,-0.1278,15z', barcelona: '@41.3851,2.1734,15z',\n  madrid: '@40.4168,-3.7038,15z', rome: '@41.9028,12.4964,15z',\n  berlin: '@52.5200,13.4050,15z', munich: '@48.1351,11.5820,15z',\n  frankfurt: '@50.1109,8.6821,15z', vienna: '@48.2082,16.3738,15z',\n  zurich: '@47.3769,8.5417,15z', geneva: '@46.2044,6.1432,15z',\n  brussels: '@50.8503,4.3517,15z', lisbon: '@38.7223,-9.1393,15z',\n  porto: '@41.1579,-8.6291,15z', dublin: '@53.3498,-6.2603,15z',\n  copenhagen: '@55.6761,12.5683,15z', stockholm: '@59.3293,18.0686,15z',\n  oslo: '@59.9139,10.7522,15z', helsinki: '@60.1699,24.9384,15z',\n  prague: '@50.0755,14.4378,15z', budapest: '@47.4979,19.0402,15z',\n  warsaw: '@52.2297,21.0122,15z', athens: '@37.9838,23.7275,15z',\n  istanbul: '@41.0082,28.9784,15z', moscow: '@55.7558,37.6173,15z',\n  milan: '@45.4642,9.1900,15z', venice: '@45.4408,12.3155,15z',\n  florence: '@43.7696,11.2558,15z', naples: '@40.8518,14.2681,15z',\n  nice: '@43.7102,7.2620,15z', valencia: '@39.4699,-0.3763,15z',\n  seville: '@37.3891,-5.9845,15z', malaga: '@36.7213,-4.4214,15z',\n  bilbao: '@43.2630,-2.9350,15z', manchester: '@53.4808,-2.2426,15z',\n  edinburgh: '@55.9533,-3.1883,15z',\n  'new york': '@40.7128,-74.0060,15z', newyork: '@40.7128,-74.0060,15z',\n  miami: '@25.7617,-80.1918,15z', 'los angeles': '@34.0522,-118.2437,15z',\n  losangeles: '@34.0522,-118.2437,15z', chicago: '@41.8781,-87.6298,15z',\n  'san francisco': '@37.7749,-122.4194,15z', sanfrancisco: '@37.7749,-122.4194,15z',\n  boston: '@42.3601,-71.0589,15z', washington: '@38.9072,-77.0369,15z',\n  toronto: '@43.6532,-79.3832,15z', vancouver: '@49.2827,-123.1207,15z',\n  'mexico city': '@19.4326,-99.1332,15z', mexicocity: '@19.4326,-99.1332,15z',\n  cancun: '@21.1619,-86.8515,15z',\n  'buenos aires': '@-34.6037,-58.3816,15z', buenosaires: '@-34.6037,-58.3816,15z',\n  bogota: '@4.7110,-74.0721,15z', lima: '@-12.0464,-77.0428,15z',\n  santiago: '@-33.4489,-70.6693,15z', 'sao paulo': '@-23.5505,-46.6333,15z',\n  saopaulo: '@-23.5505,-46.6333,15z', 'rio de janeiro': '@-22.9068,-43.1729,15z',\n  riodejaneiro: '@-22.9068,-43.1729,15z',\n  tokyo: '@35.6762,139.6503,15z', osaka: '@34.6937,135.5023,15z',\n  seoul: '@37.5665,126.9780,15z', beijing: '@39.9042,116.4074,15z',\n  shanghai: '@31.2304,121.4737,15z', 'hong kong': '@22.3193,114.1694,15z',\n  hongkong: '@22.3193,114.1694,15z', singapore: '@1.3521,103.8198,15z',\n  bangkok: '@13.7563,100.5018,15z', 'kuala lumpur': '@3.1390,101.6869,15z',\n  kualalumpur: '@3.1390,101.6869,15z', jakarta: '@-6.2088,106.8456,15z',\n  mumbai: '@19.0760,72.8777,15z', delhi: '@28.7041,77.1025,15z',\n  dubai: '@25.2048,55.2708,15z', 'abu dhabi': '@24.4539,54.3773,15z',\n  abudhabi: '@24.4539,54.3773,15z', doha: '@25.2854,51.5310,15z',\n  'tel aviv': '@32.0853,34.7818,15z', telaviv: '@32.0853,34.7818,15z',\n  cairo: '@30.0444,31.2357,15z', 'cape town': '@-33.9249,18.4241,15z',\n  capetown: '@-33.9249,18.4241,15z', johannesburg: '@-26.2041,28.0473,15z',\n  marrakech: '@31.6295,-7.9811,15z', casablanca: '@33.5731,-7.5898,15z',\n  nairobi: '@-1.2921,36.8219,15z',\n  sydney: '@-33.8688,151.2093,15z', melbourne: '@-37.8136,144.9631,15z',\n  auckland: '@-36.8485,174.7633,15z',\n};\n\n// ── Tabla 3: IATA -> nombre completo del aeropuerto ────────────────────────\nconst iataToAirportName = {\n  AMS: 'Amsterdam Airport Schiphol', CDG: 'Paris Charles de Gaulle Airport',\n  LHR: 'London Heathrow Airport', BCN: 'Barcelona-El Prat Airport',\n  MAD: 'Adolfo Suarez Madrid-Barajas Airport', FCO: 'Rome Fiumicino Airport',\n  BER: 'Berlin Brandenburg Airport', MUC: 'Munich Airport',\n  FRA: 'Frankfurt Airport', VIE: 'Vienna International Airport',\n  ZRH: 'Zurich Airport', GVA: 'Geneva Airport',\n  BRU: 'Brussels Airport', LIS: 'Lisbon Humberto Delgado Airport',\n  OPO: 'Porto Airport', DUB: 'Dublin Airport',\n  CPH: 'Copenhagen Airport', ARN: 'Stockholm Arlanda Airport',\n  OSL: 'Oslo Gardermoen Airport', HEL: 'Helsinki Airport',\n  PRG: 'Vaclav Havel Airport Prague', BUD: 'Budapest Ferenc Liszt Airport',\n  WAW: 'Warsaw Chopin Airport', ATH: 'Athens International Airport',\n  IST: 'Istanbul Airport', SVO: 'Moscow Sheremetyevo Airport',\n  MXP: 'Milan Malpensa Airport', VCE: 'Venice Marco Polo Airport',\n  FLR: 'Florence Airport', NAP: 'Naples International Airport',\n  NCE: 'Nice Cote d Azur Airport', VLC: 'Valencia Airport',\n  SVQ: 'Seville Airport', AGP: 'Malaga Costa del Sol Airport',\n  BIO: 'Bilbao Airport', MAN: 'Manchester Airport', EDI: 'Edinburgh Airport',\n  JFK: 'John F. Kennedy International Airport', MIA: 'Miami International Airport',\n  LAX: 'Los Angeles International Airport', ORD: 'O Hare International Airport',\n  SFO: 'San Francisco International Airport', BOS: 'Boston Logan International Airport',\n  IAD: 'Washington Dulles International Airport', YYZ: 'Toronto Pearson International Airport',\n  YVR: 'Vancouver International Airport', MEX: 'Mexico City International Airport',\n  CUN: 'Cancun International Airport', EZE: 'Buenos Aires Ezeiza International Airport',\n  BOG: 'El Dorado International Airport', LIM: 'Jorge Chavez International Airport',\n  SCL: 'Santiago International Airport', GRU: 'Sao Paulo Guarulhos International Airport',\n  GIG: 'Rio de Janeiro Galeao International Airport',\n  NRT: 'Narita International Airport', KIX: 'Kansai International Airport',\n  ICN: 'Incheon International Airport', PEK: 'Beijing Capital International Airport',\n  PVG: 'Shanghai Pudong International Airport', HKG: 'Hong Kong International Airport',\n  SIN: 'Singapore Changi Airport', BKK: 'Suvarnabhumi Airport',\n  KUL: 'Kuala Lumpur International Airport', CGK: 'Soekarno-Hatta International Airport',\n  BOM: 'Chhatrapati Shivaji Maharaj International Airport', DEL: 'Indira Gandhi International Airport',\n  DXB: 'Dubai International Airport', AUH: 'Abu Dhabi International Airport',\n  DOH: 'Hamad International Airport', TLV: 'Ben Gurion Airport',\n  CAI: 'Cairo International Airport', CPT: 'Cape Town International Airport',\n  JNB: 'O. R. Tambo International Airport', RAK: 'Marrakech Menara Airport',\n  CMN: 'Casablanca Mohammed V International Airport', NBO: 'Jomo Kenyatta International Airport',\n  SYD: 'Sydney Kingsford Smith Airport', MEL: 'Melbourne Airport',\n  AKL: 'Auckland Airport',\n};\n\n// ── Tabla 4: intereses en cualquier idioma -> inglés para SerpAPI ──────────\nconst interestToEn = {\n  // ES\n  gastronomia: 'food', gastronomía: 'food', comida: 'food', restaurantes: 'restaurants',\n  museos: 'museums', museo: 'museums', arte: 'art', cultura: 'culture',\n  historia: 'history', historico: 'history', histórico: 'history',\n  compras: 'shopping', tiendas: 'shopping', moda: 'fashion',\n  naturaleza: 'nature', parques: 'parks', playa: 'beach', playas: 'beach',\n  aventura: 'adventure', deporte: 'sports', deportes: 'sports',\n  musica: 'music', música: 'music', conciertos: 'concerts', teatro: 'theater',\n  noche: 'nightlife', vida_nocturna: 'nightlife', bares: 'bars',\n  spa: 'spa', relax: 'wellness', bienestar: 'wellness',\n  arquitectura: 'architecture', monumentos: 'monuments',\n  // PT\n  compras_pt: 'shopping', praias: 'beach', museus: 'museums',\n  // FR\n  gastronomie: 'food', musées: 'museums', plages: 'beach',\n  // DE\n  einkaufen: 'shopping', museen: 'museums', strand: 'beach',\n};\n\nfunction normalizeInterests(interests) {\n  if (!Array.isArray(interests)) return interests;\n  return interests.map((i) => {\n    const key = String(i).trim().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, '_');\n    return interestToEn[key] || interestToEn[String(i).trim().toLowerCase()] || i;\n  });\n}\n\n// ── Helpers de lookup ──────────────────────────────────────────────────────\nfunction norm(s) {\n  return String(s || '')\n    .trim()\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, ''); // quita acentos\n}\n\nfunction toIata(city) {\n  const key = norm(city);\n  if (cityToIata[key]) return cityToIata[key];\n  // fallback: primeros 3 chars en mayuscula\n  return key.replace(/[^a-z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');\n}\n\nfunction toGps(city) {\n  return cityToGps[norm(city)] || null;\n}\n\n// ── Enriquecer el brief ────────────────────────────────────────────────────\nconst origin = brief.origin_city;\nconst destinations = Array.isArray(brief.destination_city)\n  ? brief.destination_city\n  : [brief.destination_city];\nconst primaryDest = destinations[0];\n\nconst origin_city_iata = toIata(origin);\nconst destination_city_iata = toIata(primaryDest);\nconst destination_city_ll = toGps(primaryDest);\nconst destination_airport_name =\n  iataToAirportName[destination_city_iata] || `${primaryDest} Airport`;\n\n// Inyectar los campos derivados en el travel_brief del session_state.\nbrief.origin_city_iata = origin_city_iata;\nbrief.destination_city_iata = destination_city_iata;\nbrief.destination_city_ll = destination_city_ll;\nbrief.destination_airport_name = destination_airport_name;\nbrief.activity_interests = normalizeInterests(brief.activity_interests);\n\n// Reemitir el item enriquecido (conserva segments, steps_to_run, etc.).\nconst out = { ...incoming };\nout.session_state = { ...session_state, travel_brief: brief };\n\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "206244e6-fcb4-4221-9a33-19f7fc85c8c2",
+      "name": "Motor Planificador - Agent 2",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        736,
+        112
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Ejecuta la secuencia de planificación de viaje para el estado de sesión siguiente. Sigue TODAS las instrucciones del system prompt EXACTAMENTE. Devuelve ÚNICAMENTE un objeto JSON válido — sin texto, sin markdown, sin bloques de código.\n\nESTADO DE SESIÓN:\n{{ JSON.stringify($json.session_state) }}\n\nSEGMENTOS A PROCESAR:\n{{ JSON.stringify($json.segments) }}\n\nDESTINOS ÚNICOS PARA TAVILY:\n{{ JSON.stringify($json.unique_destinations) }}\n\nPASOS A EJECUTAR: {{ $json.steps_to_run }}\n\nCONTEO DE REVISIÓN: {{ $json.revision_count }}\n\nINSTRUCCIÓN DE REFINAMIENTO (si aplica): {{ $json.feedback_instruction || 'ninguna — ejecución inicial completa' }}\n\nPLAN EXISTENTE (si aplica — usar como base para refinamientos parciales):\n{{ JSON.stringify($json.existing_plan) }}",
+        "options": {
+          "systemMessage": "Eres un constructor y validador de planes de viaje.\n\nNo hablas con el usuario. No produces texto libre. NUNCA generas markdown.\nDevuelves ÚNICAMENTE un objeto JSON válido que coincida con el Contrato de Output.\n\n────────────────────────────────────────\nPRIORIDAD DEL PLAN\n────────────────────────────────────────\n\nPRIORIDAD 1 — VUELOS (bloqueante)\nEl vuelo es el eje del plan. Sin vuelo válido el plan no puede continuar.\nLas fechas REALES del vuelo determinan las fechas del hotel y el rango del itinerario.\n\nPRIORIDAD 2 — HOTEL (bloqueante)\nSolo se busca hotel después de confirmar el vuelo.\ncheck_in  = arrival_datetime del vuelo de ida → YYYY-MM-DD (primeros 10 chars)\ncheck_out = departure_datetime del vuelo de regreso → YYYY-MM-DD (primeros 10 chars)\nSelección: mayor overall_rating dentro del presupuesto. Empate → menor total_rate.\nMapear hotel_class del resultado → campo stars en el output.\n\nCOMPLEMENTO 1 — ACTIVIDADES + ITINERARIO (no bloqueante — OBLIGATORIO si hay datos)\nGoogle Maps devuelve local_results[] con lugares reales. Aplicar scoring y construir activities[].\nactivities[] y daily_itinerary[] NUNCA deben quedar vacíos si Google Maps o Tavily devuelven datos.\n\nCOMPLEMENTO 2 — INTELIGENCIA DE DESTINO (no bloqueante — plan_notes[] OBLIGATORIO si Tavily devuelve datos)\nTavily aporta contexto: visado, clima, transporte. plan_notes[] mínimo 1 nota si hay respuesta.\n\n────────────────────────────────────────\nDATOS DE ENTRADA — INSTRUCCIÓN CRÍTICA\n────────────────────────────────────────\n\nNUNCA uses valores hardcodeados ni de ejecuciones anteriores. Extraer del session_state:\n  origin_city_iata      → departure_id en Flights\n  destination_city_iata → arrival_id en Flights\n  destination_city[0]   → nombre ciudad para Hotels y Google Maps (NO usar IATA)\n  departure_date        → outbound_date Flights; provisional para Hotels\n  return_date           → return_date Flights; provisional para Hotels\n  travelers.adults      → adults en Hotels\n  accommodation_type    → incluir en query Hotels\n  activity_interests    → scoring de actividades (NO va en la query de Google Maps)\n\nFECHAS DEL HOTEL — sincronizar con vuelo confirmado:\n  check_in_date  = plan.segments[0].flights.outbound.arrival_datetime[:10]\n  check_out_date = plan.segments[0].flights.return.departure_datetime[:10]\n\n────────────────────────────────────────\nPROCESAMIENTO DE RESULTADOS\n────────────────────────────────────────\n\nFlights: ÚNICAMENTE best_flights[]. IGNORAR other_flights completamente.\n  Seleccionar máximo 2: menor precio + menor duración total.\n\nHotels: ÚNICAMENTE primeros 3 de properties[].\n  Seleccionar mayor overall_rating dentro del presupuesto.\n\nGoogle Maps — SCORING POR INTERESES:\n  Google Maps devuelve resultados genéricos en local_results[].\n  El agente aplica scoring para personalizar según el usuario:\n  Por cada término de travel_brief.activity_interests que aparezca\n  en title o type del resultado → sumar 1 punto al resultado.\n  Ordenar: puntuación DESC, luego rating DESC.\n  Seleccionar top 5 resultados. Si hay menos de 5, tomar todos los disponibles.\n\nTavily: ÚNICAMENTE answer (máx 500 chars) + primeros 2 de results[].\n  Extraer costes numéricos de transporte si están en el texto.\n\n────────────────────────────────────────\nHERRAMIENTAS DISPONIBLES\n────────────────────────────────────────\n\nHerramienta 1 — Tool: SerpApi Google Flights (motor: google_flights)\nPropósito: Buscar vuelos en fechas exactas. PRIORIDAD 1 — bloqueante.\nParámetros: departure_id=origin_city_iata, arrival_id=destination_city_iata,\n  outbound_date=departure_date, return_date=return_date\nDevuelve: best_flights[].{price,total_duration,flights[],layovers[]} (filtrado por json_restrictor).\nTiene stops=0 para preferir vuelos directos.\n\nHerramienta 2 — Tool: SerpApi Google Hotels (motor: google_hotels)\nPropósito: Buscar hotel con buen review en fechas del vuelo. PRIORIDAD 2 — bloqueante.\nParámetros:\n  q = 'hotels in [destination_city[0]] [hotel_location_preference] [accommodation_type]'\n  check_in_date  = arrival_datetime del vuelo de ida → YYYY-MM-DD\n  check_out_date = departure_datetime del vuelo de regreso → YYYY-MM-DD\n  adults = travelers.adults | children = longitud travelers.children (0 si vacío)\nDevuelve: properties[].{name,hotel_class,overall_rating,reviews,rate_per_night,total_rate,link,gps_coordinates}.\nhotel_class del resultado → stars en el output del plan.\nTiene sort_by=3 (mayor rating primero) y rating=8 configurados.\n\nHerramienta 3 — Tool: Google Maps (Actividades) (motor: google_maps)\nPropósito: Buscar actividades y atracciones reales en el destino. COMPLEMENTO.\nUsar SOLO después de confirmar vuelo + hotel.\nParámetros:\n  query = '[activity_interests[0]] in [destination_city[0]]'\n    Usar el PRIMER elemento de activity_interests como tipo de búsqueda.\n    Ejemplos: 'food in Paris' | 'museums in Rome' | 'culture in Barcelona'\n    SIEMPRE en inglés. NUNCA incluir múltiples intereses en la query.\n  ll = travel_brief.destination_city_ll del session_state\n    Coordenadas GPS del destino en formato @lat,lng,15z\n    CRÍTICO: sin ll los resultados aparecen en la ubicación equivocada.\n    Si destination_city_ll es null usar cadena vacía.\nLos intereses NO van todos en la query — el scoring posterior los usa todos.\nDevuelve: local_results[].{title,type,rating,reviews,address,hours,price,links.website}\nMapeo a activities[]:\n  local_results[i].title        → activities[i].name\n  local_results[i].type         → activities[i].category\n  local_results[i].price        → activities[i].price_usd (número, 0 si no hay precio)\n  local_results[i].links.website→ activities[i].booking_url\n  source: 'google_maps'\n\nHerramienta 4 — Tool: Google Maps Directions (motor: google_maps_directions)\nPropósito: Calcular ruta y coste de transporte desde el aeropuerto al hotel. COMPLEMENTO.\nUsar en el PASO 4, DESPUÉS de confirmar hotel (necesita la dirección del hotel).\nParámetros:\n  start_addr = travel_brief.destination_airport_name del session_state\n    Nombre completo del aeropuerto de destino. Ej: 'Paris Charles de Gaulle Airport'\n  end_addr = dirección del hotel del plan (plan.segments[0].hotel.address)\n    Si la dirección solo tiene la ciudad, usar: '[hotel_name], [ciudad], [país]'\nDevuelve: directions[0].{distance, duration, steps[0]} con la primera opción de ruta.\nUsar duration para estimated_local_transport_usd:\n  Si la respuesta incluye precio/tarifa → usar ese valor en USD.\n  Si solo hay duración → usar como referencia en plan_notes (no como coste).\n  Si error o sin resultados → continuar sin este dato (no bloqueante).\n\nHerramienta 5 — Tool: Tavily (búsqueda web)\nPropósito: Inteligencia de destino + fallback actividades. COMPLEMENTO.\nPara inteligencia de destino (Paso 4) → query en inglés:\n  '[destination_city[0]] [mes año de departure_date] visa requirements nationals [origin_city] local transport metro taxi airport price'\nPara fallback actividades (si Google Maps local_results[] vacío):\n  'best things to do activities tours [destination_city[0]] [activity_interests] [mes año] price'\n  Del answer y results[], extraer nombres de lugares y construir objetos activity.\n  source: 'tavily'\nPoblar plan_notes[]: mínimo 1 nota si hay datos.\nExtraer estimated_local_transport_usd si hay cifra numérica de transporte. Si no → null.\n\n────────────────────────────────────────\nSECUENCIA DE EJECUCIÓN\n────────────────────────────────────────\n\nLeer steps_to_run:\n  all        → pasos 1,2,3,4,5\n  flights    → Paso 1 y 5 → conservar hotel, actividades e itinerario del plan existente\n  hotels     → Paso 2 y 5 → conservar vuelos, actividades e itinerario\n  activities → Paso 3 y 5 → conservar vuelos y hotel\n  validation → Paso 5 → conservar todo\n\nPASO 1 — VUELOS (Tool: SerpApi Google Flights)\n  departure_id=origin_city_iata, arrival_id=destination_city_iata\n  Seleccionar: menor precio + menor duración.\n  Sin resultados → reintentar bajando cabin_class. Si flexible_dates → ±1 día.\n  Si aún sin resultados → flag no_valid_flight (true).\n  Si escala <45min o >max_layover_hours → flag layover_violation (true).\n  Registrar: arrival_datetime y departure_datetime exactos del vuelo elegido.\n\nPASO 2 — HOTEL (Tool: SerpApi Google Hotels)\n  CONTROL: SOLO después de Paso 1 confirmado.\n  check_in_date  = outbound.arrival_datetime[:10]\n  check_out_date = return.departure_datetime[:10]\n  Selección: mayor overall_rating dentro del presupuesto. Empate → menor total_rate.\n  hotel_class → stars.\n  Sin resultados → reintentar bajando accommodation_type. Si aún → flag no_valid_hotel (true).\n\nPASO 3 — ACTIVIDADES (Tool: Google Maps → fallback: Tavily)\n  CONTROL: SOLO después de Pasos 1 y 2 confirmados.\n  Presupuesto actividades = budget_total_usd - flights_usd - hotel_usd.\n\n  A. Llamar Google Maps con query: 'things to do in [destination_city[0]]'\n  B. De local_results[] aplicar SCORING:\n     Por cada término de activity_interests en title o type → +1 punto.\n     Ordenar: puntuación DESC → rating DESC. Tomar top 5.\n  C. Mapear: title→name, type→category, price→price_usd(número), links.website→booking_url, source:'google_maps'\n  D. Si local_results[] vacío → Tavily fallback:\n     query: 'best things to do activities tours [destination_city[0]] [activity_interests] [mes año] price'\n     Extraer mínimo 3 actividades del answer/results[]. source:'tavily'. Flag: no_activities_found(false).\n  E. Distribución de fechas (OBLIGATORIO):\n     Día llegada = arrival_datetime[:10] del vuelo de ida\n     Día regreso = departure_datetime[:10] del vuelo de regreso\n     Días disponibles para actividades = desde día DESPUÉS de llegada hasta día ANTES de regreso\n     Intervalo = floor(días_disponibles / cantidad_actividades)\n     Asignar fechas: actividad_1 → día_llegada+1, actividad_2 → día_llegada+1+intervalo, etc.\n     start_time: '10:00'. duration_hours: 3.\n\nPASO 4 — INTELIGENCIA DE DESTINO (Tool: Tavily)\n  Query en inglés: '[destination_city[0]] [mes año departure_date] visa nationals [origin_city] transport metro taxi airport price'\n  Extraer en plan_notes[] → OBLIGATORIO si Tavily responde:\n    'Visa: [requerido/no requerido] para ciudadanos de [origin_city].'\n    'Clima: [descripción breve para el mes del viaje].'\n    'Transporte local: [opciones y precios si disponibles].'\n  Si hay cifra de transporte → estimated_local_transport_usd. Si no → null.\n\nPASO 5 — VALIDACIÓN (siempre, sin excepción)\n  total_cost = flights_usd + hotel_usd + activities_usd + estimated_local_transport_usd\n  total > budget → flag budget_exceeded (true, amount_over)\n  total ≤ budget × 0.85 → flag budget_headroom (false)\n  check_in hotel ≠ día arrival vuelo ida → flag date_mismatch (true)\n  check_out hotel ≠ día departure vuelo regreso → flag date_mismatch (true)\n  actividades fuera del rango de días → flag date_mismatch (true)\n  plan.revision_snapshot = revision_count del input\n  ALGUNA warning requires_user_approval:true → status: needs_user_input\n  TODAS false o vacías → status: plan_ready\n\n────────────────────────────────────────\nCONSTRUCCIÓN DEL ITINERARIO DÍA A DÍA — OBLIGATORIO\n────────────────────────────────────────\n\nUna vez completados los Pasos 1-4, construir plan.daily_itinerary[].\nEste campo es MANDATORIO. Un plan sin daily_itinerary[] está incompleto.\n\nCubrir TODOS los días del viaje desde arrival_datetime hasta departure_datetime del regreso.\nReglas por tipo de día:\n\n  DÍA DE LLEGADA (primer día):\n    title: 'Día de llegada a [destination]'\n    summary: Texto libre en español describiendo la llegada, hora aproximada según el vuelo,\n             check-in en el hotel, y sugerencia breve de qué hacer la tarde/noche de llegada.\n    activities: [] (no asignar actividades el día de llegada)\n\n  DÍAS CON ACTIVIDADES:\n    title: nombre de la actividad principal del día (o 'Día X en [destination]' si hay varias)\n    summary: Texto libre en español narrando el día — qué hacer, dónde ir, qué ver,\n             recomendaciones de restaurantes o barrios cercanos a la actividad.\n             Usar los datos reales de la actividad (nombre, categoría, horario).\n             Longitud: 2-4 frases. Tono: amigable y práctico.\n    activities: referencias a las actividades de ese día (time, name, duration_hours, price_usd, booking_url)\n\n  DÍAS LIBRES (sin actividad asignada):\n    title: 'Día libre para caminar y conocer [destination]'\n    summary: Texto libre en español con sugerencia de exploración autónoma — mercados,\n             barrios, cafés, miradores, paseos. Sin actividad formal asignada.\n    activities: []\n\n  DÍA DE REGRESO (último día):\n    title: 'Último día en [destination] — Regreso a [origin]'\n    summary: Texto libre en español sobre el check-out, tiempo libre antes del vuelo,\n             y despedida del destino. Mencionar hora aproximada del vuelo de regreso.\n    activities: []\n\nEstructura de cada elemento de daily_itinerary[]:\n  day: número del día (1, 2, 3...)\n  date: YYYY-MM-DD\n  title: string en español\n  summary: string en español — texto libre narrativo (2-4 frases)\n  activities: array de referencias — solo los días con actividades asignadas:\n    [ { time: 'HH:MM', name: string, duration_hours: number, price_usd: number, booking_url: string } ]\n\nNOTA: daily_itinerary[] referencia las mismas actividades de segments[].activities[] sin duplicar datos.\nNo inventar actividades que no estén en activities[]. Los días libres tienen activities: [].\n\n────────────────────────────────────────\nTAXONOMÍA DE ADVERTENCIAS\n────────────────────────────────────────\n\nno_valid_flight            requires_user_approval: true\nno_valid_hotel             requires_user_approval: true\nbudget_exceeded            requires_user_approval: true\nlayover_violation          requires_user_approval: true\ndate_unavailable           requires_user_approval: true\ndate_mismatch              requires_user_approval: true\ntool_timeout               requires_user_approval: true\nactivity_swap              requires_user_approval: false\nbudget_exceeded_activities requires_user_approval: false\nbudget_headroom            requires_user_approval: false\nno_activities_found        requires_user_approval: false\n\n────────────────────────────────────────\nCONTRATO DE OUTPUT\n────────────────────────────────────────\n\n{\n  \"session_id\": \"string\",\n  \"status\": \"plan_ready | needs_user_input | error\",\n  \"revision_count\": 0,\n  \"revision_snapshot\": 0,\n  \"generated_at\": \"ISO8601 — el nodo de validación lo sobreescribe automáticamente\",\n  \"steps_executed\": \"all | flights | hotels | activities | validation\",\n  \"warnings\": [{\"type\":\"\",\"detail\":\"\",\"proposed_change\":\"\",\"requires_user_approval\":true,\"amount_over\":0}],\n  \"plan\": {\n    \"segments\": [{\n      \"segment_index\": 0, \"origin\": \"\", \"destination\": \"\",\n      \"flights\": {\n        \"outbound\": {\"airline\":\"\",\"flight_no\":\"\",\"origin\":\"\",\"destination\":\"\",\"departure_datetime\":\"ISO8601\",\"arrival_datetime\":\"ISO8601\",\"layovers\":[],\"price_usd\":0,\"booking_url\":\"\"},\n        \"return\":   {\"airline\":\"\",\"flight_no\":\"\",\"origin\":\"\",\"destination\":\"\",\"departure_datetime\":\"ISO8601\",\"arrival_datetime\":\"ISO8601\",\"layovers\":[],\"price_usd\":0,\"booking_url\":\"\"}\n      },\n      \"hotel\": {\"name\":\"\",\"address\":\"\",\"stars\":0,\"rating\":0,\"check_in\":\"YYYY-MM-DD\",\"check_out\":\"YYYY-MM-DD\",\"price_per_night_usd\":0,\"total_usd\":0,\"booking_url\":\"\"},\n      \"activities\": [\n        {\"name\":\"\",\"date\":\"YYYY-MM-DD\",\"start_time\":\"HH:MM\",\"duration_hours\":0,\"price_usd\":0,\"booking_url\":\"\",\"category\":\"\",\"source\":\"google_maps | tavily\"}\n      ]\n    }],\n    \"cost_summary\": {\"flights_usd\":0,\"hotel_usd\":0,\"activities_usd\":0,\"inter_city_transport_usd\":0,\"estimated_local_transport_usd\":0,\"local_transport_data_source\":\"tavily | null\",\"total_usd\":0,\"budget_total_usd\":0,\"budget_remaining_usd\":0},\n    \"daily_itinerary\": [\n      {\n        \"day\": 1,\n        \"date\": \"YYYY-MM-DD\",\n        \"title\": \"string en español\",\n        \"summary\": \"string en español — texto narrativo libre, 2-4 frases\",\n        \"activities\": [\n          {\"time\": \"HH:MM\", \"name\": \"string\", \"duration_hours\": 0, \"price_usd\": 0, \"booking_url\": \"\"}\n        ]\n      }\n    ],\n    \"plan_notes\": [\"string — mínimo 1 si Tavily respondió\"],\n    \"revision_snapshot\": 0\n  },\n  \"error_detail\": \"\"\n}\n\nREGLAS CRÍTICAS:\n- NUNCA valores hardcodeados, de ejemplo ni de ejecuciones anteriores\n- NUNCA fabricar vuelos, hoteles, precios o URLs\n- NUNCA plan_ready con warnings requires_user_approval:true\n- NUNCA omitir el Paso 5\n- NUNCA texto fuera del JSON\n- NUNCA hardcodear costes de transporte\n- NUNCA activities[] vacío si Google Maps o Tavily devolvieron datos\n- NUNCA plan_notes[] vacío si Tavily devolvió datos\n- NUNCA daily_itinerary[] vacío — es MANDATORIO, cubrir TODOS los días del viaje\n- Los intereses activity_interests NO van en la query de Google Maps — solo en el scoring\n- hotel_class del resultado → stars en el output\n- Fechas hotel desde vuelo confirmado, no del formulario\n- Si steps_to_run no es 'all': conservar plan existente para pasos no ejecutados\n- SIEMPRE pasar destination_city_ll en el campo ll de Google Maps — es crítico para resultados en la ciudad correcta\n- Google Maps Directions no bloquea el plan — si falla, continuar normalmente\n- La query de Google Maps usa activity_interests[0] (solo el primero), el scoring usa todos"
+        }
+      }
+    },
+    {
+      "id": "8876445a-86f8-406d-9bdc-4bee4413caad",
+      "name": "OpenAI GPT-4o (Planificador)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        304
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {
+          "maxTokens": 4096,
+          "temperature": 0.1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "yBJhPxLB2X9hamNc",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "id": "fb35ddf4-54f4-405b-8433-af40b89dbc19",
+      "name": "Tool: SerpApi Google Flights",
+      "type": "n8n-nodes-serpapi.serpApiTool",
+      "typeVersion": 1,
+      "position": [
+        624,
+        368
+      ],
+      "parameters": {
+        "operation": "google_flights",
+        "departure_id": "={{ $fromAI('departure_id', 'Codigo IATA 3 letras del aeropuerto de ORIGEN. Usar travel_brief.origin_city_iata del session_state.', 'string') }}",
+        "arrival_id": "={{ $fromAI('arrival_id', 'Codigo IATA 3 letras del aeropuerto de DESTINO. Usar travel_brief.destination_city_iata del session_state.', 'string') }}",
+        "outbound_date": "={{ $fromAI('outbound_date', 'Fecha de salida YYYY-MM-DD. Extraer de travel_brief.departure_date.', 'string') }}",
+        "return_date": "={{ $fromAI('return_date', 'Fecha de regreso YYYY-MM-DD. Extraer de travel_brief.return_date.', 'string') }}",
+        "additionalFields": {
+          "stops": 0,
+          "json_restrictor": "best_flights[].{price,total_duration,flights[].{airline,flight_number,departure_airport.{id,name,time},arrival_airport.{id,name,time},duration},layovers[].{name,id,duration}}",
+          "currency": "USD"
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "serpApi": {
+          "id": "aXZ2LJInYh6FIx8d",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "id": "3a32193d-8270-4077-8e7e-c3e60aca314e",
+      "name": "Tool: SerpApi Google Hotels",
+      "type": "n8n-nodes-serpapi.serpApiTool",
+      "typeVersion": 1,
+      "position": [
+        768,
+        416
+      ],
+      "parameters": {
+        "operation": "google_hotels",
+        "q": "={{ $fromAI('q', 'Query: hotels in [destination_city] [hotel_location_preference] [accommodation_type].', 'string') }}",
+        "check_in_date": "={{ $fromAI('check_in_date', 'Fecha entrada hotel YYYY-MM-DD = llegada vuelo ida.', 'string') }}",
+        "check_out_date": "={{ $fromAI('check_out_date', 'Fecha salida hotel YYYY-MM-DD = salida vuelo regreso.', 'string') }}",
+        "additionalFields": {
+          "adults": "={{ $fromAI('adults', 'Numero de adultos. Extraer de travel_brief.travelers.adults.', 'number') }}",
+          "children": "={{ $fromAI('children', 'Numero de ninos (0 si array vacio).', 'number') }}",
+          "sort_by": 3,
+          "rating": 8,
+          "json_restrictor": "properties[].{name,hotel_class,overall_rating,reviews,rate_per_night.{lowest,extracted_lowest},total_rate.{lowest,extracted_lowest},link,gps_coordinates}",
+          "currency": "USD"
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "serpApi": {
+          "id": "aXZ2LJInYh6FIx8d",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "id": "64f01f29-28e4-46ba-9bbb-bce5507c9784",
+      "name": "Tool: Google Maps (Actividades)",
+      "type": "n8n-nodes-serpapi.serpApiTool",
+      "typeVersion": 1,
+      "position": [
+        944,
+        432
+      ],
+      "notes": "Busca actividades reales en Google Maps. Query: [activity_interests[0]] in [ciudad]. ll critico para resultados en la ciudad correcta.",
+      "parameters": {
+        "operation": "google_maps",
+        "q": "={{ $fromAI('q', 'REQUERIDO. Search query en INGLES: <primer interes> in <ciudad>. Ej: museums in Paris. Toma activity_interests[0] y destination_city[0] del session_state. NUNCA dejes vacio, NUNCA uses coffee.', 'string') }}",
+        "type": "search",
+        "ll": "={{ $fromAI('ll', 'REQUERIDO. GPS @lat,lng,15z del destino, de travel_brief.destination_city_ll. Ej Paris: @48.8566,2.3522,15z.', 'string') }}",
+        "additionalFields": {
+          "hl": "en"
+        },
+        "toolDescription": "Busca actividades reales en Google Maps. Argumentos REQUERIDOS: q (=<primer interes en ingles> in <ciudad>, ej museums in Paris) y ll (=coordenadas @lat,lng,15z de destination_city_ll).",
+        "requestOptions": {}
+      },
+      "credentials": {
+        "serpApi": {
+          "id": "aXZ2LJInYh6FIx8d",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "id": "gmaps-directions-v24",
+      "name": "Tool: Google Maps Directions",
+      "type": "n8n-nodes-serpapi.serpApiTool",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        432
+      ],
+      "notes": "Calcula ruta aeropuerto->hotel. No bloqueante: si falla, el plan continua.",
+      "parameters": {
+        "operation": "google_maps_directions",
+        "start_addr": "={{ $fromAI('start_addr', 'Nombre completo del aeropuerto destino. Usar travel_brief.destination_airport_name.', 'string') }}",
+        "end_addr": "={{ $fromAI('end_addr', 'Direccion del hotel. Usar plan.segments[0].hotel.address.', 'string') }}",
+        "additionalFields": {
+          "json_restrictor": "directions[0].{distance,duration,steps[0].{html_instructions,distance,duration,travel_mode}}"
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "serpApi": {
+          "id": "aXZ2LJInYh6FIx8d",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "id": "b95eb137-e3d3-4da3-9848-3da2bdadfad7",
+      "name": "Tool: Tavily",
+      "type": "@tavily/n8n-nodes-tavily.tavilyTool",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        368
+      ],
+      "parameters": {
+        "query": "={{ $fromAI('query', 'Consulta web. Inteligencia destino: visado clima transporte [ciudad] [mes ano]. Fallback actividades: mejores actividades [destino] [intereses] [mes ano].', 'string') }}",
+        "options": {
+          "maxResults": 3,
+          "searchDepth": "basic",
+          "includeAnswer": true
+        }
+      },
+      "credentials": {
+        "tavilyApi": {
+          "id": "BcOZbG1L8NkLwUPi",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "id": "e0f9b080-430e-4487-a408-1c04d5c49ff0",
+      "name": "Validar Output del Planificador",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        112
+      ],
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Validar Output del Planificador\"\n// ---------------------------------------------------------------------------\n// Limpia markdown fences del output del Agente Motor, parsea el JSON de forma\n// segura, sobreescribe generated_at, aplica safety-net de daily_itinerary[]\n// vacio, extrae costes de transporte de plan_notes[], fuerza needs_user_input\n// si hay warnings criticas, y persiste el plan. Ver doc arquitectura, sec 4.5.\n\nconst incoming = $input.first().json;\n\n// El toolsAgent deja su salida en .output (string JSON) normalmente.\nlet raw = incoming.output ?? incoming.text ?? incoming.response ?? incoming;\n\nfunction stripFences(s) {\n  if (typeof s !== 'string') return s;\n  return s\n    .replace(/^\\s*```(?:json)?\\s*/i, '')\n    .replace(/\\s*```\\s*$/i, '')\n    .trim();\n}\n\nlet result;\nif (typeof raw === 'string') {\n  try {\n    result = JSON.parse(stripFences(raw));\n  } catch (e) {\n    return [\n      {\n        json: {\n          status: 'error',\n          error_detail: `No se pudo parsear el output del planificador: ${e.message}`,\n          raw_output: typeof raw === 'string' ? raw.slice(0, 1000) : raw,\n          session_id: incoming.session_id || null,\n        },\n      },\n    ];\n  }\n} else if (raw && typeof raw === 'object') {\n  result = raw;\n} else {\n  return [\n    {\n      json: {\n        status: 'error',\n        error_detail: 'Output del planificador vacio o de tipo inesperado',\n        session_id: incoming.session_id || null,\n      },\n    },\n  ];\n}\n\n// 1) generated_at incondicional.\nresult.generated_at = new Date().toISOString();\n\nconst plan = result.plan || {};\nconst seg0 = (plan.segments && plan.segments[0]) || {};\n\n// 2) Safety net: daily_itinerary[] vacio -> construir desde activities[].\nif (!Array.isArray(plan.daily_itinerary) || plan.daily_itinerary.length === 0) {\n  const activities = Array.isArray(seg0.activities) ? seg0.activities : [];\n  const byDate = {};\n  for (const a of activities) {\n    const d = a.date || '';\n    if (!byDate[d]) byDate[d] = [];\n    byDate[d].push({\n      time: a.start_time || '10:00',\n      name: a.name || '',\n      duration_hours: a.duration_hours || 3,\n      price_usd: a.price_usd || 0,\n      booking_url: a.booking_url || '',\n    });\n  }\n  const dest = seg0.destination || '';\n  plan.daily_itinerary = Object.keys(byDate)\n    .sort()\n    .map((date, i) => ({\n      day: i + 1,\n      date,\n      title: byDate[date][0] ? byDate[date][0].name : `Dia en ${dest}`,\n      summary: `Actividades planificadas en ${dest}.`,\n      activities: byDate[date],\n    }));\n}\n\n// 3) Safety net transporte: extraer coste numerico de plan_notes[].\nconst cost = plan.cost_summary || (plan.cost_summary = {});\nif (\n  cost.estimated_local_transport_usd === undefined ||\n  cost.estimated_local_transport_usd === null\n) {\n  let transport = null;\n  for (const note of plan.plan_notes || []) {\n    const m = String(note).match(/(?:USD|\\$)\\s*(\\d+(?:\\.\\d+)?)/i);\n    if (m && /transport|metro|taxi|traslado/i.test(note)) {\n      transport = Number(m[1]);\n      break;\n    }\n  }\n  cost.estimated_local_transport_usd = transport ?? 0;\n  cost.local_transport_data_source = transport != null ? 'tavily' : 'null';\n}\n\n// 4) Regla de seguridad: warnings criticas fuerzan needs_user_input.\nconst warnings = Array.isArray(result.warnings) ? result.warnings : [];\nconst hasCritical = warnings.some((w) => w && w.requires_user_approval === true);\nif (hasCritical && result.status === 'plan_ready') {\n  result.status = 'needs_user_input';\n}\n\n// 5) Persistir el plan en el session_state (static data).\nconst session_id = result.session_id || incoming.session_id || null;\nif (session_id) {\n  const store = $getWorkflowStaticData('global');\n  if (!store.sessions) store.sessions = {};\n  if (!store.sessions[session_id]) store.sessions[session_id] = { session_id };\n  store.sessions[session_id].current_plan = result;\n  store.sessions[session_id].status = result.status;\n}\n\nresult.plan = plan;\nreturn [{ json: result }];\n"
+      }
+    },
+    {
+      "id": "token-logger-v24",
+      "name": "Logger - Tokens y Metricas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        112
+      ],
+      "notes": "Anade _debug con token_usage y plan_metrics al JSON de respuesta. Util para el TFM.",
+      "parameters": {
+        "jsCode": "// Nodo Code: \"Logger - Tokens y Metricas\"\n// ---------------------------------------------------------------------------\n// Anade result._debug = { token_usage, execution_time_ms, plan_metrics } al\n// JSON de respuesta. Util para el TFM: metricas visibles en Postman.\n// Ver doc de arquitectura, seccion 4.5.\n//\n// NOTA (limitacion v24): n8n no expone tokenUsage en el output JSON del agente,\n// por lo que token_usage suele quedar null. Ver Executions para el dato real.\n\nconst result = $input.first().json;\n\nconst plan = result.plan || {};\nconst seg0 = (plan.segments && plan.segments[0]) || {};\nconst activities = Array.isArray(seg0.activities) ? seg0.activities : [];\nconst itinerary = Array.isArray(plan.daily_itinerary) ? plan.daily_itinerary : [];\nconst notes = Array.isArray(plan.plan_notes) ? plan.plan_notes : [];\nconst warnings = Array.isArray(result.warnings) ? result.warnings : [];\n\n// Tiempo de ejecucion: desde el inicio del workflow hasta ahora (si disponible).\nlet execution_time_ms = null;\ntry {\n  const startedAt = $execution?.startedAt || $workflow?.startedAt;\n  if (startedAt) {\n    execution_time_ms = Date.now() - new Date(startedAt).getTime();\n  }\n} catch (e) {\n  execution_time_ms = null;\n}\n\n// Intento best-effort de leer token usage (normalmente null en n8n).\nlet token_usage = null;\ntry {\n  token_usage =\n    result.tokenUsage ||\n    result._tokenUsage ||\n    result.usage ||\n    null;\n} catch (e) {\n  token_usage = null;\n}\n\nresult._debug = {\n  token_usage,\n  execution_time_ms,\n  plan_metrics: {\n    activities_found: activities.length,\n    itinerary_days: itinerary.length,\n    plan_notes: notes.length,\n    warnings: warnings.length,\n    has_flights: !!(seg0.flights && seg0.flights.outbound),\n    has_hotel: !!(seg0.hotel && seg0.hotel.name),\n    tools_called: result.steps_executed || 'all',\n  },\n};\n\nreturn [{ json: result }];\n"
+      }
+    },
+    {
+      "id": "c2ec3ed0-2fb8-4f71-82d3-2fdd362b1c1c",
+      "name": "Responder - Plan Listo",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1536,
+        112
+      ],
+      "notes": "Devuelve el plan completo como JSON al frontend (HTTP 200).",
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "6f4e483d-c3ad-4ada-a667-5ccc2487bc55",
+      "name": "Responder - Error Formulario",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -64,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', error_detail: $json.error_detail || 'Error de validacion en el formulario', session_id: $json.session_id }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "b2c52048-2dc8-4741-a4fe-43849066c8b4",
+      "name": "Responder - Error Refinamiento",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -64,
+        208
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', error_detail: $json.error_detail || 'Error en el refinamiento', session_id: $json.session_id }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Formulario": {
+      "main": [
+        [
+          {
+            "node": "Validar Formulario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Refinamiento": {
+      "main": [
+        [
+          {
+            "node": "Cargar Sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Formulario": {
+      "main": [
+        [
+          {
+            "node": "Error Formulario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cargar Sesion": {
+      "main": [
+        [
+          {
+            "node": "Error Refinamiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Formulario": {
+      "main": [
+        [
+          {
+            "node": "Responder - Error Formulario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Motor Planificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Refinamiento": {
+      "main": [
+        [
+          {
+            "node": "Responder - Error Refinamiento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente de Refinamiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de Refinamiento": {
+      "main": [
+        [
+          {
+            "node": "Parsear Refinamiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4o-mini (Refinamiento)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de Refinamiento",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Refinamiento": {
+      "main": [
+        [
+          {
+            "node": "Preparar Motor Planificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Motor Planificador": {
+      "main": [
+        [
+          {
+            "node": "Convertir Ciudades a IATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir Ciudades a IATA": {
+      "main": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4o (Planificador)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: SerpApi Google Flights": {
+      "ai_tool": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: SerpApi Google Hotels": {
+      "ai_tool": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Google Maps (Actividades)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Google Maps Directions": {
+      "ai_tool": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Tavily": {
+      "ai_tool": [
+        [
+          {
+            "node": "Motor Planificador - Agent 2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motor Planificador - Agent 2": {
+      "main": [
+        [
+          {
+            "node": "Validar Output del Planificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Output del Planificador": {
+      "main": [
+        [
+          {
+            "node": "Logger - Tokens y Metricas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logger - Tokens y Metricas": {
+      "main": [
+        [
+          {
+            "node": "Responder - Plan Listo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "94cc21f6-4f74-44b7-abcd-057dd10a569d",
+  "meta": {
+    "instanceId": "5d587e66d544e55f35b8ff972b161101c97d16e7b06c179f9047e0d55c007ab6"
+  },
+  "id": "0z6LimiiJLHI6xO7",
+  "tags": [
+    {
+      "name": "Travel Planner",
+      "id": "SlwAUozAwLkPYpbl"
+    }
+  ]
+}

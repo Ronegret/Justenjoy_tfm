@@ -1,0 +1,99 @@
+# Just Enjoy — Docker Compose
+#
+# Servicios incluidos:
+#   n8n     — orquestador del planificador de viajes (puerto 5678)
+#
+# Servicios preparados (descomenta cuando el código llegue):
+#   frontend — portal del viajero
+#   botpress  — agente conversacional
+#
+# USO:
+#   Copia .env.example → .env y rellena las claves reales antes de arrancar.
+#
+#   Arrancar:      docker compose up -d
+#   Ver logs n8n:  docker compose logs -f n8n
+#   Parar:         docker compose down
+#   Parar+borrar:  docker compose down -v   ← CUIDADO: borra datos de sesión
+
+services:
+  # ── n8n — Motor orquestador ──────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # URL base pública (ajusta con tu dominio o URL de ngrok)
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${NGROK_URL:-http://localhost:5678}
+      # Clave de cifrado para credenciales (OBLIGATORIO en producción)
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      # Timezone
+      - GENERIC_TIMEZONE=Europe/Madrid
+      - TZ=Europe/Madrid
+      # Modo: production o development
+      - NODE_ENV=production
+      # Permite que los community nodes (SerpAPI, Tavily) se usen como tools
+      # del AI Agent. Sin esto, n8n NO genera las variantes *Tool y el workflow
+      # del planificador muestra esos nodos como "unrecognized node type".
+      - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+      # Reinstala automaticamente los community nodes si faltan tras recrear
+      # el contenedor (estan en el volumen n8n_data, pero por seguridad).
+      - N8N_REINSTALL_MISSING_PACKAGES=true
+    volumes:
+      # Persistencia de workflows, credenciales y datos de n8n
+      - n8n_data:/home/node/.n8n
+    networks:
+      - just_enjoy_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ── Frontend — Portal del Viajero ────────────────────────────────────────
+  # Descomenta este bloque cuando el código frontend esté en ./frontend/
+  #
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=${NGROK_URL:-http://localhost:5678}
+  #   networks:
+  #     - just_enjoy_net
+  #   depends_on:
+  #     n8n:
+  #       condition: service_healthy
+
+  # ── Botpress — Agente conversacional ─────────────────────────────────────
+  # Descomenta este bloque cuando Botpress esté configurado
+  #
+  # botpress:
+  #   image: botpress/server:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     - BP_MODULE_NLU_LANGUAGESOURCES=[{"endpoint":"https://lang.botpress.io"}]
+  #   volumes:
+  #     - botpress_data:/botpress/data
+  #     - ./botpress:/botpress/custom
+  #   networks:
+  #     - just_enjoy_net
+
+volumes:
+  n8n_data:
+    driver: local
+  # botpress_data:
+  #   driver: local
+
+networks:
+  just_enjoy_net:
+    driver: bridge
