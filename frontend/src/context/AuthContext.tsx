@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -34,8 +35,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Synchronize authentication state in real time with Firebase
   useEffect(() => {
+    // Capture redirect result when user comes back from Google
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser({
+            name: result.user.displayName || result.user.email?.split('@')[0] || 'Viajero',
+            email: result.user.email || ''
+          });
+        }
+      })
+      .catch((err: any) => {
+        console.error('Google redirect error:', err.code, err.message);
+        const msg = mapFirebaseError(err.code);
+        setError(msg);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser({
@@ -51,20 +67,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  const mapFirebaseError = (code: string): string => {
+    switch (code) {
+      case 'auth/popup-closed-by-user':
+      case 'auth/cancelled-popup-request':
+        return 'Inicio de sesión cancelado. Vuelve a intentarlo.';
+      case 'auth/popup-blocked':
+        return 'El navegador bloqueó la ventana de Google. Permite los pop-ups para este sitio.';
+      case 'auth/unauthorized-domain':
+        return 'Dominio no autorizado en Firebase. Contacta al administrador.';
+      case 'auth/operation-not-allowed':
+        return 'El inicio de sesión con Google no está habilitado. Actívalo en Firebase Console.';
+      case 'auth/network-request-failed':
+        return 'Error de red. Comprueba tu conexión a internet.';
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return 'El correo electrónico o la contraseña son incorrectos.';
+      case 'auth/email-already-in-use':
+        return 'Este correo electrónico ya está registrado.';
+      case 'auth/weak-password':
+        return 'La contraseña debe tener al menos 6 caracteres.';
+      case 'auth/invalid-email':
+        return 'El formato del correo electrónico no es válido.';
+      default:
+        return `Error de autenticación (${code || 'desconocido'}).`;
+    }
+  };
+
   const login = async (email: string, password: string) => {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
       console.error('Firebase Login Error:', err.code, err.message);
-      let msg = 'Error al iniciar sesión.';
-      if (
-        err.code === 'auth/invalid-credential' ||
-        err.code === 'auth/wrong-password' ||
-        err.code === 'auth/user-not-found'
-      ) {
-        msg = 'El correo electrónico o la contraseña son incorrectos.';
-      }
+      const msg = mapFirebaseError(err.code);
       setError(msg);
       throw new Error(msg);
     }
@@ -76,44 +113,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
         await updateProfile(userCredential.user, { displayName: name });
-        // Manually update local user state
         setUser({ name, email });
       }
     } catch (err: any) {
       console.error('Firebase Signup Error:', err.code, err.message);
-      let msg = 'Error al registrar el usuario.';
-      if (err.code === 'auth/email-already-in-use') {
-        msg = 'Este correo electrónico ya está registrado.';
-      } else if (err.code === 'auth/weak-password') {
-        msg = 'La contraseña debe tener al menos 6 caracteres.';
-      } else if (err.code === 'auth/invalid-email') {
-        msg = 'El formato del correo electrónico no es válido.';
-      }
+      const msg = mapFirebaseError(err.code);
       setError(msg);
       throw new Error(msg);
     }
   };
 
+  // Redirects to Google — user comes back to the app after authenticating
   const loginWithGoogle = async () => {
     setError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithRedirect(auth, googleProvider);
+      // Execution stops here — browser navigates to Google
     } catch (err: any) {
-      console.error('Firebase Google Login Error:', err.code, err.message);
-      let msg = 'Error al iniciar sesión con Google.';
-      if (err.code === 'auth/popup-closed-by-user') {
-        msg = 'Ventana cerrada. Vuelve a intentarlo.';
-      } else if (err.code === 'auth/popup-blocked') {
-        msg = 'El navegador bloqueó la ventana de Google. Permite los pop-ups para este sitio.';
-      } else if (err.code === 'auth/unauthorized-domain') {
-        msg = 'Dominio no autorizado en Firebase. Añade este dominio en Firebase Console → Authentication → Dominios autorizados.';
-      } else if (err.code === 'auth/operation-not-allowed') {
-        msg = 'El inicio de sesión con Google no está habilitado. Actívalo en Firebase Console → Authentication → Sign-in method → Google.';
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        msg = 'Solicitud cancelada. Vuelve a intentarlo.';
-      } else if (err.code === 'auth/network-request-failed') {
-        msg = 'Error de red. Comprueba tu conexión a internet.';
-      }
+      console.error('Google redirect error:', err.code, err.message);
+      const msg = mapFirebaseError(err.code);
       setError(msg);
       throw new Error(msg);
     }

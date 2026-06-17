@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login, signup, loginWithGoogle, error } = useAuth();
+  const { user, login, signup, loginWithGoogle, error, isLoading } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -30,12 +30,12 @@ export default function LoginPage() {
     '¡Listo! Entrando a JUST ENJOY...'
   ];
 
-  // If already logged in, redirect to dashboard
+  // Redirect once auth state is resolved
   useEffect(() => {
-    if (user && !isSubmitting) {
+    if (!isLoading && user && !isSubmitting) {
       router.push('/dashboard');
     }
-  }, [user, router, isSubmitting]);
+  }, [isLoading, user, router, isSubmitting]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,16 +67,11 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setLocalError(null);
     setAuthMethod('google');
-
+    // signInWithRedirect navigates the browser away to Google.
+    // On return, AuthContext.getRedirectResult captures the session.
     try {
-      const googlePromise = loginWithGoogle();
-      // Run animation in parallel; abort early if popup fails immediately
-      await Promise.race([
-        triggerLoadingSteps(),
-        googlePromise.catch(() => {}),
-      ]);
-      await googlePromise;
-      router.push('/dashboard');
+      await loginWithGoogle();
+      // Execution does not continue here — browser has navigated away.
     } catch (err: any) {
       setIsSubmitting(false);
       setLocalError(err.message || 'Error al iniciar sesión con Google.');
