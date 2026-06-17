@@ -47,7 +47,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       })
       .catch((err: any) => {
-        console.error('Google redirect error:', err.code, err.message);
+        console.error('Google redirect error — code:', err.code, '| message:', err.message);
+        // Ignore "no pending redirect" — normal on first load without redirect
+        if (err.code === 'auth/no-auth-event') return;
         const msg = mapFirebaseError(err.code);
         setError(msg);
       });
@@ -71,15 +73,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     switch (code) {
       case 'auth/popup-closed-by-user':
       case 'auth/cancelled-popup-request':
+      case 'auth/redirect-cancelled-by-user':
         return 'Inicio de sesión cancelado. Vuelve a intentarlo.';
       case 'auth/popup-blocked':
-        return 'El navegador bloqueó la ventana de Google. Permite los pop-ups para este sitio.';
+        return 'El navegador bloqueó la ventana. Permite los pop-ups e inténtalo de nuevo.';
       case 'auth/unauthorized-domain':
-        return 'Dominio no autorizado en Firebase. Contacta al administrador.';
+        return 'Dominio no autorizado. Añádelo en Firebase Console → Authentication → Dominios autorizados.';
       case 'auth/operation-not-allowed':
-        return 'El inicio de sesión con Google no está habilitado. Actívalo en Firebase Console.';
+        return 'El inicio de sesión con Google no está habilitado en Firebase Console.';
+      case 'auth/account-exists-with-different-credential':
+        return 'Ya existe una cuenta con ese email usando otro método de acceso.';
       case 'auth/network-request-failed':
         return 'Error de red. Comprueba tu conexión a internet.';
+      case 'auth/web-storage-unsupported':
+        return 'Tu navegador bloquea el almacenamiento web. Desactiva el modo privado o permite las cookies de terceros.';
       case 'auth/invalid-credential':
       case 'auth/wrong-password':
       case 'auth/user-not-found':
@@ -91,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case 'auth/invalid-email':
         return 'El formato del correo electrónico no es válido.';
       default:
-        return `Error de autenticación (${code || 'desconocido'}).`;
+        return `Error Google (${code || 'desconocido'}) — ve a console.cloud.google.com → APIs & Services → OAuth consent screen y publica la app.`;
     }
   };
 
