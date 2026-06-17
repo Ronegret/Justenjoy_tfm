@@ -70,12 +70,16 @@ export default function LoginPage() {
 
     try {
       const googlePromise = loginWithGoogle();
-      await triggerLoadingSteps();
+      // Run animation in parallel; abort early if popup fails immediately
+      await Promise.race([
+        triggerLoadingSteps(),
+        googlePromise.catch(() => {}),
+      ]);
       await googlePromise;
       router.push('/dashboard');
     } catch (err: any) {
       setIsSubmitting(false);
-      setLocalError('Error al iniciar sesión con Google.');
+      setLocalError(err.message || 'Error al iniciar sesión con Google.');
     }
   };
 

@@ -102,9 +102,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Firebase Google Login Error:', err.code, err.message);
       let msg = 'Error al iniciar sesión con Google.';
       if (err.code === 'auth/popup-closed-by-user') {
-        msg = 'La ventana de inicio de sesión fue cerrada.';
-      } else if (err.code === 'auth/blocked-improper-client-projection') {
-        msg = 'La proyección de cliente de autenticación no está permitida.';
+        msg = 'Ventana cerrada. Vuelve a intentarlo.';
+      } else if (err.code === 'auth/popup-blocked') {
+        msg = 'El navegador bloqueó la ventana de Google. Permite los pop-ups para este sitio.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'Dominio no autorizado en Firebase. Añade este dominio en Firebase Console → Authentication → Dominios autorizados.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        msg = 'El inicio de sesión con Google no está habilitado. Actívalo en Firebase Console → Authentication → Sign-in method → Google.';
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        msg = 'Solicitud cancelada. Vuelve a intentarlo.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = 'Error de red. Comprueba tu conexión a internet.';
       }
       setError(msg);
       throw new Error(msg);
