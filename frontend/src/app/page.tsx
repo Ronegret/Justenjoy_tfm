@@ -117,7 +117,7 @@ export default function Home() {
         </div>
 
         {/* Hero Right Visual: OVERLAPPING CARDS MOCKUP */}
-        <div className="w-full lg:w-1/2 relative h-[420px] flex items-center justify-center select-none z-10 mt-10 lg:mt-0">
+        <div className="w-full lg:w-1/2 relative h-[420px] flex items-center justify-center select-none z-10 mt-10 lg:mt-0 overflow-visible">
 
           {/* Background Blurred Base Card */}
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/5 to-brand-coral/5 rounded-3xl border border-brand-dark/5 dark:border-brand-white/5 backdrop-blur-xs -z-10" />

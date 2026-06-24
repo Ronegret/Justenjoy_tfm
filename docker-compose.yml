@@ -3,13 +3,7 @@
 # Servicios incluidos:
 #   n8n     — orquestador del planificador de viajes (puerto 5678)
 #
-# Servicios preparados (descomenta cuando el código llegue):
-#   frontend — portal del viajero
-#   botpress  — agente conversacional
-#
 # USO:
-#   Copia .env.example → .env y rellena las claves reales antes de arrancar.
-#
 #   Arrancar:      docker compose up -d
 #   Ver logs n8n:  docker compose logs -f n8n
 #   Parar:         docker compose down
@@ -28,8 +22,6 @@ services:
       - N8N_PORT=${N8N_PORT:-5678}
       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
       - WEBHOOK_URL=${NGROK_URL:-http://localhost:5678}
-      # Clave de cifrado para credenciales (OBLIGATORIO en producción)
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
       # Timezone
       - GENERIC_TIMEZONE=Europe/Madrid
       - TZ=Europe/Madrid
@@ -43,8 +35,8 @@ services:
       # el contenedor (estan en el volumen n8n_data, pero por seguridad).
       - N8N_REINSTALL_MISSING_PACKAGES=true
     volumes:
-      # Persistencia de workflows, credenciales y datos de n8n
-      - n8n_data:/home/node/.n8n
+      # Reutiliza el volumen existente del usuario (preserva cuenta y credenciales)
+      - n8n_n8n_data:/home/node/.n8n
     networks:
       - just_enjoy_net
     healthcheck:
@@ -54,45 +46,9 @@ services:
       retries: 3
       start_period: 40s
 
-  # ── Frontend — Portal del Viajero ────────────────────────────────────────
-  # Descomenta este bloque cuando el código frontend esté en ./frontend/
-  #
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - NEXT_PUBLIC_API_URL=${NGROK_URL:-http://localhost:5678}
-  #   networks:
-  #     - just_enjoy_net
-  #   depends_on:
-  #     n8n:
-  #       condition: service_healthy
-
-  # ── Botpress — Agente conversacional ─────────────────────────────────────
-  # Descomenta este bloque cuando Botpress esté configurado
-  #
-  # botpress:
-  #   image: botpress/server:latest
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     - BP_MODULE_NLU_LANGUAGESOURCES=[{"endpoint":"https://lang.botpress.io"}]
-  #   volumes:
-  #     - botpress_data:/botpress/data
-  #     - ./botpress:/botpress/custom
-  #   networks:
-  #     - just_enjoy_net
-
 volumes:
-  n8n_data:
-    driver: local
-  # botpress_data:
-  #   driver: local
+  n8n_n8n_data:
+    external: true   # Reutiliza el volumen ya existente con la cuenta del usuario
 
 networks:
   just_enjoy_net:

@@ -305,7 +305,7 @@ export default function AboutPage() {
                 <span className="text-[9px] font-black text-purple-600 bg-purple-500/10 px-2.5 py-1 rounded-md w-fit uppercase">Chatbots de IA genéricos</span>
                 <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">Solo Texto de Inspiración</h4>
                 <p className="text-[11px] text-text-muted leading-relaxed">
-                  Le preguntas a un chatbot convencional y te devuelve una lista bonita en texto. Pero **no busca vuelos reales**, no sabe si el hotel está libre, no calcula precios en tiempo real ni genera mapas interactivos.
+                  Le preguntas a un chatbot convencional y te devuelve una lista bonita en texto. Pero <strong>no busca vuelos reales</strong>, no sabe si el hotel está libre, no calcula precios en tiempo real ni genera mapas interactivos.
                 </p>
               </div>
               <div className="text-[9px] font-bold text-purple-600 bg-purple-500/5 border border-purple-500/10 p-2.5 rounded-lg flex items-center gap-1.5">

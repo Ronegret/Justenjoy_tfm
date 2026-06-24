@@ -62,6 +62,14 @@ body {
   border: 1px solid rgba(248, 250, 252, 0.04);
 }
 
+/* Slow spin animation for compass icon */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 4s linear infinite;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
