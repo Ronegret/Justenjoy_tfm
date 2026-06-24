@@ -17,6 +17,16 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Ignorar peticiones que no sean GET o que vayan a dominios externos (como Firebase/Google APIs)
+  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // Ignorar las rutas de la API interna para evitar que el fallback offline devuelva HTML
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -25,8 +35,11 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
         return fetch(event.request).catch(() => {
-          // Offline fallback
-          return caches.match('/');
+          // Offline fallback solo para navegaciones HTML
+          if (event.request.mode === 'navigate') {
+            return caches.match('/');
+          }
+          return new Response('Network error', { status: 408, headers: { 'Content-Type': 'text/plain' } });
         });
       })
   );
