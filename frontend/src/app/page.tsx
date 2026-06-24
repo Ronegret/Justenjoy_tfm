@@ -65,7 +65,7 @@ export default function Home() {
             </h1>
 
             <p className="text-xs sm:text-sm text-text-muted font-bold max-w-xl mt-1 leading-relaxed">
-              Just Enjoy compara y orquesta de forma inteligente vuelos, alojamientos y actividades en tiempo real con n8n, devolviéndote una única ruta visual y completamente justificada.
+              Just Enjoy compara y orquesta de forma inteligente vuelos, alojamientos y actividades en tiempo real, devolviéndote una única ruta visual y completamente justificada.
             </p>
           </motion.div>
 

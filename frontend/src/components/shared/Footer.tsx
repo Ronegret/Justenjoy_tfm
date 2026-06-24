@@ -69,11 +69,11 @@ export const Footer: React.FC = () => {
         <div>
           <h4 className="text-sm font-semibold uppercase tracking-wider text-brand-white mb-4">Integraciones</h4>
           <p className="text-xs text-brand-cream/60 leading-relaxed">
-            Arquitectura compatible con KAYAK, Amadeus, Google Places, Civitatis, GetYourGuide y automatizaciones en n8n.
+            Arquitectura compatible con KAYAK, Amadeus, Google Places, Civitatis, GetYourGuide e integración con los principales proveedores de viajes.
           </p>
           <div className="mt-4 pt-4 border-t border-brand-white/10 flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-brand-blue/20 px-2 py-1 text-xs font-semibold text-brand-blue ring-1 ring-inset ring-brand-blue/30">
-              Compatible con n8n
+              Motor IA Propio
             </span>
             <span className="inline-flex items-center rounded-full bg-brand-coral/20 px-2 py-1 text-xs font-semibold text-brand-coral ring-1 ring-inset ring-brand-coral/30">
               AI Powered

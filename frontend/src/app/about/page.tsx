@@ -25,7 +25,7 @@ export default function AboutPage() {
     {
       num: 2,
       title: "Orquestación en Paralelo",
-      subtitle: "n8n Webhook & Buscadores",
+      subtitle: "Motor de Búsqueda & APIs",
       icon: Network,
       description: "n8n recibe las variables y lanza consultas simultáneas en milisegundos a las APIs de Skyscanner/Amadeus (vuelos), Google Hotels (alojamiento) y Civitatis/GetYourGuide (actividades). Esto evita la sobrecarga de consultas y ahorra horas de navegación manual.",
       badge: "n8n Workflow Engine",

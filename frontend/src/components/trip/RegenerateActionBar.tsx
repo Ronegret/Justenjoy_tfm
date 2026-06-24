@@ -33,7 +33,7 @@ export const RegenerateActionBar: React.FC<RegenerateActionBarProps> = ({ onRege
             Ajustar y Regenerar
           </h4>
           <p className="text-[10px] text-text-muted mt-0.5">
-            Ajusta los parámetros para recalcular la ruta automáticamente con n8n.
+            Ajusta los parámetros para recalcular la ruta automáticamente.
           </p>
         </div>
 

@@ -62,7 +62,7 @@ export default function PricingPage() {
       features: [
         'Características Pro ilimitadas',
         'Marca blanca (White Label) con tu logo',
-        'Conexión directa con tu webhook de n8n',
+        'Conexión directa con tu API de automatización propia',
         'Integración CRM y panel de clientes',
         'Gestión de enlaces de afiliado propios',
         'Soporte técnico preferente'

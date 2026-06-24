@@ -58,7 +58,7 @@ export const AiProcessingScreen: React.FC = () => {
                 Hiperautomatizando tu viaje
               </h2>
               <p className="text-brand-cream/60 text-sm mt-1">
-                La IA de Just Enjoy está analizando miles de opciones a través de n8n...
+                La IA de Just Enjoy está analizando miles de opciones para ti...
               </p>
             </div>
 
@@ -67,7 +67,7 @@ export const AiProcessingScreen: React.FC = () => {
               <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-brand-blue to-brand-coral transition-all duration-300" style={{ width: `${loadingProgress}%` }} />
 
               <div className="flex items-center justify-between w-full text-xs font-semibold text-brand-cream/50">
-                <span>PROCESANDO EN N8N</span>
+                <span>MOTOR IA JUST ENJOY</span>
                 <span>{loadingProgress}%</span>
               </div>
 

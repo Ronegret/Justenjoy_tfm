@@ -67,11 +67,11 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setLocalError(null);
     setAuthMethod('google');
-    // signInWithRedirect navigates the browser away to Google.
-    // On return, AuthContext.getRedirectResult captures the session.
     try {
       await loginWithGoogle();
-      // Execution does not continue here — browser has navigated away.
+      // Popup succeeded — mostrar pasos de carga y redirigir
+      await triggerLoadingSteps();
+      router.push('/dashboard');
     } catch (err: any) {
       setIsSubmitting(false);
       setLocalError(err.message || 'Error al iniciar sesión con Google.');

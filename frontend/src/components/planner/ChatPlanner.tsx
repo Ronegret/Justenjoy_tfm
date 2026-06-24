@@ -548,7 +548,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
               </div>
               <h4 className="text-sm font-extrabold text-brand-dark dark:text-brand-white uppercase">¡Todo listo para la IA!</h4>
               <p className="text-[10px] text-text-muted max-w-xs mx-auto leading-relaxed">
-                Toda la información ha sido recopilada. Haz clic a continuación para orquestar tu viaje en n8n.
+                Toda la información ha sido recopilada. Haz clic a continuación para que la IA genere tu viaje personalizado.
               </p>
             </div>
           )}

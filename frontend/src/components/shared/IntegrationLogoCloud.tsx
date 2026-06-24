@@ -33,7 +33,7 @@ export const IntegrationLogoCloud: React.FC = () => {
           Arquitectura lista para conectar con proveedores clave
         </h3>
         <p className="text-xs text-text-muted mt-1 max-w-lg mx-auto">
-          Conexión automatizada mediante webhooks en n8n para comparar tarifas en tiempo real.
+          Conexión automatizada con proveedores clave para comparar tarifas en tiempo real.
         </p>
       </div>
 
