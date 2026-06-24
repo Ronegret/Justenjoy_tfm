@@ -155,7 +155,7 @@ export const Navbar: React.FC = () => {
                   </span>
                   <button
                     onClick={() => { logout(); closeMobile(); }}
-                    className="text-xs font-black text-brand-coral uppercase tracking-wider cursor-pointer"
+                    className="text-xs font-black text-brand-coral uppercase tracking-wider cursor-pointer hover:text-brand-coral/70 transition-colors"
                   >
                     Cerrar Sesión
                   </button>

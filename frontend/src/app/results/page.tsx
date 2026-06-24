@@ -36,7 +36,7 @@ function ResultsContent() {
         <p className="text-xs text-text-muted">Si has creado un viaje, se cargará en breves segundos.</p>
         <button
           onClick={() => router.push('/planner')}
-          className="mt-2 px-5 py-2.5 rounded-xl bg-brand-blue text-brand-white text-xs font-bold shadow-xs hover:bg-brand-blue/90"
+          className="mt-2 px-5 py-2.5 rounded-xl bg-brand-blue text-brand-white text-xs font-bold shadow-xs hover:bg-brand-blue/90 hover:-translate-y-0.5 transition-all cursor-pointer"
         >
           Ir al Planificador
         </button>

@@ -18,9 +18,11 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "JUST ENJOY - De 20 pestañas a tu viaje perfecto en 3 minutos",
-  description: "Hiperautomatización inteligente de viajes. Just Enjoy compara vuelos, alojamientos, actividades y clima para darte la mejor ruta justificada.",
+  description: "Just Enjoy compara vuelos, alojamientos, actividades y clima para darte la mejor ruta en minutos. Sin estrés, sin pestañas infinitas.",
   icons: {
     icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
   manifest: "/manifest.json",
 };

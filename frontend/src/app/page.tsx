@@ -55,7 +55,7 @@ export default function Home() {
           >
             <span className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-blue/5 to-brand-coral/5 dark:from-brand-blue/15 dark:to-brand-coral/15 border border-brand-blue/10 px-4 py-2 rounded-full text-[11px] font-bold text-brand-blue dark:text-brand-white uppercase tracking-widest w-fit">
               <Sparkles className="w-4 h-4 text-brand-coral animate-pulse" />
-              <span>Hiperautomatización inteligente de viajes</span>
+              <span>Tu concierge inteligente de viajes</span>
             </span>
 
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-brand-dark dark:text-brand-white tracking-tight uppercase leading-[0.98] font-sans">
