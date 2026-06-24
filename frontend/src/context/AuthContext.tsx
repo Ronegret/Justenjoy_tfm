@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           await signInWithRedirect(auth, googleProvider);
           // Wait indefinitely while browser navigates away, to prevent success logic from firing
-          return new Promise(() => {});
+          return new Promise<void>(() => {});
         } catch (redirectErr: any) {
           console.error('[Auth] signInWithRedirect error:', redirectErr.code, redirectErr.message);
           const msg = mapFirebaseError(redirectErr.code);
