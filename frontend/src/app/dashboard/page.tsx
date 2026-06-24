@@ -28,7 +28,7 @@ export default function DashboardPage() {
               Mis Viajes Guardados
             </h2>
             <p className="text-xs text-text-muted mt-1 leading-relaxed">
-              Gestiona, comparte o revisa las rutas que has generado mediante hiperautomatización.
+              Aquí están todos los viajes que has planificado. Revísalos, compártelos o vuelve a verlos cuando quieras.
             </p>
           </div>
 

@@ -523,7 +523,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
                   </div>
                   <h3 className="text-xl font-bold text-brand-dark dark:text-brand-white">¡Todo listo para crear tu viaje!</h3>
                   <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
-                    Hemos ordenado tu estilo de viaje. Haz clic abajo para hiperautomatizar la ruta perfecta.
+                    Ya tenemos todo lo que necesitamos. Pulsa el botón y te preparamos tu viaje personalizado.
                   </p>
                 </div>
 

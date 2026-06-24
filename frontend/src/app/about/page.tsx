@@ -27,8 +27,8 @@ export default function AboutPage() {
       title: "Orquestación en Paralelo",
       subtitle: "Motor de Búsqueda & APIs",
       icon: Network,
-      description: "n8n recibe las variables y lanza consultas simultáneas en milisegundos a las APIs de Skyscanner/Amadeus (vuelos), Google Hotels (alojamiento) y Civitatis/GetYourGuide (actividades). Esto evita la sobrecarga de consultas y ahorra horas de navegación manual.",
-      badge: "n8n Workflow Engine",
+      description: "Just Enjoy busca al mismo tiempo vuelos, hoteles y actividades disponibles para tus fechas. En segundos tienes opciones reales sin tener que abrir decenas de páginas.",
+      badge: "Búsqueda Inteligente",
       color: "from-brand-coral to-red-500"
     },
     {
@@ -36,8 +36,8 @@ export default function AboutPage() {
       title: "Razonamiento IA y Scoring",
       subtitle: "Filtros y Explicabilidad",
       icon: Cpu,
-      description: "Un nodo AI en n8n pasa los datos sin procesar a un LLM (como Claude 3.5 o GPT-4o). El modelo evalúa las combinaciones, filtra los vuelos incómodos, calcula el Match Score (precio, confort, ubicación) y redacta las justificaciones de por qué es la ruta óptima.",
-      badge: "OpenAI GPT-4o / Claude 3.5",
+      description: "La inteligencia artificial analiza las opciones y descarta las que no encajan: vuelos incómodos, hoteles mal valorados, actividades fuera de tu presupuesto. Solo te muestra lo que merece la pena.",
+      badge: "IA Personalizada",
       color: "from-purple-500 to-pink-500"
     },
     {
@@ -45,8 +45,8 @@ export default function AboutPage() {
       title: "Consolidación de Cockpit",
       subtitle: "Dashboard Next.js",
       icon: Compass,
-      description: "n8n guarda la estructura del viaje en una base de datos (Supabase/Firebase) y genera un ID de viaje único. El bot cuelga la llamada o cierra el chat y envía un SMS automatizado al móvil del usuario con el enlace a su Travel Cockpit privado en Next.js.",
-      badge: "Next.js 16 + Tailwind CSS v4",
+      description: "Tu viaje queda guardado y accesible desde cualquier dispositivo. Tienes el itinerario completo, el desglose de costes y los botones para reservar directamente. Todo en un solo lugar.",
+      badge: "Tu Viaje Guardado",
       color: "from-brand-teal to-emerald-600"
     }
   ];
@@ -62,11 +62,11 @@ export default function AboutPage() {
             <span>¿Cómo funciona Just Enjoy?</span>
           </span>
           <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-brand-dark dark:text-brand-white uppercase leading-[0.98]">
-            La hiperautomatización <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-coral to-purple-600">explicada paso a paso</span>
+            Tu viaje perfecto <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-coral to-purple-600">en minutos, sin estrés</span>
           </h2>
           <p className="text-xs sm:text-sm text-text-muted mt-2 leading-relaxed font-bold">
-            Entiende cómo transformamos una simple conversación por voz de 2 minutos en un itinerario consolidado con mapas reales, vuelos reservados y desglose de costes inteligente.
+            Cuéntanos a dónde quieres ir y Just Enjoy se encarga de todo: vuelos, hotel, actividades y el plan día a día. Sin formularios interminables, sin comparar pestañas.
           </p>
         </section>
 
@@ -78,7 +78,7 @@ export default function AboutPage() {
           {/* LEFT: STEP SELECTOR */}
           <div className="w-full lg:w-5/12 flex flex-col gap-4 shrink-0">
             <h3 className="text-xs font-black text-text-muted uppercase tracking-widest mb-2">
-              Flujo del Dato y Arquitectura
+              ¿Qué pasa cuando pides tu viaje?
             </h3>
 
             <div className="flex flex-col gap-3">
@@ -174,7 +174,7 @@ export default function AboutPage() {
                             <div className="flex gap-1.5"><span className="text-brand-coral font-bold">TÚ:</span><span>"Quiero ir a Lisboa en mayo con mi pareja, unos 3 o 4 días. Presupuesto medio."</span></div>
                             <div className="flex gap-1.5"><span className="text-brand-blue font-bold">IA:</span><span className="italic">"¡Apuntado! Lisboa en mayo para 2 adultos, presupuesto equilibrado. ¿Tenéis alguna restricción?"</span></div>
                             <div className="flex gap-1.5"><span className="text-brand-coral font-bold">TÚ:</span><span>"Sí, preferimos hotel céntrico y evitar vuelos que salgan muy temprano."</span></div>
-                            <div className="flex gap-1.5"><span className="text-brand-blue font-bold">IA:</span><span className="italic">"Perfecto. Conectando con el orquestador n8n. ¡Dame unos segundos!"</span></div>
+                            <div className="flex gap-1.5"><span className="text-brand-blue font-bold">IA:</span><span className="italic">"Perfecto. ¡Dame unos segundos para preparar las mejores opciones!"</span></div>
                           </div>
                         </div>
                       )}
@@ -185,7 +185,7 @@ export default function AboutPage() {
                           <div className="flex items-center justify-between border-b border-brand-dark/5 pb-2">
                             <span className="text-brand-coral font-bold uppercase tracking-wider flex items-center gap-1.5">
                               <Network className="w-3.5 h-3.5" />
-                              Ejecución de Nodos de Automatización (n8n)
+                              Buscando las mejores opciones para ti
                             </span>
                             <span className="text-brand-teal font-extrabold">STATUS: 200 OK</span>
                           </div>
@@ -279,7 +279,7 @@ export default function AboutPage() {
               Just Enjoy vs. Agencias y Chatbots
             </h3>
             <p className="text-xs text-text-muted leading-relaxed">
-              Compara cómo se planifica un viaje tradicionalmente frente a la propuesta de hiperautomatización de Just Enjoy.
+              Compara cómo se planifica un viaje de la forma tradicional frente a lo que hace Just Enjoy por ti.
             </p>
           </div>
 
@@ -324,7 +324,7 @@ export default function AboutPage() {
                 </span>
                 <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">Llamar, Colgar y Reservar</h4>
                 <p className="text-[11px] text-brand-dark dark:text-brand-white leading-relaxed font-semibold">
-                  Haces una llamada por voz de 2 minutos. La IA orquesta las APIs con n8n en segundo plano y te envía un dashboard Next.js listo con mapas, itinerario completo optimizado, desgloses y botones de reserva real.
+                  Dinos destino, fechas y presupuesto. En segundos tienes vuelos reales, hotel recomendado, actividades y un itinerario día a día listo para reservar con un clic.
                 </p>
               </div>
               <div className="text-[9px] font-bold text-brand-teal bg-brand-teal/10 border border-brand-teal/20 p-2.5 rounded-lg flex items-center gap-1.5">
@@ -339,10 +339,10 @@ export default function AboutPage() {
         <section className="bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-8 shadow-md flex flex-col gap-8">
           <div>
             <h3 className="text-lg font-black text-brand-dark dark:text-brand-white uppercase tracking-tight">
-              Estructura Tecnológica Integrada
+              Todo en uno, solo para ti
             </h3>
             <p className="text-xs text-text-muted mt-1 leading-relaxed">
-              Los componentes clave que integran nuestro ecosistema de hiperautomatización.
+              Las herramientas que trabajan juntas para darte el mejor viaje posible.
             </p>
           </div>
 
@@ -363,9 +363,9 @@ export default function AboutPage() {
               <div className="w-12 h-12 rounded-2xl bg-brand-coral/10 text-brand-coral flex items-center justify-center shadow-xs">
                 <Server className="w-6 h-6" />
               </div>
-              <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">2. Orquestador n8n</h4>
+              <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">2. Búsqueda Inteligente</h4>
               <p className="text-[10px] text-text-muted leading-relaxed font-medium">
-                Dispara el webhook, paraleliza APIs reales de viajes y guarda en base de datos.
+                Consulta simultánea de vuelos, hoteles y actividades reales en segundos.
               </p>
             </div>
 
@@ -376,7 +376,7 @@ export default function AboutPage() {
               </div>
               <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">3. IA Generativa</h4>
               <p className="text-[10px] text-text-muted leading-relaxed font-medium">
-                El LLM en n8n filtra y estructura el viaje en base a la lógica de negocio.
+                La IA selecciona y ordena las mejores opciones según tu perfil de viaje.
               </p>
             </div>
 
@@ -385,9 +385,9 @@ export default function AboutPage() {
               <div className="w-12 h-12 rounded-2xl bg-brand-teal/10 text-brand-teal flex items-center justify-center shadow-xs">
                 <Compass className="w-6 h-6" />
               </div>
-              <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">4. Cockpit Next.js</h4>
+              <h4 className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">4. Tu Plan Listo</h4>
               <p className="text-[10px] text-text-muted leading-relaxed font-medium">
-                La interfaz final interactiva con mapas, timelines, presupuestos y checklists.
+                Itinerario completo con mapas, presupuesto detallado y botones de reserva.
               </p>
             </div>
           </div>
@@ -399,7 +399,7 @@ export default function AboutPage() {
             Prueba el Planificador de Viajes Inteligente
           </h3>
           <p className="text-xs max-w-lg leading-relaxed font-bold opacity-90">
-            Pon a prueba nuestro Wizard de preferencias en tiempo real. Configura tus filtros y observa cómo simulamos la llamada con n8n para trazar tu viaje.
+            Cuéntanos tu destino, fechas y presupuesto. En menos de un minuto tendrás un plan de viaje completo, real y listo para reservar.
           </p>
           <Link
             href="/planner"
