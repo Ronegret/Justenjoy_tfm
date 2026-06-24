@@ -86,13 +86,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(mapFirebaseError(err.code));
       });
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        try {
+          const idToken = await firebaseUser.getIdToken();
+          await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken })
+          });
+        } catch (e) {
+          console.error('[Auth] Error al establecer cookie de sesión:', e);
+        }
         setUser({
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Viajero',
           email: firebaseUser.email || ''
         });
       } else {
+        try {
+          await fetch('/api/auth/session', { method: 'DELETE' });
+        } catch (e) {
+          console.error('[Auth] Error al eliminar cookie de sesión:', e);
+        }
         setUser(null);
       }
       setIsLoading(false);

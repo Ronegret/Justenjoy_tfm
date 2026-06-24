@@ -485,6 +485,11 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
 }
 
 export async function POST(req: NextRequest) {
+  const session = req.cookies.get('justenjoy-session');
+  if (!session?.value) {
+    return NextResponse.json({ error: 'No autenticado. Inicia sesión para planificar tu viaje.' }, { status: 401 });
+  }
+
   try {
     const body: TripPreferences = await req.json();
     const { destination, budget } = body;
