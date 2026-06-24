@@ -55,6 +55,7 @@ export default function LoginPage() {
         const signupPromise = signup(email, password, name);
         await triggerLoadingSteps();
         await signupPromise;
+      }
       window.location.href = '/dashboard';
     } catch (err: any) {
       setIsSubmitting(false);
