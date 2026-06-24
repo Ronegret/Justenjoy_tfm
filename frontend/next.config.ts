@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "888414990197",
     NEXT_PUBLIC_FIREBASE_APP_ID:
       process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:888414990197:web:e6f38cd4dab0ae4335ed3c",
+    OPENAI_API_KEY: 
+      process.env.OPENAI_API_KEY || "***REMOVED-OPENAI-KEY***",
+    ANTHROPIC_API_KEY:
+      process.env.ANTHROPIC_API_KEY || "***REMOVED-ANTHROPIC-KEY***",
   },
 };
 
