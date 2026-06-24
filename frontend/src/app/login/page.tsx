@@ -33,9 +33,9 @@ export default function LoginPage() {
   // Redirect once auth state is resolved
   useEffect(() => {
     if (!isLoading && user && !isSubmitting) {
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
-  }, [isLoading, user, router, isSubmitting]);
+  }, [isLoading, user, isSubmitting]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +55,7 @@ export default function LoginPage() {
         const signupPromise = signup(email, password, name);
         await triggerLoadingSteps();
         await signupPromise;
-      }
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       setIsSubmitting(false);
       setLocalError(err.message || 'Ocurrió un error al iniciar sesión.');
@@ -71,7 +70,7 @@ export default function LoginPage() {
       await loginWithGoogle();
       // Popup succeeded — mostrar pasos de carga y redirigir
       await triggerLoadingSteps();
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       setIsSubmitting(false);
       setLocalError(err.message || 'Error al iniciar sesión con Google.');
