@@ -152,11 +152,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('[Auth] signInWithPopup error:', err.code, err.message);
 
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-        // Fallback: full-page redirect if popup is blocked
+      if (
+        err.code === 'auth/popup-blocked' ||
+        err.code === 'auth/cancelled-popup-request' ||
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cross-origin-opener-policy-same-origin'
+      ) {
+        // Fallback: full-page redirect if popup is blocked or closed
         try {
           await signInWithRedirect(auth, googleProvider);
-          return; // Browser navigates away
+          // Wait indefinitely while browser navigates away, to prevent success logic from firing
+          return new Promise(() => {});
         } catch (redirectErr: any) {
           console.error('[Auth] signInWithRedirect error:', redirectErr.code, redirectErr.message);
           const msg = mapFirebaseError(redirectErr.code);
