@@ -54,7 +54,7 @@ Qué implica esta decisión: ventajas, desventajas, deuda técnica conocida.
 
 | Fichero | Fecha | Decisión | Estado |
 |---|---|---|---|
-| *(ninguno todavía — añade el primero cuando surja la primera decisión formal)* | | | |
+| [2026-07-01-n8n-como-motor-de-orquestacion.md](2026-07-01-n8n-como-motor-de-orquestacion.md) | 2026-07-01 | n8n self-hosted como motor de orquestación | aceptada |
 
 ---
 
@@ -63,6 +63,7 @@ Qué implica esta decisión: ventajas, desventajas, deuda técnica conocida.
 Estas decisiones están implícitas en la arquitectura actual. Se pueden formalizar
 como ADR si generan debate o si alguien del equipo las cuestiona:
 
+- ~~**n8n como motor de orquestación**~~ → formalizada en [ADR-0001](2026-07-01-n8n-como-motor-de-orquestacion.md).
 - **Un único workflow n8n** (vs. múltiples workflows separados) → facilita el testeo.
 - **GPT-4o para el planificador, GPT-4o-mini para refinamiento** → balance coste/calidad.
 - **SerpAPI para vuelos/hoteles/mapas** → plan gratuito suficiente para el TFM.
