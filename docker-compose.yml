@@ -31,9 +31,28 @@ services:
       # del AI Agent. Sin esto, n8n NO genera las variantes *Tool y el workflow
       # del planificador muestra esos nodos como "unrecognized node type".
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
-      # Reinstala automaticamente los community nodes si faltan tras recrear
-      # el contenedor (estan en el volumen n8n_data, pero por seguridad).
-      - N8N_REINSTALL_MISSING_PACKAGES=true
+      # Gestion declarativa de community nodes desde el entorno (n8n >= 2.21).
+      # En cada arranque n8n reconcilia contra N8N_COMMUNITY_PACKAGES: instala
+      # los que falten y DESINSTALA los que no esten en la lista (la lista es la
+      # unica fuente de verdad; la UI de community nodes queda en solo lectura).
+      # Asi el repo es reproducible: al clonar y "docker compose up" se instalan
+      # solos los nodos que el workflow necesita.
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+      - N8N_COMMUNITY_PACKAGES_MANAGED_BY_ENV=true
+      - N8N_COMMUNITY_PACKAGES=[{"name":"n8n-nodes-serpapi"},{"name":"@tavily/n8n-nodes-tavily"}]
+      # Permite resolver expresiones {{ $env.X }} en credenciales/nodos.
+      # En n8n v2.x el default es "true" (bloqueado); hay que ponerlo en false
+      # para que las credenciales lean las API keys desde variables de entorno.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # API keys inyectadas desde el .env del host (NUNCA versionadas). Las
+      # credenciales de n8n las leen como {{ $env.X }} (ver n8n/credentials/).
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SERPAPI_KEY=${SERPAPI_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      n8n-import:
+        condition: service_completed_successfully
     volumes:
       # Reutiliza el volumen existente del usuario (preserva cuenta y credenciales)
       - n8n_n8n_data:/home/node/.n8n
@@ -45,6 +64,24 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # ── n8n-import — importa las credenciales al arrancar (efímero) ───────────
+  # Corre ANTES que n8n (depends_on), importa la estructura de credenciales
+  # (n8n/credentials/credentials.json, sin secretos) y termina. n8n solo
+  # arranca si este servicio finaliza con exito.
+  n8n-import:
+    image: n8nio/n8n:latest
+    user: node
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "n8n import:credentials --input=/import/credentials.json"
+    volumes:
+      # Mismo volumen que n8n: escribe en la misma BD cifrada
+      - n8n_n8n_data:/home/node/.n8n
+      # Monta el JSON de credenciales versionado (solo lectura)
+      - ./n8n/credentials:/import:ro
+    networks:
+      - just_enjoy_net
 
 volumes:
   n8n_n8n_data:

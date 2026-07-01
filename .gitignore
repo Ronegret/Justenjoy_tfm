@@ -7,6 +7,11 @@
 *.p12
 secrets/
 credentials/
+# Excepción: la estructura de credenciales de n8n SÍ se versiona porque NO
+# contiene secretos — los valores son expresiones {{ $env.X }} que n8n resuelve
+# en runtime desde el .env (no versionado). Ver n8n/credentials/README.md.
+!n8n/credentials/
+!n8n/credentials/**
 
 # ── Herramientas IA ───────────────────────────────────────────────────────────
 .claude/
