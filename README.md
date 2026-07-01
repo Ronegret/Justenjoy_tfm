@@ -107,9 +107,15 @@ n8n estará disponible en: **http://localhost:5678**
 
 1. Abre http://localhost:5678
 2. Ve a **Workflows → Import from File**
-3. Selecciona `n8n/workflows/Planificador_de_Viajes_v24.json`
-4. Configura las credenciales (OpenAI, SerpAPI, Tavily) en **Settings → Credentials**
-5. Activa el workflow con el toggle **Publish**
+3. Selecciona `n8n/workflows/Planificador de Viajes v26.json` (versión más reciente)
+4. Activa el workflow con el toggle **Publish**
+
+> **Credenciales — ya automatizadas.** No hace falta introducir las API keys a mano
+> en la UI. Al arrancar el stack, el servicio `n8n-import` importa la estructura de
+> credenciales desde [n8n/credentials/credentials.json](n8n/credentials/credentials.json)
+> (sin secretos) y n8n resuelve cada clave desde las variables de entorno del `.env`
+> (`OPENAI_API_KEY`, `SERPAPI_KEY`, `TAVILY_API_KEY`). Detalles en
+> [n8n/credentials/README.md](n8n/credentials/README.md).
 
 ### 4. Exponer el webhook para pruebas
 
