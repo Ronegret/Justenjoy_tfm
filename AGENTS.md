@@ -48,6 +48,7 @@ leerlo, confirma que tu contexto es coherente y reanuda.
 | `botpress/` | Configuración del agente conversacional (pendiente) | Cuando llegue el código Botpress |
 | `docs/ARCHITECTURE.md` | Visión general del sistema completo | Al arrancar cualquier tarea nueva |
 | `docs/adr/` | Registro de decisiones de arquitectura | Al evaluar decisiones técnicas |
+| `docs/HARNESS_REVIEW.md` | Nivel del arnés de IA y fechas de revisión | Al revisar el arnés (ver fechas dentro) |
 | `docs/specs/` | Especificaciones aprobadas de funcionalidades | Antes de codificar cualquier feature |
 | `.env.example` | Plantilla de variables de entorno | Al configurar una instancia nueva |
 | `verify.ps1` | Script de verificación local (Windows) | Antes de cada commit |
