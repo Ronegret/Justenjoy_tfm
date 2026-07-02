@@ -1,0 +1,35 @@
+# .gitleaks.toml — Configuración del escáner de secretos para Just Enjoy
+#
+# Extiende el conjunto de reglas por defecto de gitleaks y añade una allowlist
+# para falsos positivos conocidos. NO desactiva ninguna regla: los secretos
+# reales (claves de OpenAI, Anthropic, tokens, etc.) siguen detectándose.
+
+[extend]
+useDefault = true
+
+# ── Allowlist de falsos positivos ────────────────────────────────────────────
+[allowlist]
+description = "Configuración pública de Firebase (no es secreta por diseño)"
+
+# Las variables NEXT_PUBLIC_FIREBASE_* viajan SIEMPRE al navegador; son públicas
+# por diseño (ver https://firebase.google.com/docs/projects/api-keys). La API key
+# de Firebase (formato AIzaSy...) identifica el proyecto, NO autoriza acceso a
+# datos. En este repo Firebase se usa SOLO para Auth (frontend/src/lib/firebase.ts),
+# sin Firestore ni Storage, así que no hay reglas de datos que dependan de ocultarla.
+#
+# La protección real de esta clave (restricción por dominio HTTP referrer y
+# dominios autorizados en Firebase Auth) vive en la consola de GCP/Firebase del
+# proyecto 'justenjoy-tfm-g7', NO en este repositorio. Verificar periódicamente:
+#   - GCP Console → APIs & Services → Credentials → restricciones de la API key
+#   - Firebase Console → Authentication → Settings → Authorized domains
+#
+# gitleaks marca el patrón AIzaSy... con la regla genérica gcp-api-key; aquí es
+# un falso positivo. Sólo se silencia ese patrón en los dos ficheros de config
+# de Firebase, no en todo el repo.
+regexes = [
+  '''AIzaSy[0-9A-Za-z_-]{33}''',
+]
+paths = [
+  '''frontend/next\.config\.ts''',
+  '''frontend/src/lib/firebase\.ts''',
+]
