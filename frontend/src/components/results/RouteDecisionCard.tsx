@@ -29,7 +29,7 @@ export const RouteDecisionCard: React.FC<RouteDecisionCardProps> = ({ bestOption
 
       {/* Summary */}
       <p className="text-xs text-text-dark dark:text-brand-cream italic bg-brand-cream/40 dark:bg-brand-white/5 p-4 rounded-xl border border-brand-dark/5 dark:border-brand-white/5">
-        "{bestOption.summary}"
+        &quot;{bestOption.summary}&quot;
       </p>
 
       {/* Pros & Tradeoffs Lists */}

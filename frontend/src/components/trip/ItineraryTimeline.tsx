@@ -62,7 +62,7 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary 
           <span>{activeDay.title}</span>
         </h3>
         <p className="text-xs text-text-muted leading-relaxed italic">
-          "{activeDay.summary}"
+          &quot;{activeDay.summary}&quot;
         </p>
       </div>
 
