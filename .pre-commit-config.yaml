@@ -20,9 +20,9 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0  # ultima estable verificada 2026-06-16
     hooks:
-      # Bloquea commits directos a main
+      # Bloquea commits directos a la rama principal (este repo usa "master")
       - id: no-commit-to-branch
-        args: [--branch, main]
+        args: [--branch, master, --branch, main]
 
       # Detecta claves privadas hardcodeadas (primera capa, rápida)
       - id: detect-private-key
