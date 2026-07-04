@@ -65,27 +65,36 @@ services:
       retries: 3
       start_period: 40s
 
-  # ── n8n-import — importa las credenciales al arrancar (efímero) ───────────
-  # Corre ANTES que n8n (depends_on), importa la estructura de credenciales
-  # (n8n/credentials/credentials.json, sin secretos) y termina. n8n solo
-  # arranca si este servicio finaliza con exito.
+  # ── n8n-import — importa credenciales Y workflow al arrancar (efímero) ────
+  # Corre ANTES que n8n (depends_on). Deja el stack REPRODUCIBLE en un equipo
+  # nuevo: importa la estructura de credenciales (sin secretos; las claves salen
+  # de las variables de entorno del .env de cada dev), importa el workflow
+  # activo (v27) y lo marca como activo para que n8n registre el webhook al
+  # arrancar. Termina; n8n solo arranca si este servicio finaliza con exito.
   n8n-import:
     image: n8nio/n8n:latest
     user: node
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - "n8n import:credentials --input=/import/credentials.json"
+      # publish:workflow activa el workflow (registra el webhook). El id es el del
+      # JSON de v27 (import preserva el id). --all/update:workflow --active están
+      # deprecados en n8n 2.x.
+      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador de Viajes v27.json' && n8n publish:workflow --id=1Yg0c5jJRlLjKfvm"
     volumes:
       # Mismo volumen que n8n: escribe en la misma BD cifrada
       - n8n_n8n_data:/home/node/.n8n
       # Monta el JSON de credenciales versionado (solo lectura)
       - ./n8n/credentials:/import:ro
+      # Monta los workflows versionados (solo lectura) para importar el v27
+      - ./n8n/workflows:/import-workflows:ro
     networks:
       - just_enjoy_net
 
 volumes:
+  # Volumen gestionado por compose: se crea vacío en cada equipo nuevo y el
+  # servicio n8n-import lo rellena (credenciales + workflow v27). Reproducible.
+  # (Antes era external: reutilizaba el volumen de un equipo concreto.)
   n8n_n8n_data:
-    external: true   # Reutiliza el volumen ya existente con la cuenta del usuario
 
 networks:
   just_enjoy_net:
