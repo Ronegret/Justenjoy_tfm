@@ -230,10 +230,20 @@ COMPLEMENTO 2 — INTELIGENCIA DE DESTINO (no bloqueante)
 | Campo | Valor |
 |---|---|
 | Motor | `google_flights` |
+| type | `2` (SOLO IDA / one-way) — **desde v27** |
 | departure_id / arrival_id | códigos IATA (origin/destination_city_iata) |
-| outbound_date / return_date | fechas del travel_brief |
+| outbound_date | fecha del trayecto (departure_date en la IDA, return_date en la VUELTA) |
 | stops | `0` (vuelos directos primero) |
 | json_restrictor | `best_flights[].{price,total_duration,flights[].{...},layovers[].{...}}` |
+
+> **v27 — Vuelos ida/vuelta como dos búsquedas one-way.** Hasta v26 la herramienta
+> hacía una única búsqueda round-trip (`outbound_date` + `return_date`). Google Flights
+> devuelve en ese caso solo la **ida** más un `departure_token`, y la **vuelta** exige
+> una **segunda** llamada con ese token — que el `json_restrictor` eliminaba. Resultado:
+> la vuelta se perdía de forma intermitente (`no_valid_flight`). Desde v27 la herramienta
+> es one-way (`type=2`, sin `return_date`) y el agente la llama **dos veces** (IDA
+> origen→destino, VUELTA destino→origen invirtiendo IATAs), lo que hace la búsqueda del
+> regreso fiable y determinista.
 
 El restrictor elimina `other_flights[]` y metadata. Reducción ~95% de tokens.
 
@@ -369,11 +379,19 @@ Body: { "session_id": "session_...", "feedback_text": "Prefiero un hotel mas eco
 
 ## 12. Ciudades en la tabla IATA/GPS
 
-~60 ciudades soportadas. Principales: Amsterdam (AMS), Paris (CDG), London (LHR),
-Barcelona (BCN), Madrid (MAD), Rome (FCO), Berlin (BER), New York (JFK), Miami (MIA),
-Buenos Aires (EZE), Bogotá (BOG), Tokyo (NRT), Dubai (DXB), Singapore (SIN), Sydney (SYD).
+~110 ciudades soportadas tras la ampliación de v27. El frontend envía nombres en
+**español**, así que la tabla incluye alias en español (p. ej. `londres`→LHR,
+`múnich`→MUC). Cobertura: capitales y grandes ciudades de Europa, América, Asia,
+Oriente Medio, Oceanía y África, más las ciudades españolas secundarias
+(Valencia/Sevilla/Málaga/Bilbao/Palma/Alicante).
+
+> Sin la entrada correspondiente, el nodo hace fallback a las 3 primeras letras del
+> nombre (p. ej. "Valencia"→`VAL` en vez de `VLC`), lo que genera IATA inválidas y hace
+> fallar la búsqueda de vuelos. Por eso la tabla debe cubrir los destinos reales que
+> ofrece el frontend, con su alias en español.
+
 Para añadir una ciudad: editar el nodo `Convertir Ciudades a IATA` (tres tablas:
-`cityToIata`, `cityToGps`, `iataToAirportName`).
+`cityToIata`, `cityToGps`, `iataToAirportName`) e incluir el/los alias en español.
 
 ---
 
@@ -410,7 +428,9 @@ Para añadir una ciudad: editar el nodo `Convertir Ciudades a IATA` (tres tablas
 | v19 | json_restrictor en todas las tools SerpAPI (reducción 88-95% tokens) |
 | v22 | Google Maps reemplaza Travel Explore para actividades reales |
 | v23 | `daily_itinerary[]` mandatorio, query Google Maps simplificada, scoring |
-| **v24** | **GPS coordinates, Google Maps Directions, Logger de métricas, tabla de aeropuertos** |
+| v24 | GPS coordinates, Google Maps Directions, Logger de métricas, tabla de aeropuertos |
+| v26 | Ampliación de ciudades ES en la tabla IATA (Valencia/Sevilla/Málaga/Bilbao/Palma/Alicante) |
+| **v27** | **Vuelos ida/vuelta como DOS búsquedas one-way (`type=2`) → arregla la vuelta que fallaba de forma intermitente (`no_valid_flight`) por el `departure_token` que el restrictor eliminaba** |
 
 ---
 
