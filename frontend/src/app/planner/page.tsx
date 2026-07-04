@@ -37,7 +37,12 @@ function PlannerContent() {
   // Avisos de n8n cuando no puede completar el plan (p. ej. sin vuelos).
   const [planWarnings, setPlanWarnings] = useState<N8nWarning[] | null>(null);
 
-  // Pre-populate preferences from URL query parameters if they exist
+  // Pre-populate preferences from URL query parameters if they exist.
+  // Sincroniza el formulario con un valor EXTERNO (la URL) tras montar; el estado
+  // inicial son los mismos defaults en servidor y cliente, así que no hay
+  // hydration mismatch. Es un patrón de sincronización válido; se desactiva la
+  // regla set-state-in-effect de forma acotada y documentada.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const destParam = searchParams.get('dest');
     const styleParam = searchParams.get('style');
@@ -52,6 +57,7 @@ function PlannerContent() {
       }));
     }
   }, [searchParams]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleUpdatePreferences = (updated: TripPreferences) => {
     setPreferences(updated);

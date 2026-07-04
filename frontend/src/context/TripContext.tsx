@@ -40,7 +40,13 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loadingMessage, setLoadingMessage] = useState('');
   const [activeLoadingStep, setActiveLoadingStep] = useState(0);
 
-  // Initialize trips from localstorage or load default mocks
+  // Initialize trips from localstorage or load default mocks.
+  // Se hace en un efecto de montaje (no en un inicializador de useState) A
+  // PROPÓSITO: así el HTML del servidor y la primera hidratación coinciden
+  // (estado vacío) y el relleno desde localStorage ocurre TRAS montar, evitando
+  // un hydration mismatch. Por eso set-state-in-effect no aplica a este patrón
+  // SSR-safe y se desactiva de forma acotada y documentada.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('justenjoy_trips');
@@ -63,6 +69,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const saveTrip = (trip: TripData) => {
     setSavedTrips((prev) => {
