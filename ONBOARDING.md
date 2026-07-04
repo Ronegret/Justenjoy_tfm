@@ -82,6 +82,35 @@ Abre **http://localhost:3000** → **Iniciar sesión** (Google) → **Planificar
 viaje (p. ej. Valencia → Londres). Verás un plan real con vuelo de ida y vuelta, hotel e
 itinerario servido por **tu** n8n.
 
+### 3.5 Mantener el proyecto actualizado
+
+Si ya lo tienes montado y quieres traer cambios nuevos (incluidas nuevas versiones del
+workflow de n8n, p. ej. **v27**):
+
+```bash
+git checkout develop
+git pull                       # trae el codigo + el workflow actualizado
+
+# Actualiza tu n8n al workflow versionado en el repo:
+docker compose down            # NO uses -v (conserva tu volumen); solo para/quita contenedores
+docker compose up -d           # n8n-import re-importa y PUBLICA el workflow (lo activa)
+
+# Frontend (por si hay dependencias nuevas):
+cd frontend && npm install
+npm run dev
+```
+
+- **Importante:** un `docker compose up -d` "a secas" puede **no** re-ejecutar el import si ya
+  completó antes. Usa `docker compose down && docker compose up -d` (o
+  `docker compose up -d --force-recreate n8n-import n8n`) para forzar la re-importación.
+- **No hace falta tocar** tu `.env` ni tu `frontend/.env.local` — tus claves siguen igual.
+- **Verifica**: en la UI de n8n (`localhost:5678`) el workflow debe ser la versión esperada
+  (p. ej. *"Planificador de Viajes — v27"*) y estar **activo**. Prueba generar un viaje con
+  vuelta para confirmarlo.
+- Si montaste el stack **antes** de que el volumen dejara de ser `external`, el primer `up`
+  usará un volumen nuevo y n8n re-importará credenciales + workflow desde cero (pierdes estados
+  de sesión, que son volátiles). Es esperado y queda funcional.
+
 ---
 
 ## 4. Cómo contribuir (reglas del repo)
