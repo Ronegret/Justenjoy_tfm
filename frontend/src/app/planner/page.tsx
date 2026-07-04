@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTrips } from '@/context/TripContext';
 import { TripPreferences } from '@/types/trip';
+import { N8nWarning } from '@/types/planResult';
 import { ChatPlanner } from '@/components/planner/ChatPlanner';
 import { TravelSummaryPanel } from '@/components/planner/TravelSummaryPanel';
 import { AiProcessingScreen } from '@/components/planner/AiProcessingScreen';
@@ -33,8 +34,15 @@ function PlannerContent() {
   });
 
   const [currentStep, setCurrentStep] = useState(1);
+  // Avisos de n8n cuando no puede completar el plan (p. ej. sin vuelos).
+  const [planWarnings, setPlanWarnings] = useState<N8nWarning[] | null>(null);
 
-  // Pre-populate preferences from URL query parameters if they exist
+  // Pre-populate preferences from URL query parameters if they exist.
+  // Sincroniza el formulario con un valor EXTERNO (la URL) tras montar; el estado
+  // inicial son los mismos defaults en servidor y cliente, así que no hay
+  // hydration mismatch. Es un patrón de sincronización válido; se desactiva la
+  // regla set-state-in-effect de forma acotada y documentada.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const destParam = searchParams.get('dest');
     const styleParam = searchParams.get('style');
@@ -49,6 +57,7 @@ function PlannerContent() {
       }));
     }
   }, [searchParams]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleUpdatePreferences = (updated: TripPreferences) => {
     setPreferences(updated);
@@ -56,8 +65,15 @@ function PlannerContent() {
 
   const handleCompleteWizard = async (finalPrefs: TripPreferences) => {
     try {
-      const generatedId = await generateTrip(finalPrefs);
-      router.push(`/results?id=${generatedId}`);
+      setPlanWarnings(null);
+      const result = await generateTrip(finalPrefs);
+      if (result.status === 'ok') {
+        router.push(`/results?id=${result.tripId}`);
+      } else {
+        // n8n no pudo completar el plan: mostramos sus avisos reales en vez de
+        // navegar a un viaje falso. El usuario ajusta la entrada y reintenta.
+        setPlanWarnings(result.warnings);
+      }
     } catch (error) {
       console.error('Failed to generate trip:', error);
     }
@@ -80,6 +96,29 @@ function PlannerContent() {
 
       {/* Smart Loading Screen overlay (handles active processing checkmarks) */}
       <AiProcessingScreen />
+
+      {/* Aviso cuando n8n no puede completar el plan (p. ej. sin vuelos): mostramos
+          el motivo real y la sugerencia en vez de generar un viaje ficticio. */}
+      {planWarnings && planWarnings.length > 0 && (
+        <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 pt-4">
+          <div className="rounded-2xl border border-amber-400/50 bg-amber-50 dark:bg-amber-500/10 p-4 flex flex-col gap-2">
+            <h4 className="text-sm font-extrabold text-amber-700 dark:text-amber-300 uppercase tracking-tight">
+              No pudimos completar tu plan
+            </h4>
+            {planWarnings.map((w, i) => (
+              <div key={i} className="text-xs text-brand-dark dark:text-brand-white leading-relaxed">
+                <p>{w.detail || 'n8n necesita que ajustes algún dato del viaje.'}</p>
+                {w.proposed_change && (
+                  <p className="text-text-muted mt-0.5">Sugerencia: {w.proposed_change}</p>
+                )}
+              </div>
+            ))}
+            <p className="text-[11px] text-text-muted mt-1">
+              Ajusta las fechas, el origen o el destino y vuelve a generar el viaje.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col lg:flex-row gap-6 p-4 lg:p-8">
 

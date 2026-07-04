@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TripData, TripPreferences } from '../types/trip';
+import { GenerateTripResult } from '../types/planResult';
 import { mockTrips } from '../data/mockTripData';
 
 interface TripContextType {
@@ -11,7 +12,7 @@ interface TripContextType {
   loadingProgress: number;
   loadingMessage: string;
   activeLoadingStep: number;
-  generateTrip: (prefs: TripPreferences) => Promise<string>;
+  generateTrip: (prefs: TripPreferences) => Promise<GenerateTripResult>;
   saveTrip: (trip: TripData) => void;
   deleteTrip: (id: string) => void;
   setCurrentTripById: (id: string) => boolean;
@@ -39,7 +40,12 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loadingMessage, setLoadingMessage] = useState('');
   const [activeLoadingStep, setActiveLoadingStep] = useState(0);
 
-  // Initialize trips from localstorage or load default mocks
+  // Initialize trips from localstorage or load default mocks.
+  // Efecto de montaje (no inicializador de useState) A PROPÓSITO: el HTML del
+  // servidor y la primera hidratación coinciden (estado vacío) y el relleno desde
+  // localStorage ocurre TRAS montar, evitando un hydration mismatch. Los disables
+  // por línea (set-state-in-effect) y el de exhaustive-deps documentan que es
+  // intencional y SSR-safe.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -103,7 +109,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Simulates or calls n8n webhook
-  const generateTrip = async (prefs: TripPreferences): Promise<string> => {
+  const generateTrip = async (prefs: TripPreferences): Promise<GenerateTripResult> => {
     setIsLoading(true);
     setLoadingProgress(0);
     setActiveLoadingStep(0);
@@ -126,7 +132,16 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('API returned non-ok status');
       }
 
-      customizedTrip = await response.json();
+      const data = await response.json();
+
+      // n8n no pudo completar el plan: no fingimos un viaje, devolvemos sus avisos
+      // para que el planner los muestre y el usuario ajuste la entrada.
+      if (data && data.status === 'needs_user_input') {
+        setIsLoading(false);
+        return { status: 'needs_user_input', warnings: Array.isArray(data.warnings) ? data.warnings : [] };
+      }
+
+      customizedTrip = data;
       generatedId = customizedTrip?.trip_id || '';
     } catch (error) {
       console.warn('API call failed or n8n not connected, falling back to local simulation:', error);
@@ -177,7 +192,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentTrip(customizedTrip);
     }
     setIsLoading(false);
-    return generatedId;
+    return { status: 'ok', tripId: generatedId };
   };
 
   return (
