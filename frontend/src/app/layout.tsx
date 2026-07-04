@@ -12,6 +12,9 @@ import { Footer } from "@/components/shared/Footer";
 // no hay, según el sistema. Debe ir inline y antes del contenido para que no
 // haya parpadeo claro→oscuro al recargar. La <html> lleva suppressHydrationWarning
 // porque este script muta su className fuera de React.
+// NOTA: la clave 'justenjoy-theme' debe coincidir con THEME_STORAGE_KEY de
+// ThemeContext; al ser un script inyectado como string no puede importar la
+// constante, así que se mantiene el literal sincronizado a mano.
 const themeInitScript = `
 (function() {
   try {
@@ -20,7 +23,9 @@ const themeInitScript = `
       t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     if (t === 'dark') document.documentElement.classList.add('dark');
-  } catch (e) {}
+  } catch (e) {
+    // Sin acceso a localStorage/matchMedia: se mantiene el tema claro por defecto.
+  }
 })();
 `;
 
