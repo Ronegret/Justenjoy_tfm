@@ -2,8 +2,8 @@
 
 - **Fecha:** 2026-07-04
 - **Tipo:** bugfix de comportamiento (con UI nueva de aviso)
-- **Estado:** PROPUESTA — pendiente de aprobación humana. **No codificar hasta el OK** (AGENTS.md §4).
-- **Rama prevista:** `bugfix/frontend-respeta-needs-user-input`
+- **Estado:** aprobada (2026-07-04) e implementada. Decisiones D1–D4 según la propuesta recomendada.
+- **Rama:** `bugfix/frontend-respeta-needs-user-input`
 
 ## Contexto
 
