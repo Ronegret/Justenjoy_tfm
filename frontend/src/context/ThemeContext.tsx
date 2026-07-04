@@ -45,6 +45,7 @@ function setTheme(next: Theme) {
   } catch {
     // localStorage no disponible (p. ej. modo privado estricto): se degrada sin
     // romper; el tema se aplica igualmente para esta sesión.
+    console.debug('[theme] no se pudo persistir la preferencia en localStorage');
   }
   listeners.forEach((l) => l());
 }
