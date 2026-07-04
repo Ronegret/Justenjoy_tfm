@@ -7,6 +7,8 @@ import {
   MapPin, Clock, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { ItineraryBlock } from '@/types/trip';
+import DestinationImage from './DestinationImage';
+import MapViewer from './MapViewer';
 
 interface DayPlanCardProps {
   block: ItineraryBlock;
@@ -58,6 +60,15 @@ export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block }) => {
 
       {/* Main card box - vercel minimal style */}
       <div className="flex-grow bg-brand-white dark:bg-brand-dark/40 premium-border rounded-2xl p-5 shadow-xs flex flex-col gap-3.5 hover:shadow-sm transition-shadow">
+
+        {/* Destination image (fondo: mientras n8n no devuelva imageUrl, se muestra un placeholder de viaje) */}
+        {block.type !== 'transit' && (
+          <DestinationImage
+            destination={block.location}
+            imageUrl={block.imageUrl}
+            className="w-full h-40 object-cover rounded-xl"
+          />
+        )}
 
         {/* Header row */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
@@ -113,6 +124,11 @@ export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block }) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Mapa interactivo — solo si tenemos coordenadas (hoy: mock/demo; ver docs/specs/2026-07-04-imagenes-y-mapas.md) */}
+        {block.lat !== undefined && block.lng !== undefined && (
+          <MapViewer latitude={block.lat} longitude={block.lng} title={block.location} zoom={15} />
         )}
 
       </div>
