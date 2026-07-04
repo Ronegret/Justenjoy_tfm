@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { mockTrips } from '@/data/mockTripData';
 import {
   TripData,
@@ -485,9 +486,24 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
 }
 
 export async function POST(req: NextRequest) {
+  // Autenticación obligatoria: cierra la API abierta y el vector de coste
+  // (llamadas anónimas a LLM/n8n). Verificación autoritativa con Admin SDK.
+  const adminAuth = getAdminAuth();
+  if (!adminAuth) {
+    console.error('[plan-trip] Firebase Admin no configurado; rechazando petición');
+    return NextResponse.json(
+      { error: 'Servicio no disponible' },
+      { status: 503 }
+    );
+  }
   const session = req.cookies.get('justenjoy-session');
   if (!session?.value) {
-    console.log('plan-trip: request without session cookie — proceeding in demo mode');
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+  try {
+    await adminAuth.verifySessionCookie(session.value, true);
+  } catch {
+    return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 });
   }
 
   try {

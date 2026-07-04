@@ -125,6 +125,13 @@ Ver `n8n/examples/input-formulario.json` para el esquema completo.
 Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 `return_date`, `travelers`, `budget_total_usd`, `accommodation_type`, `activity_interests[]`.
 
+> ⚠️ **Al probar, usa fechas futuras.** SerpAPI (Google Flights/Hotels) rechaza
+> consultas con `outbound_date` en el pasado (`` `outbound_date` cannot be in the
+> past ``). Con fechas caducadas el plan vuelve con `status: needs_user_input` y
+> warnings `no_valid_flight` / `no_valid_hotel` (las actividades sí aparecen porque
+> Google Maps no depende de la fecha). No es un fallo del workflow: actualiza las
+> fechas del ejemplo antes de lanzar la prueba.
+
 ### Salida (HTTP 200)
 Ver `n8n/examples/output-plan.json` para el esquema completo.
 Campos clave: `status`, `plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`,
@@ -141,6 +148,39 @@ El sistema re-ejecuta solo los pasos afectados por el feedback.
 El estado de sesión se persiste en `$getWorkflowStaticData('global')` de n8n,
 indexado por `session_id`. **Es volátil**: se pierde si n8n se reinicia.
 Para producción, migrar a PostgreSQL Memory.
+
+---
+
+## Autenticación (portal del viajero)
+
+El frontend usa **Firebase Auth** en el cliente y una **session cookie firmada
+por el servidor** para autorizar peticiones. Modelo de verificación en dos capas:
+
+```
+Cliente (Firebase Auth) --ID token--> POST /api/auth/session
+                                         │  verifyIdToken (firebase-admin)
+                                         │  createSessionCookie (14 días)
+                                         ▼
+                              cookie httpOnly "justenjoy-session"
+   ┌──────────────────────────────────────────────────────────────┐
+   │ Proxy (src/proxy.ts)  → verificación LIGERA con jose          │
+   │   firma RS256 vs claves públicas de Google + iss/aud/exp      │
+   │   protege /dashboard, /planner, /trip                         │
+   ├──────────────────────────────────────────────────────────────┤
+   │ Route handlers        → verificación AUTORITATIVA (Admin SDK) │
+   │   verifySessionCookie(..., checkRevoked) en /api/plan-trip    │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+- **Fail-closed:** sin credenciales del Admin SDK, los endpoints devuelven 503 y
+  el proxy redirige a `/login`.
+- **Credenciales del servidor:** service account vía `FIREBASE_ADMIN_*` (ver
+  `.env.example`). Secretas; nunca en el repo ni en el cliente.
+- La config `NEXT_PUBLIC_FIREBASE_*` sigue siendo pública por diseño (solo Auth).
+- Detalle e historial de decisiones: `docs/specs/2026-07-04-auth-verificacion-servidor.md`.
+
+> ⚠️ El despliegue de esta auth **requiere** configurar la service account en el
+> entorno (local y Vercel). Sin ella, nadie puede iniciar sesión (fail-closed).
 
 ---
 
