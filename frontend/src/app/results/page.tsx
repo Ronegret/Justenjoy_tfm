@@ -57,8 +57,12 @@ function ResultsContent() {
       restrictions: actionType === 'low-walking' ? [...trip.user_preferences.restrictions, 'low_walking'] : trip.user_preferences.restrictions
     };
 
-    const newId = await generateTrip(updatedPrefs);
-    router.push(`/results?id=${newId}`);
+    const result = await generateTrip(updatedPrefs);
+    if (result.status === 'ok') {
+      router.push(`/results?id=${result.tripId}`);
+    }
+    // Si n8n devuelve needs_user_input al regenerar, no navegamos: se mantiene el
+    // viaje actual (esta acción es un ajuste rápido opcional).
   };
 
   // Compile comparative cards data
