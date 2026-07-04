@@ -84,7 +84,7 @@ npm run lint     # ESLint
 ## 3. Restricciones
 
 ### 3.1 Puedes sin aprobación
-- Crear ramas `feature/*`, `fix/*`, `chore/*`, `docs/*`
+- Crear ramas `feature/*`, `bugfix/*`, `chore/*`, `docs/*`
 - Editar dentro del scope de la tarea acordada
 - Añadir o corregir tests
 - Refactorizar dentro del scope (sin cambiar la API pública)
@@ -105,7 +105,7 @@ npm run lint     # ESLint
 ### 3.3 Nunca
 - Push directo a `main`
 - Commitear secretos, claves de API, tokens, URLs de ngrok con token
-- Force push fuera de `feature/*`
+- Force push fuera de `feature/*` y `bugfix/*`
 - Modificar tests para que pasen sin entender por qué fallaban
 - Escribir tests que aserten la salida actual del código en vez del comportamiento esperado
 - Empezar una funcionalidad nueva sin spec aprobada (excepción: cambios triviales)
