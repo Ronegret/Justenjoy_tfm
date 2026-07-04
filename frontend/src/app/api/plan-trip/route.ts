@@ -11,6 +11,7 @@ import {
   ItineraryBlock,
   BudgetBreakdown
 } from '@/types/trip';
+import { N8nWarning } from '@/types/planResult';
 
 const SYSTEM_PROMPT = `
 Eres el motor de orquestación de viajes de "JUST ENJOY". Tu tarea es actuar como un agente de viajes experto y automatizado, generando un itinerario completo, justificado y optimizado basado en las preferencias de viaje del usuario.
@@ -323,12 +324,29 @@ interface N8nSegment {
 interface N8nResponse {
   session_id?: string;
   status?: string;
+  warnings?: N8nWarning[];
   plan?: {
     segments?: N8nSegment[];
     daily_itinerary?: N8nDay[];
     plan_notes?: string[];
     cost_summary?: N8nCostSummary;
   };
+}
+
+/**
+ * Determina si la respuesta de n8n NO es un plan utilizable. Se corta cuando n8n
+ * pide intervención (`needs_user_input`) o cuando el plan viene vacío (sin vuelo
+ * de ida, sin hotel y sin itinerario). En ese caso el frontend debe mostrar los
+ * `warnings` reales en vez de rellenar con defaults y fingir un viaje.
+ */
+function isUnusableN8nPlan(rawData: N8nResponse): boolean {
+  if (!rawData) return true;
+  if (rawData.status === 'needs_user_input') return true;
+  const segment = rawData.plan?.segments?.[0];
+  const hasFlight = !!segment?.flights?.outbound?.airline;
+  const hasHotel = !!segment?.hotel?.name;
+  const hasItinerary = (rawData.plan?.daily_itinerary?.length ?? 0) > 0;
+  return !hasFlight && !hasHotel && !hasItinerary;
 }
 
 /**
@@ -676,6 +694,14 @@ export async function POST(req: NextRequest) {
           // Detectar si la respuesta viene con el esquema oficial de n8n o es directa
           const rawData = Array.isArray(n8nData) ? n8nData[0] : n8nData;
           if (rawData && (rawData.plan || rawData.status)) {
+            // Si n8n no pudo completar el plan (p. ej. sin vuelos), NO fingimos un
+            // viaje con defaults: devolvemos su señal y sus avisos para que el
+            // frontend los muestre y el usuario ajuste la entrada.
+            if (isUnusableN8nPlan(rawData)) {
+              console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
+              const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
+              return NextResponse.json({ status: 'needs_user_input', warnings });
+            }
             console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
             const mappedData = mapN8nToTripData(n8nData, body);
             return NextResponse.json(mappedData);
