@@ -13,16 +13,17 @@
 #   - pre-commit-hooks: https://github.com/pre-commit/pre-commit-hooks/releases
 #   - gitleaks:         https://github.com/gitleaks/gitleaks/releases
 
-default_install_hook_types: [pre-commit, commit-msg]
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
 
 repos:
   # ── Hooks universales de pre-commit ────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0  # ultima estable verificada 2026-06-16
     hooks:
-      # Bloquea commits directos a la rama principal (este repo usa "master")
+      # Bloquea commits directos a las ramas base de Git Flow (master y develop).
+      # El trabajo debe ocurrir en ramas feature/*, bugfix/*, release/* o hotfix/*.
       - id: no-commit-to-branch
-        args: [--branch, master, --branch, main]
+        args: [--branch, master, --branch, develop]
 
       # Detecta claves privadas hardcodeadas (primera capa, rápida)
       - id: detect-private-key
@@ -66,3 +67,18 @@ repos:
         args: ["protect", "--staged", "--redact", "--verbose"]
         language: system
         pass_filenames: false
+
+  # ── Git Flow — política de ramas en pre-push ──────────────────────────────
+  # Bloquea el push directo a las ramas base (master/develop) y valida que el
+  # nombre de la rama siga la convención de Git Flow. Es una red temprana local:
+  # la imposición real la hace la branch protection de GitHub (no evitable con
+  # --no-verify). Ver docs/git-flow.md.
+  - repo: local
+    hooks:
+      - id: gitflow-branch-policy
+        name: git flow (politica de ramas en push)
+        entry: .githooks/check-gitflow-branch.sh
+        language: script
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
