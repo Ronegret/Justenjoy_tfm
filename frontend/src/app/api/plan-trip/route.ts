@@ -245,7 +245,7 @@ function isGpsCoordinates(value: string): boolean {
  * el llamador aplique su propio fallback. NO usar el nº de entradas del
  * itinerario: n8n puede devolver pocas para un viaje largo.
  */
-function computeTripDays(prefs: TripPreferences, hotel: any): number {
+function computeTripDays(prefs: TripPreferences, hotel: { check_in?: string; check_out?: string }): number {
   const start = prefs?.dates?.start || hotel?.check_in;
   const end = prefs?.dates?.end || hotel?.check_out;
   if (!start || !end) return 0;
@@ -255,18 +255,94 @@ function computeTripDays(prefs: TripPreferences, hotel: any): number {
   return Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24));
 }
 
+function getErrorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+// Esquema (parcial) de la respuesta de n8n que consume el mapper. Todos los
+// campos son opcionales: n8n puede omitirlos y el mapper aplica defaults.
+interface N8nFlightLeg {
+  airline?: string;
+  origin?: string;
+  destination?: string;
+  departure_datetime?: string;
+  arrival_datetime?: string;
+  duration?: string;
+  layovers?: unknown[];
+  price_usd?: number;
+  booking_url?: string;
+}
+
+interface N8nHotel {
+  name?: string;
+  address?: string;
+  rating?: number;
+  price_per_night_usd?: number;
+  total_usd?: number;
+  booking_url?: string;
+  check_in?: string;
+  check_out?: string;
+}
+
+interface N8nActivity {
+  source?: string;
+  name?: string;
+  category?: string;
+  price_usd?: number;
+  duration_hours?: number;
+  booking_url?: string;
+  start_time?: string;
+  time?: string;
+}
+
+interface N8nDay {
+  day?: number;
+  date?: string;
+  title?: string;
+  summary?: string;
+  activities?: N8nActivity[];
+}
+
+interface N8nCostSummary {
+  flights_usd?: number;
+  hotel_usd?: number;
+  activities_usd?: number;
+  inter_city_transport_usd?: number;
+  estimated_local_transport_usd?: number;
+  total_usd?: number;
+}
+
+interface N8nSegment {
+  destination?: string;
+  origin?: string;
+  flights?: { outbound?: N8nFlightLeg; return?: N8nFlightLeg };
+  hotel?: N8nHotel;
+  activities?: N8nActivity[];
+}
+
+interface N8nResponse {
+  session_id?: string;
+  status?: string;
+  plan?: {
+    segments?: N8nSegment[];
+    daily_itinerary?: N8nDay[];
+    plan_notes?: string[];
+    cost_summary?: N8nCostSummary;
+  };
+}
+
 /**
  * Mapea la respuesta generada por n8n (output-plan.json) a la interfaz
  * TripData requerida por la interfaz gráfica del frontend.
  */
-function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): TripData {
+function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPrefs: TripPreferences): TripData {
   const data = Array.isArray(n8nResponse) ? n8nResponse[0] : n8nResponse;
 
-  const plan = data?.plan || {};
-  const segment = plan?.segments?.[0] || {};
-  const flights = segment?.flights || {};
-  const hotel = segment?.hotel || {};
-  const costSummary = plan?.cost_summary || {};
+  const plan: NonNullable<N8nResponse['plan']> = data?.plan ?? {};
+  const segment: N8nSegment = plan?.segments?.[0] ?? {};
+  const flights: NonNullable<N8nSegment['flights']> = segment?.flights ?? {};
+  const hotel: N8nHotel = segment?.hotel ?? {};
+  const costSummary: N8nCostSummary = plan?.cost_summary ?? {};
 
   const destination = segment?.destination || originalPrefs.destination || 'Viaje';
   const generatedId = data?.session_id || `justenjoy-${destination.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
@@ -339,7 +415,7 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
 
   // 3. Mapear actividades
   const rawActivities = segment.activities || [];
-  const mappedActivities: Activity[] = rawActivities.map((act: any) => ({
+  const mappedActivities: Activity[] = rawActivities.map((act: N8nActivity) => ({
     provider: act.source || 'Google Maps',
     name: act.name || 'Actividad sugerida',
     category: act.category || 'Cultura',
@@ -354,10 +430,10 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
 
   // 4. Mapear itinerario diario
   const rawItinerary = plan.daily_itinerary || [];
-  const mappedItinerary: DayPlan[] = rawItinerary.map((dayPlan: any, index: number) => {
+  const mappedItinerary: DayPlan[] = rawItinerary.map((dayPlan: N8nDay, index: number) => {
     const dayActivities = dayPlan.activities || [];
 
-    const blocks: ItineraryBlock[] = dayActivities.map((act: any) => {
+    const blocks: ItineraryBlock[] = dayActivities.map((act: N8nActivity) => {
       const timeStr = act.time || '10:00';
       const hr = parseInt(timeStr.split(':')[0]) || 10;
       let period: 'Mañana' | 'Mediodía' | 'Tarde' | 'Noche' = 'Mañana';
@@ -365,15 +441,16 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
       else if (hr >= 15 && hr < 20) period = 'Tarde';
       else if (hr >= 20) period = 'Noche';
 
+      const actName = act.name || 'Actividad sugerida';
       return {
         time: timeStr,
         period,
-        title: act.name,
+        title: actName,
         type: (act.category || '').toLowerCase().includes('restaurant') || (act.category || '').toLowerCase().includes('food') ? 'food' : 'activity',
         duration: act.duration_hours ? `${act.duration_hours}h` : '2h',
         cost: act.price_usd || 0,
-        location: act.name,
-        description: `Visita recomendada a ${act.name}.`,
+        location: actName,
+        description: `Visita recomendada a ${actName}.`,
         tip: act.booking_url ? 'Se aconseja reservar online con antelación.' : undefined
       };
     });
@@ -419,10 +496,11 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
       }
     }
 
+    const dayNumber = dayPlan.day ?? index + 1;
     return {
-      day: dayPlan.day,
+      day: dayNumber,
       date: dayPlan.date || '',
-      title: dayPlan.title || `Día ${dayPlan.day}`,
+      title: dayPlan.title || `Día ${dayNumber}`,
       summary: dayPlan.summary || 'Jornada libre en el destino.',
       blocks
     };
@@ -608,8 +686,8 @@ export async function POST(req: NextRequest) {
         } else {
           console.warn(`n8n webhook error: ${response.statusText}. Trying direct LLM API...`);
         }
-      } catch (e: any) {
-        console.warn('Failed to contact n8n webhook, trying direct LLM API:', e.message);
+      } catch (e: unknown) {
+        console.warn('Failed to contact n8n webhook, trying direct LLM API:', getErrorMessage(e));
       }
     }
 
@@ -663,8 +741,8 @@ export async function POST(req: NextRequest) {
           const errText = await response.text();
           console.warn(`OpenAI API returned error: ${response.status} - ${errText}. Trying Claude API...`);
         }
-      } catch (e: any) {
-        console.warn('Failed to request itinerary from OpenAI:', e.message);
+      } catch (e: unknown) {
+        console.warn('Failed to request itinerary from OpenAI:', getErrorMessage(e));
       }
     }
 
@@ -721,8 +799,8 @@ export async function POST(req: NextRequest) {
           const errText = await response.text();
           console.warn(`Anthropic API returned error: ${response.status} - ${errText}. Trying mock fallback...`);
         }
-      } catch (e: any) {
-        console.warn('Failed to request itinerary from Anthropic Claude:', e.message);
+      } catch (e: unknown) {
+        console.warn('Failed to request itinerary from Anthropic Claude:', getErrorMessage(e));
       }
     }
 
@@ -764,10 +842,10 @@ export async function POST(req: NextRequest) {
     };
 
     return NextResponse.json(customizedTrip);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in plan-trip API route:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor al procesar el viaje.', details: error.message },
+      { error: 'Error interno del servidor al procesar el viaje.', details: getErrorMessage(error) },
       { status: 500 }
     );
   }
