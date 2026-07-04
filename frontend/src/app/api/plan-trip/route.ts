@@ -428,6 +428,30 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
     };
   });
 
+  // Garantiza al menos un día: n8n puede responder sin `daily_itinerary`
+  // (p. ej. status "needs_user_input"), y un itinerario vacío rompe la vista
+  // del viaje (ItineraryTimeline accede a itinerary[0].title).
+  if (mappedItinerary.length === 0) {
+    mappedItinerary.push({
+      day: 1,
+      date: originalPrefs.dates?.start || '',
+      title: `Día libre en ${destination}`,
+      summary: 'Itinerario aún por detallar; explora el destino a tu ritmo.',
+      blocks: [
+        {
+          time: '10:00',
+          period: 'Mañana',
+          title: 'Explorar la ciudad',
+          type: 'activity',
+          duration: '4h',
+          cost: 0,
+          location: destination,
+          description: 'Día libre sugerido para pasear por los rincones más bonitos del destino.'
+        }
+      ]
+    });
+  }
+
   // 5. Mapear desglose de presupuesto.
   // La comida se costea por la duración REAL del viaje (fechas), no por el nº de
   // entradas del itinerario: n8n puede devolver pocas para un viaje largo y antes
