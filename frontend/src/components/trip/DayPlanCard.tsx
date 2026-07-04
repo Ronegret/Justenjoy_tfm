@@ -12,30 +12,30 @@ interface DayPlanCardProps {
   block: ItineraryBlock;
 }
 
+const getIcon = (type: string) => {
+  switch (type) {
+    case 'flight': return Plane;
+    case 'food': return Utensils;
+    case 'activity': return Landmark;
+    case 'hotel': return Building;
+    case 'transit': return Clock;
+    default: return Compass;
+  }
+};
+
+const getColorClass = (type: string) => {
+  switch (type) {
+    case 'flight': return 'bg-blue-500/10 text-brand-blue border-blue-500/20';
+    case 'food': return 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20';
+    case 'activity': return 'bg-purple-500/10 text-purple-600 dark:text-purple-500 border-purple-500/20';
+    case 'hotel': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 border-indigo-500/20';
+    case 'transit': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20';
+    default: return 'bg-brand-blue/10 text-brand-blue border-brand-blue/20';
+  }
+};
+
 export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block }) => {
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'flight': return Plane;
-      case 'food': return Utensils;
-      case 'activity': return Landmark;
-      case 'hotel': return Building;
-      case 'transit': return Clock;
-      default: return Compass;
-    }
-  };
 
-  const getColorClass = (type: string) => {
-    switch (type) {
-      case 'flight': return 'bg-blue-500/10 text-brand-blue border-blue-500/20';
-      case 'food': return 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20';
-      case 'activity': return 'bg-purple-500/10 text-purple-600 dark:text-purple-500 border-purple-500/20';
-      case 'hotel': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 border-indigo-500/20';
-      case 'transit': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20';
-      default: return 'bg-brand-blue/10 text-brand-blue border-brand-blue/20';
-    }
-  };
-
-  const IconComponent = getIcon(block.type);
   const colorClass = getColorClass(block.type);
 
   return (
@@ -51,7 +51,7 @@ export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block }) => {
       {/* Dotted Timeline connector element */}
       <div className="flex flex-col items-center shrink-0">
         <div className={`w-8 h-8 rounded-full border flex items-center justify-center shadow-xs z-10 ${colorClass}`}>
-          <IconComponent className="w-3.5 h-3.5" />
+          {React.createElement(getIcon(block.type), { className: 'w-3.5 h-3.5' })}
         </div>
         <div className="w-0.5 h-full border-l border-dashed border-brand-dark/15 dark:border-brand-white/10 absolute top-8 bottom-0 left-[75px] -z-10" />
       </div>

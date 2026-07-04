@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Firebase public config — these are intentionally public (see Firebase docs).
-  // Fallback ensures they're always available even if Vercel env vars aren't set at build time.
+  // Firebase public config — these are intentionally public (see Firebase docs)
+  // and safe to fall back to since they identify the project, not a secret.
+  // OPENAI_API_KEY / ANTHROPIC_API_KEY are NOT listed here on purpose: they are
+  // server-only secrets read directly via process.env in the API route, and
+  // must be configured in Vercel's Environment Variables, never hardcoded.
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY:
       process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCttNjv5AKhLsgfNrjLj1MrVQ6v0iFixWo",
@@ -16,10 +19,6 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "888414990197",
     NEXT_PUBLIC_FIREBASE_APP_ID:
       process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:888414990197:web:e6f38cd4dab0ae4335ed3c",
-    OPENAI_API_KEY:
-      process.env.OPENAI_API_KEY || "***REMOVED-OPENAI-KEY***",
-    ANTHROPIC_API_KEY:
-      process.env.ANTHROPIC_API_KEY || "***REMOVED-ANTHROPIC-KEY***",
   },
 };
 
