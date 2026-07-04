@@ -15,6 +15,22 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary 
 
   const activeDay = itinerary[activeDayIdx] || itinerary[0];
 
+  // Guard defensivo: un itinerario vacío (p. ej. datos parciales o antiguos)
+  // dejaría activeDay indefinido y romper­ía el render. Mostramos un estado vacío.
+  if (!activeDay) {
+    return (
+      <div className="bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/5 dark:border-brand-white/5 rounded-2xl p-8 shadow-xs flex flex-col items-center text-center gap-2">
+        <Compass className="w-8 h-8 text-brand-blue" />
+        <h3 className="text-sm font-extrabold text-brand-dark dark:text-brand-white uppercase tracking-tight">
+          Itinerario aún no disponible
+        </h3>
+        <p className="text-xs text-text-muted leading-relaxed">
+          Genera o refina tu viaje para ver el plan día a día.
+        </p>
+      </div>
+    );
+  }
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
