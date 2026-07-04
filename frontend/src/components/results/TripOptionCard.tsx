@@ -74,7 +74,7 @@ export const TripOptionCard: React.FC<TripOptionCardProps> = ({
         <div className="flex flex-col">
           <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">PRESUPUESTO ESTIMADO</span>
           <span className="text-xl font-extrabold text-brand-dark dark:text-brand-white">
-            {price}€ <span className="text-xs font-semibold text-text-muted">/ persona</span>
+            {price}€ <span className="text-xs font-semibold text-text-muted">total</span>
           </span>
         </div>
 

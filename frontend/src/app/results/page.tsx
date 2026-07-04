@@ -159,7 +159,7 @@ function ResultsContent() {
               type="recommended"
               destination={mainOption.destination}
               matchScore={trip.justgo_score.overall_match}
-              price={trip.budget.total}
+              price={mainOption.estimated_total}
               reason={mainOption.summary}
               isSelected={activeAlternativeType === 'recommended'}
               onSelect={() => setActiveAlternativeType('recommended')}
