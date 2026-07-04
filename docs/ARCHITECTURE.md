@@ -125,6 +125,13 @@ Ver `n8n/examples/input-formulario.json` para el esquema completo.
 Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 `return_date`, `travelers`, `budget_total_usd`, `accommodation_type`, `activity_interests[]`.
 
+> ⚠️ **Al probar, usa fechas futuras.** SerpAPI (Google Flights/Hotels) rechaza
+> consultas con `outbound_date` en el pasado (`` `outbound_date` cannot be in the
+> past ``). Con fechas caducadas el plan vuelve con `status: needs_user_input` y
+> warnings `no_valid_flight` / `no_valid_hotel` (las actividades sí aparecen porque
+> Google Maps no depende de la fecha). No es un fallo del workflow: actualiza las
+> fechas del ejemplo antes de lanzar la prueba.
+
 ### Salida (HTTP 200)
 Ver `n8n/examples/output-plan.json` para el esquema completo.
 Campos clave: `status`, `plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`,
