@@ -230,6 +230,32 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
 }
 
 /**
+ * n8n a veces devuelve el `address` del hotel como coordenadas GPS crudas
+ * (p. ej. "48.8919654, 2.4093141") en vez de un barrio. Detectarlo para no
+ * pintar coordenadas donde la UI espera un área legible.
+ */
+function isGpsCoordinates(value: string): boolean {
+  return /^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(value);
+}
+
+/**
+ * Duración del viaje en días, derivada de las fechas reales (misma convención
+ * que mapPreferencesToN8n: ceil de la diferencia). Fallback a las fechas de
+ * check-in/check-out del hotel. Devuelve 0 si no hay fechas usables, para que
+ * el llamador aplique su propio fallback. NO usar el nº de entradas del
+ * itinerario: n8n puede devolver pocas para un viaje largo.
+ */
+function computeTripDays(prefs: TripPreferences, hotel: any): number {
+  const start = prefs?.dates?.start || hotel?.check_in;
+  const end = prefs?.dates?.end || hotel?.check_out;
+  if (!start || !end) return 0;
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return 0;
+  return Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24));
+}
+
+/**
  * Mapea la respuesta generada por n8n (output-plan.json) a la interfaz
  * TripData requerida por la interfaz gráfica del frontend.
  */
@@ -284,7 +310,7 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
     mappedHotels.push({
       provider: 'Booking.com',
       name: hotel.name,
-      area: hotel.address || 'Centro',
+      area: hotel.address && !isGpsCoordinates(hotel.address) ? hotel.address : `Centro de ${destination}`,
       rating: hotel.rating || 4.5,
       price_per_night: hotel.price_per_night_usd || 100,
       total_price: hotel.total_usd || 300,
@@ -328,7 +354,7 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
 
   // 4. Mapear itinerario diario
   const rawItinerary = plan.daily_itinerary || [];
-  const mappedItinerary: DayPlan[] = rawItinerary.map((dayPlan: any) => {
+  const mappedItinerary: DayPlan[] = rawItinerary.map((dayPlan: any, index: number) => {
     const dayActivities = dayPlan.activities || [];
 
     const blocks: ItineraryBlock[] = dayActivities.map((act: any) => {
@@ -352,9 +378,12 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
       };
     });
 
-    // Relleno si no hay bloques de actividad ese día
+    // Relleno si no hay bloques de actividad ese día.
+    // Se usa el índice del array (no dayPlan.day): en viajes largos n8n puede
+    // devolver pocas entradas con números de día salteados (p. ej. 1, 2, 15),
+    // así que comparar dayPlan.day contra la longitud nunca acertaba el último día.
     if (blocks.length === 0) {
-      if (dayPlan.day === 1) {
+      if (index === 0) {
         blocks.push({
           time: '15:00',
           period: 'Tarde',
@@ -365,7 +394,7 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
           location: hotel.name || 'Alojamiento',
           description: 'Llegada y check-in en tu hotel para dejar el equipaje y descansar.'
         });
-      } else if (dayPlan.day === rawItinerary.length) {
+      } else if (index === rawItinerary.length - 1) {
         blocks.push({
           time: '11:00',
           period: 'Mañana',
@@ -399,17 +428,25 @@ function mapN8nToTripData(n8nResponse: any, originalPrefs: TripPreferences): Tri
     };
   });
 
-  // 5. Mapear desglose de presupuesto
-  const daysCount = mappedItinerary.length || 3;
+  // 5. Mapear desglose de presupuesto.
+  // La comida se costea por la duración REAL del viaje (fechas), no por el nº de
+  // entradas del itinerario: n8n puede devolver pocas para un viaje largo y antes
+  // se infravaloraba (p. ej. 3 días en un viaje de 2 semanas).
   const travelersCount = originalPrefs.travelers.adults + originalPrefs.travelers.children;
+  const tripDays = computeTripDays(originalPrefs, hotel) || mappedItinerary.length || 3;
 
   const flightsCost = costSummary.flights_usd || (mappedFlights.reduce((acc, f) => acc + f.price, 0) * travelersCount);
   const hotelCost = costSummary.hotel_usd || (hotel.total_usd || 0);
   const activitiesCost = costSummary.activities_usd || (mappedActivities.reduce((acc, a) => acc + a.price, 0) * travelersCount);
+  // Cadena de fallback: transporte entre ciudades → transporte local → default.
+  // Se mantiene || (no ??) porque aquí un 0 significa "no aplica, prueba el siguiente".
   const transportCost = costSummary.inter_city_transport_usd || costSummary.estimated_local_transport_usd || 50;
-  const foodCost = 30 * travelersCount * daysCount;
+  const foodCost = 30 * travelersCount * tripDays;
   const extrasCost = 20 * travelersCount;
-  const totalCost = costSummary.total_usd || (flightsCost + hotelCost + activitiesCost + transportCost + foodCost + extrasCost);
+  // El total se calcula SIEMPRE como la suma de los componentes mostrados para
+  // que el desglose cuadre con el total. Antes se tomaba costSummary.total_usd,
+  // que no incluía comida/extras/transporte y dejaba el desglose descuadrado.
+  const totalCost = flightsCost + hotelCost + activitiesCost + transportCost + foodCost + extrasCost;
 
   const budget: BudgetBreakdown = {
     flights: flightsCost,
