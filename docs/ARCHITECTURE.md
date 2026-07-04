@@ -151,6 +151,39 @@ Para producción, migrar a PostgreSQL Memory.
 
 ---
 
+## Autenticación (portal del viajero)
+
+El frontend usa **Firebase Auth** en el cliente y una **session cookie firmada
+por el servidor** para autorizar peticiones. Modelo de verificación en dos capas:
+
+```
+Cliente (Firebase Auth) --ID token--> POST /api/auth/session
+                                         │  verifyIdToken (firebase-admin)
+                                         │  createSessionCookie (14 días)
+                                         ▼
+                              cookie httpOnly "justenjoy-session"
+   ┌──────────────────────────────────────────────────────────────┐
+   │ Proxy (src/proxy.ts)  → verificación LIGERA con jose          │
+   │   firma RS256 vs claves públicas de Google + iss/aud/exp      │
+   │   protege /dashboard, /planner, /trip                         │
+   ├──────────────────────────────────────────────────────────────┤
+   │ Route handlers        → verificación AUTORITATIVA (Admin SDK) │
+   │   verifySessionCookie(..., checkRevoked) en /api/plan-trip    │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+- **Fail-closed:** sin credenciales del Admin SDK, los endpoints devuelven 503 y
+  el proxy redirige a `/login`.
+- **Credenciales del servidor:** service account vía `FIREBASE_ADMIN_*` (ver
+  `.env.example`). Secretas; nunca en el repo ni en el cliente.
+- La config `NEXT_PUBLIC_FIREBASE_*` sigue siendo pública por diseño (solo Auth).
+- Detalle e historial de decisiones: `docs/specs/2026-07-04-auth-verificacion-servidor.md`.
+
+> ⚠️ El despliegue de esta auth **requiere** configurar la service account en el
+> entorno (local y Vercel). Sin ella, nadie puede iniciar sesión (fail-closed).
+
+---
+
 ## Decisiones de arquitectura
 
 Ver `docs/adr/` para el registro completo de decisiones y su motivación.

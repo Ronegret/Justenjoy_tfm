@@ -88,20 +88,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        let sessionOk = false;
         try {
-          const idToken = await firebaseUser.getIdToken();
-          await fetch('/api/auth/session', {
+          // Fuerza un ID token fresco: createSessionCookie es estricto con la
+          // antigüedad del token y rechazaría uno cacheado al restaurar sesión.
+          const idToken = await firebaseUser.getIdToken(true);
+          const res = await fetch('/api/auth/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken })
           });
+          sessionOk = res.ok;
+          if (!res.ok) {
+            console.error('[Auth] el servidor no pudo crear la sesión:', res.status);
+          }
         } catch (e) {
           console.error('[Auth] Error al establecer cookie de sesión:', e);
         }
-        setUser({
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Viajero',
-          email: firebaseUser.email || ''
-        });
+        if (sessionOk) {
+          setUser({
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Viajero',
+            email: firebaseUser.email || ''
+          });
+        } else {
+          // Sin cookie de sesión válida, el cliente y el servidor quedarían
+          // desincronizados (UI "logueada" que no puede usar rutas protegidas).
+          // Reconciliamos cerrando sesión y mostrando el error.
+          setError('No se pudo iniciar sesión en el servidor. Vuelve a intentarlo.');
+          setUser(null);
+          await signOut(auth);
+        }
       } else {
         try {
           await fetch('/api/auth/session', { method: 'DELETE' });
