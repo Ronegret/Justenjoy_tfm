@@ -41,20 +41,22 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeLoadingStep, setActiveLoadingStep] = useState(0);
 
   // Initialize trips from localstorage or load default mocks.
-  // Se hace en un efecto de montaje (no en un inicializador de useState) A
-  // PROPÓSITO: así el HTML del servidor y la primera hidratación coinciden
-  // (estado vacío) y el relleno desde localStorage ocurre TRAS montar, evitando
-  // un hydration mismatch. Por eso set-state-in-effect no aplica a este patrón
-  // SSR-safe y se desactiva de forma acotada y documentada.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  // Efecto de montaje (no inicializador de useState) A PROPÓSITO: el HTML del
+  // servidor y la primera hidratación coinciden (estado vacío) y el relleno desde
+  // localStorage ocurre TRAS montar, evitando un hydration mismatch. Los disables
+  // por línea (set-state-in-effect) y el de exhaustive-deps documentan que es
+  // intencional y SSR-safe.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('justenjoy_trips');
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSavedTrips(parsed);
           if (parsed.length > 0 && !currentTrip) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCurrentTrip(parsed[0]);
           }
         } catch (e) {
@@ -63,13 +65,14 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Populate with defaults
         const defaults = Object.values(mockTrips);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSavedTrips(defaults);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCurrentTrip(defaults[0]);
         localStorage.setItem('justenjoy_trips', JSON.stringify(defaults));
       }
     }
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const saveTrip = (trip: TripData) => {
     setSavedTrips((prev) => {
