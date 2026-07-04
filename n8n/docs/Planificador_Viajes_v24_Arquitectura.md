@@ -372,8 +372,12 @@ Body: { "session_id": "session_...", "feedback_text": "Prefiero un hotel mas eco
 ~60 ciudades soportadas. Principales: Amsterdam (AMS), Paris (CDG), London (LHR),
 Barcelona (BCN), Madrid (MAD), Rome (FCO), Berlin (BER), New York (JFK), Miami (MIA),
 Buenos Aires (EZE), Bogotá (BOG), Tokyo (NRT), Dubai (DXB), Singapore (SIN), Sydney (SYD).
+Ciudades españolas secundarias (añadidas 2026-07-04): Valencia (VLC), Sevilla/Seville (SVQ),
+Málaga (AGP), Bilbao (BIO), Palma de Mallorca (PMI), Alicante (ALC) — el frontend envía
+nombres en español, así que sin estas entradas el fallback (3 primeras letras) generaba
+IATA inválidas (p. ej. "Valencia" → `VAL` en vez de `VLC`) y la búsqueda de vuelos fallaba.
 Para añadir una ciudad: editar el nodo `Convertir Ciudades a IATA` (tres tablas:
-`cityToIata`, `cityToGps`, `iataToAirportName`).
+`cityToIata`, `cityToGps`, `iataToAirportName`) e incluir el alias en español.
 
 ---
 
