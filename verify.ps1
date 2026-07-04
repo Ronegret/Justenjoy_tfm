@@ -12,6 +12,7 @@ function Write-Step { param($msg) Write-Host "`n==> $msg" -ForegroundColor Cyan 
 function Write-OK   { param($msg) Write-Host "    [OK] $msg" -ForegroundColor Green }
 function Write-FAIL { param($msg) Write-Host "    [FAIL] $msg" -ForegroundColor Red; $script:failed = $true }
 function Write-SKIP { param($msg) Write-Host "    [SKIP] $msg" -ForegroundColor Yellow }
+function Write-WARN { param($msg) Write-Host "    [WARN] $msg" -ForegroundColor Yellow }
 
 # ── Paso 1: Verificar que ningun .env esta SIN ignorar por git ────────────────
 # Tener un .env local es el flujo normal (el README indica: cp .env.example .env).
@@ -114,6 +115,51 @@ if (-not $toolPresent) {
 } else {
     Write-OK "Guardian de secretos activo (hook pre-commit registrado en el repo)"
     $precommitOk = $true
+}
+
+# ── Paso 6: Calidad del frontend (typecheck duro + lint informativo) ──────────
+# `tsc --noEmit` es GATE DURO: hoy pasa limpio y atrapa regresiones de tipos.
+# `npm run lint` es INFORMATIVO (WARN): hay deuda de ESLint conocida que NO bloquea
+# `next build` (Next 16) y que se esta reduciendo; cuando el lint quede limpio,
+# eleva ese bloque a Write-FAIL (gate duro). `next build` queda fuera por lentitud
+# (comprobacion manual: cd frontend; npm run build).
+Write-Step "Comprobando la calidad del frontend (typecheck + lint)"
+
+$frontendDir = "frontend"
+if (-not (Test-Path $frontendDir)) {
+    Write-SKIP "No existe el directorio frontend/ (nada que comprobar aqui)"
+} elseif (-not (Test-Path (Join-Path $frontendDir "node_modules"))) {
+    Write-SKIP "frontend/node_modules no instalado. Ejecuta 'npm install' en frontend/ (se omite la calidad)"
+} elseif ($null -eq (Get-Command npx -ErrorAction SilentlyContinue)) {
+    Write-SKIP "npx no esta en el PATH; no se pueden ejecutar tsc/eslint"
+} else {
+    Push-Location $frontendDir
+    try {
+        # Typecheck: gate duro
+        & npx tsc --noEmit 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-OK "TypeScript: sin errores de tipos (tsc --noEmit)"
+        } else {
+            Write-FAIL "TypeScript: hay errores de tipos. Revisa con: cd frontend; npx tsc --noEmit"
+        }
+
+        # Lint: informativo, no bloquea (deuda conocida)
+        if ($null -ne (Get-Command npm -ErrorAction SilentlyContinue)) {
+            $lintOut = & npm run --silent lint 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-OK "ESLint: limpio"
+            } else {
+                $joined = ($lintOut -join "`n")
+                $errCount  = ([regex]::Matches($joined, "\berror\b")).Count
+                $warnCount = ([regex]::Matches($joined, "\bwarning\b")).Count
+                Write-WARN "ESLint: $errCount errores / $warnCount warnings (deuda conocida; no bloquea el gate). Detalle: cd frontend; npm run lint"
+            }
+        } else {
+            Write-SKIP "npm no esta en el PATH; se omite el lint del frontend"
+        }
+    } finally {
+        Pop-Location
+    }
 }
 
 # ── Resultado final ───────────────────────────────────────────────────────────
