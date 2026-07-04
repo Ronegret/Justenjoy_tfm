@@ -35,6 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${plusJakartaSans.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-brand-cream text-brand-dark dark:bg-brand-dark dark:text-brand-white">
@@ -45,22 +46,24 @@ export default function RootLayout({
             <Footer />
           </TripProvider>
         </AuthProvider>
-        {/* Service Worker PWA Registration Script */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                    console.log('PWA ServiceWorker registered successfully:', reg.scope);
-                  }).catch(function(err) {
-                    console.log('PWA ServiceWorker registration failed:', err);
+        {/* Service Worker PWA Registration Script — solo en producción (en dev provoca bucles con Fast Refresh) */}
+        {process.env.NODE_ENV === 'production' && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                      console.log('PWA ServiceWorker registered successfully:', reg.scope);
+                    }).catch(function(err) {
+                      console.log('PWA ServiceWorker registration failed:', err);
+                    });
                   });
-                });
-              }
-            `
-          }}
-        />
+                }
+              `
+            }}
+          />
+        )}
       </body>
     </html>
   );
