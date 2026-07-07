@@ -133,7 +133,8 @@ Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 > fechas del ejemplo antes de lanzar la prueba.
 
 ### Salida (HTTP 200)
-Ver `n8n/examples/output-plan.json` para el esquema completo.
+Ver `n8n/examples/output-plan.json` (genérico) y
+`n8n/examples/output-plan-v29-amsterdam-paris.json` (respuesta real de v29) para el esquema completo.
 Campos clave: `status`, `plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`,
 `warnings[]`, `_debug`. Desde v29 la respuesta añade además campos internos de la
 persistencia en Supabase (`_supabase_record`, `_skip_supabase`); el frontend los ignora.
