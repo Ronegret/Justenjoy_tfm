@@ -1,0 +1,562 @@
+{
+  "session_id": "session_1783458586688_40gval1c0",
+  "status": "plan_ready",
+  "revision_count": 0,
+  "revision_snapshot": 0,
+  "generated_at": "2026-07-07T21:10:29.320Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Amsterdam",
+        "destination": "Paris",
+        "flights": {
+          "outbound": {
+            "airline": "Air France",
+            "flight_no": "AF 1641",
+            "origin": "AMS",
+            "destination": "CDG",
+            "departure_datetime": "2026-09-01T14:10:00",
+            "arrival_datetime": "2026-09-01T15:35:00",
+            "layovers": [],
+            "price_usd": 128,
+            "booking_url": "https://www.google.com/flights?hl=en#flt=AMS.CDG.2026-09-01;c:USD;e:1;sd:1;t:f"
+          },
+          "return": {
+            "airline": "Air France",
+            "flight_no": "AF 1640",
+            "origin": "CDG",
+            "destination": "AMS",
+            "departure_datetime": "2026-09-15T11:45:00",
+            "arrival_datetime": "2026-09-15T13:10:00",
+            "layovers": [],
+            "price_usd": 80,
+            "booking_url": "https://www.google.com/flights?hl=en#flt=CDG.AMS.2026-09-15;c:USD;e:1;sd:1;t:f"
+          }
+        },
+        "hotel": {
+          "name": "Votre Maison Lointaine",
+          "address": "",
+          "stars": null,
+          "rating": 4.9,
+          "check_in": "2026-09-01",
+          "check_out": "2026-09-15",
+          "price_per_night_usd": 70,
+          "total_usd": 974,
+          "booking_url": "https://votre-maison-lointaine.com/"
+        },
+        "activities": [
+          {
+            "name": "Loulou",
+            "date": "2026-09-02",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 27,
+            "booking_url": "",
+            "category": "Australian restaurant",
+            "source": "google_maps"
+          },
+          {
+            "name": "Zatziki Paris",
+            "date": "2026-09-05",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 15,
+            "booking_url": "",
+            "category": "Mediterranean restaurant",
+            "source": "google_maps"
+          },
+          {
+            "name": "U’s Canteen - Paris 11eme",
+            "date": "2026-09-08",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 15,
+            "booking_url": "",
+            "category": "American restaurant",
+            "source": "google_maps"
+          },
+          {
+            "name": "Chez Sophie",
+            "date": "2026-09-11",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 27,
+            "booking_url": "",
+            "category": "Restaurant",
+            "source": "google_maps"
+          },
+          {
+            "name": "Les Baux de Paris",
+            "date": "2026-09-14",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 27,
+            "booking_url": "",
+            "category": "Restaurant",
+            "source": "google_maps"
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 208,
+      "hotel_usd": 974,
+      "activities_usd": 111,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": null,
+      "local_transport_data_source": "null",
+      "total_usd": 1293,
+      "budget_total_usd": 2200,
+      "budget_remaining_usd": 907
+    },
+    "trip_summary": "Viaje a París de dos semanas con vuelo directo desde Ámsterdam, alojamiento en un hotel boutique de alta valoración en el centro y actividades gastronómicas seleccionadas para descubrir la cocina local. El plan equilibra tiempo libre y experiencias culinarias en restaurantes destacados.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-09-01",
+        "title": "Día de llegada a Paris",
+        "summary": "Llegada a París a las 15:35 y traslado al hotel para hacer check-in. Tarde libre para instalarse y dar un primer paseo por los alrededores.",
+        "activities": []
+      },
+      {
+        "day": 2,
+        "date": "2026-09-02",
+        "title": "Descubre la cocina australiana en Loulou",
+        "summary": "Comienza el día con una experiencia gastronómica en Loulou, un restaurante australiano muy valorado. El resto del día es ideal para explorar el barrio latino y disfrutar de los cafés parisinos.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Loulou",
+            "duration_hours": 3,
+            "price_usd": 27,
+            "booking_url": ""
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "date": "2026-09-03",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Día libre para recorrer mercados locales, visitar barrios emblemáticos como Le Marais o Montmartre y relajarse en algún café tradicional.",
+        "activities": []
+      },
+      {
+        "day": 4,
+        "date": "2026-09-04",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Aprovecha para visitar museos, pasear por los jardines de Luxemburgo o descubrir tiendas y galerías en el centro de París.",
+        "activities": []
+      },
+      {
+        "day": 5,
+        "date": "2026-09-05",
+        "title": "Sabores mediterráneos en Zatziki Paris",
+        "summary": "Disfruta de una experiencia culinaria mediterránea en Zatziki Paris. El resto del día puedes explorar boutiques y librerías cercanas.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Zatziki Paris",
+            "duration_hours": 3,
+            "price_usd": 15,
+            "booking_url": ""
+          }
+        ]
+      },
+      {
+        "day": 6,
+        "date": "2026-09-06",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Día perfecto para recorrer el Sena, visitar Notre-Dame o relajarse en los parques urbanos de la ciudad.",
+        "activities": []
+      },
+      {
+        "day": 7,
+        "date": "2026-09-07",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Explora los mercados de pulgas, prueba dulces en una pastelería local o visita alguna exposición temporal.",
+        "activities": []
+      },
+      {
+        "day": 8,
+        "date": "2026-09-08",
+        "title": "Comida americana en U’s Canteen - Paris 11eme",
+        "summary": "Visita U’s Canteen para probar su propuesta americana. Aprovecha la tarde para pasear por el Canal Saint-Martin.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "U’s Canteen - Paris 11eme",
+            "duration_hours": 3,
+            "price_usd": 15,
+            "booking_url": ""
+          }
+        ]
+      },
+      {
+        "day": 9,
+        "date": "2026-09-09",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Recorre el barrio de Saint-Germain-des-Prés, disfruta de sus librerías y galerías de arte, o relájate en una terraza.",
+        "activities": []
+      },
+      {
+        "day": 10,
+        "date": "2026-09-10",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Día para descubrir rincones menos turísticos, probar panaderías artesanales y disfrutar del ambiente parisino.",
+        "activities": []
+      },
+      {
+        "day": 11,
+        "date": "2026-09-11",
+        "title": "Cocina francesa en Chez Sophie",
+        "summary": "Reserva la mañana para una experiencia en Chez Sophie, restaurante de alta valoración. El resto del día puedes visitar museos cercanos.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Chez Sophie",
+            "duration_hours": 3,
+            "price_usd": 27,
+            "booking_url": ""
+          }
+        ]
+      },
+      {
+        "day": 12,
+        "date": "2026-09-12",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Aprovecha para visitar monumentos históricos, hacer compras o simplemente relajarte en los jardines de la ciudad.",
+        "activities": []
+      },
+      {
+        "day": 13,
+        "date": "2026-09-13",
+        "title": "Día libre para caminar y conocer Paris",
+        "summary": "Últimos días para explorar rincones ocultos, probar nuevos sabores y disfrutar del ambiente bohemio de París.",
+        "activities": []
+      },
+      {
+        "day": 14,
+        "date": "2026-09-14",
+        "title": "Restaurante tradicional en Les Baux de Paris",
+        "summary": "Cierra tu viaje con una comida en Les Baux de Paris, restaurante tradicional. Aprovecha para dar un paseo nocturno por la ciudad.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Les Baux de Paris",
+            "duration_hours": 3,
+            "price_usd": 27,
+            "booking_url": ""
+          }
+        ]
+      },
+      {
+        "day": 15,
+        "date": "2026-09-15",
+        "title": "Último día en Paris — Regreso a Amsterdam",
+        "summary": "Check-out del hotel y traslado al aeropuerto para tomar el vuelo de regreso a las 11:45. Tiempo para un último café parisino antes de partir.",
+        "activities": []
+      }
+    ],
+    "plan_notes": [
+      "No se requiere visado para ciudadanos de Ámsterdam para estancias cortas en Francia en septiembre de 2026.",
+      "El transporte local en París incluye metro, autobuses y taxis, con precios accesibles desde unos 2 euros por trayecto en metro.",
+      "El clima en septiembre suele ser templado, ideal para pasear y disfrutar de terrazas al aire libre."
+    ],
+    "revision_snapshot": 0
+  },
+  "error_detail": "",
+  "_debug": {
+    "token_usage": null,
+    "execution_time_ms": 9,
+    "plan_metrics": {
+      "activities_found": 5,
+      "itinerary_days": 15,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_supabase_record": {
+    "session_id": "session_1783458586688_40gval1c0",
+    "status": "plan_ready",
+    "destination": "Paris",
+    "origin": "Amsterdam",
+    "departure_date": "2026-09-01",
+    "return_date": "2026-09-15",
+    "budget_usd": 2200,
+    "total_cost_usd": 1293,
+    "travelers_count": 2,
+    "activity_interests": [
+      "food",
+      "culture",
+      "museums"
+    ],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Amsterdam",
+          "destination": "Paris",
+          "flights": {
+            "outbound": {
+              "airline": "Air France",
+              "flight_no": "AF 1641",
+              "origin": "AMS",
+              "destination": "CDG",
+              "departure_datetime": "2026-09-01T14:10:00",
+              "arrival_datetime": "2026-09-01T15:35:00",
+              "layovers": [],
+              "price_usd": 128,
+              "booking_url": "https://www.google.com/flights?hl=en#flt=AMS.CDG.2026-09-01;c:USD;e:1;sd:1;t:f"
+            },
+            "return": {
+              "airline": "Air France",
+              "flight_no": "AF 1640",
+              "origin": "CDG",
+              "destination": "AMS",
+              "departure_datetime": "2026-09-15T11:45:00",
+              "arrival_datetime": "2026-09-15T13:10:00",
+              "layovers": [],
+              "price_usd": 80,
+              "booking_url": "https://www.google.com/flights?hl=en#flt=CDG.AMS.2026-09-15;c:USD;e:1;sd:1;t:f"
+            }
+          },
+          "hotel": {
+            "name": "Votre Maison Lointaine",
+            "address": "",
+            "stars": null,
+            "rating": 4.9,
+            "check_in": "2026-09-01",
+            "check_out": "2026-09-15",
+            "price_per_night_usd": 70,
+            "total_usd": 974,
+            "booking_url": "https://votre-maison-lointaine.com/"
+          },
+          "activities": [
+            {
+              "name": "Loulou",
+              "date": "2026-09-02",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 27,
+              "booking_url": "",
+              "category": "Australian restaurant",
+              "source": "google_maps"
+            },
+            {
+              "name": "Zatziki Paris",
+              "date": "2026-09-05",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 15,
+              "booking_url": "",
+              "category": "Mediterranean restaurant",
+              "source": "google_maps"
+            },
+            {
+              "name": "U’s Canteen - Paris 11eme",
+              "date": "2026-09-08",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 15,
+              "booking_url": "",
+              "category": "American restaurant",
+              "source": "google_maps"
+            },
+            {
+              "name": "Chez Sophie",
+              "date": "2026-09-11",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 27,
+              "booking_url": "",
+              "category": "Restaurant",
+              "source": "google_maps"
+            },
+            {
+              "name": "Les Baux de Paris",
+              "date": "2026-09-14",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 27,
+              "booking_url": "",
+              "category": "Restaurant",
+              "source": "google_maps"
+            }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 208,
+        "hotel_usd": 974,
+        "activities_usd": 111,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": null,
+        "local_transport_data_source": "null",
+        "total_usd": 1293,
+        "budget_total_usd": 2200,
+        "budget_remaining_usd": 907
+      },
+      "trip_summary": "Viaje a París de dos semanas con vuelo directo desde Ámsterdam, alojamiento en un hotel boutique de alta valoración en el centro y actividades gastronómicas seleccionadas para descubrir la cocina local. El plan equilibra tiempo libre y experiencias culinarias en restaurantes destacados.",
+      "daily_itinerary": [
+        {
+          "day": 1,
+          "date": "2026-09-01",
+          "title": "Día de llegada a Paris",
+          "summary": "Llegada a París a las 15:35 y traslado al hotel para hacer check-in. Tarde libre para instalarse y dar un primer paseo por los alrededores.",
+          "activities": []
+        },
+        {
+          "day": 2,
+          "date": "2026-09-02",
+          "title": "Descubre la cocina australiana en Loulou",
+          "summary": "Comienza el día con una experiencia gastronómica en Loulou, un restaurante australiano muy valorado. El resto del día es ideal para explorar el barrio latino y disfrutar de los cafés parisinos.",
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Loulou",
+              "duration_hours": 3,
+              "price_usd": 27,
+              "booking_url": ""
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "date": "2026-09-03",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Día libre para recorrer mercados locales, visitar barrios emblemáticos como Le Marais o Montmartre y relajarse en algún café tradicional.",
+          "activities": []
+        },
+        {
+          "day": 4,
+          "date": "2026-09-04",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Aprovecha para visitar museos, pasear por los jardines de Luxemburgo o descubrir tiendas y galerías en el centro de París.",
+          "activities": []
+        },
+        {
+          "day": 5,
+          "date": "2026-09-05",
+          "title": "Sabores mediterráneos en Zatziki Paris",
+          "summary": "Disfruta de una experiencia culinaria mediterránea en Zatziki Paris. El resto del día puedes explorar boutiques y librerías cercanas.",
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Zatziki Paris",
+              "duration_hours": 3,
+              "price_usd": 15,
+              "booking_url": ""
+            }
+          ]
+        },
+        {
+          "day": 6,
+          "date": "2026-09-06",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Día perfecto para recorrer el Sena, visitar Notre-Dame o relajarse en los parques urbanos de la ciudad.",
+          "activities": []
+        },
+        {
+          "day": 7,
+          "date": "2026-09-07",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Explora los mercados de pulgas, prueba dulces en una pastelería local o visita alguna exposición temporal.",
+          "activities": []
+        },
+        {
+          "day": 8,
+          "date": "2026-09-08",
+          "title": "Comida americana en U’s Canteen - Paris 11eme",
+          "summary": "Visita U’s Canteen para probar su propuesta americana. Aprovecha la tarde para pasear por el Canal Saint-Martin.",
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "U’s Canteen - Paris 11eme",
+              "duration_hours": 3,
+              "price_usd": 15,
+              "booking_url": ""
+            }
+          ]
+        },
+        {
+          "day": 9,
+          "date": "2026-09-09",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Recorre el barrio de Saint-Germain-des-Prés, disfruta de sus librerías y galerías de arte, o relájate en una terraza.",
+          "activities": []
+        },
+        {
+          "day": 10,
+          "date": "2026-09-10",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Día para descubrir rincones menos turísticos, probar panaderías artesanales y disfrutar del ambiente parisino.",
+          "activities": []
+        },
+        {
+          "day": 11,
+          "date": "2026-09-11",
+          "title": "Cocina francesa en Chez Sophie",
+          "summary": "Reserva la mañana para una experiencia en Chez Sophie, restaurante de alta valoración. El resto del día puedes visitar museos cercanos.",
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Chez Sophie",
+              "duration_hours": 3,
+              "price_usd": 27,
+              "booking_url": ""
+            }
+          ]
+        },
+        {
+          "day": 12,
+          "date": "2026-09-12",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Aprovecha para visitar monumentos históricos, hacer compras o simplemente relajarte en los jardines de la ciudad.",
+          "activities": []
+        },
+        {
+          "day": 13,
+          "date": "2026-09-13",
+          "title": "Día libre para caminar y conocer Paris",
+          "summary": "Últimos días para explorar rincones ocultos, probar nuevos sabores y disfrutar del ambiente bohemio de París.",
+          "activities": []
+        },
+        {
+          "day": 14,
+          "date": "2026-09-14",
+          "title": "Restaurante tradicional en Les Baux de Paris",
+          "summary": "Cierra tu viaje con una comida en Les Baux de Paris, restaurante tradicional. Aprovecha para dar un paseo nocturno por la ciudad.",
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Les Baux de Paris",
+              "duration_hours": 3,
+              "price_usd": 27,
+              "booking_url": ""
+            }
+          ]
+        },
+        {
+          "day": 15,
+          "date": "2026-09-15",
+          "title": "Último día en Paris — Regreso a Amsterdam",
+          "summary": "Check-out del hotel y traslado al aeropuerto para tomar el vuelo de regreso a las 11:45. Tiempo para un último café parisino antes de partir.",
+          "activities": []
+        }
+      ],
+      "plan_notes": [
+        "No se requiere visado para ciudadanos de Ámsterdam para estancias cortas en Francia en septiembre de 2026.",
+        "El transporte local en París incluye metro, autobuses y taxis, con precios accesibles desde unos 2 euros por trayecto en metro.",
+        "El clima en septiembre suele ser templado, ideal para pasear y disfrutar de terrazas al aire libre."
+      ],
+      "revision_snapshot": 0
+    }
+  },
+  "_skip_supabase": false
+}
