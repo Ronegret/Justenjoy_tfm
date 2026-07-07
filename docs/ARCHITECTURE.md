@@ -135,7 +135,8 @@ Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 ### Salida (HTTP 200)
 Ver `n8n/examples/output-plan.json` para el esquema completo.
 Campos clave: `status`, `plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`,
-`warnings[]`, `_debug`.
+`warnings[]`, `_debug`. Desde v29 la respuesta añade además campos internos de la
+persistencia en Supabase (`_supabase_record`, `_skip_supabase`); el frontend los ignora.
 
 ### Refinamiento (POST `/webhook/travel-refine`)
 Entrada: `{ session_id, feedback_text }`.
