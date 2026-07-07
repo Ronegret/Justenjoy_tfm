@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "maps.googleapis.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com", // Utilizado a menudo por Google Places Photos
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com", // Placeholder de viaje mientras no hay imageUrl real
+      },
+    ],
+  },
   // Firebase public config — these are intentionally public (see Firebase docs)
   // and safe to fall back to since they identify the project, not a secret.
   // OPENAI_API_KEY / ANTHROPIC_API_KEY are NOT listed here on purpose: they are

@@ -86,6 +86,9 @@ export interface ItineraryBlock {
   description: string;
   tip?: string;
   alternative?: string;
+  lat?: number;
+  lng?: number;
+  imageUrl?: string;
 }
 
 export interface DayPlan {

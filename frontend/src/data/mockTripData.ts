@@ -145,7 +145,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Aeropuerto de Lisboa',
             description: 'Llegada y traslado al hotel.',
             tip: 'Comprar tarjeta de transporte si se harán varios trayectos.',
-            alternative: 'Taxi o Bolt si se viaja con equipaje.'
+            alternative: 'Taxi o Bolt si se viaja con equipaje.',
+            lat: 38.7813,
+            lng: -9.1359
           },
           {
             time: '13:00',
@@ -157,7 +159,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Baixa-Chiado',
             description: 'Comida cerca del alojamiento para evitar desplazamientos.',
             tip: 'Reservar si es fin de semana.',
-            alternative: 'Comer un pastel de bacalao en el mercado.'
+            alternative: 'Comer un pastel de bacalao en el mercado.',
+            lat: 38.7107,
+            lng: -9.1387
           },
           {
             time: '16:00',
@@ -169,7 +173,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Praça do Comércio',
             description: 'Explora la plaza más grande de Lisboa y camina por la orilla del Tajo.',
             tip: 'El acceso es libre y es ideal para fotos de tarde.',
-            alternative: 'Subir al Arco de la Rua Augusta por 3€.'
+            alternative: 'Subir al Arco de la Rua Augusta por 3€.',
+            lat: 38.7075,
+            lng: -9.1364
           },
           {
             time: '20:30',
@@ -181,7 +187,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Bairro Alto',
             description: 'Disfruta de la comida tradicional portuguesa con música en directo.',
             tip: 'Los mejores sitios de Fado tradicional requieren reserva previa.',
-            alternative: 'Cena de tapas en tabernas locales si prefieres algo informal.'
+            alternative: 'Cena de tapas en tabernas locales si prefieres algo informal.',
+            lat: 38.7139,
+            lng: -9.1469
           }
         ]
       },
@@ -201,7 +209,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Barrio de Alfama',
             description: 'Paseo guiado por el barrio más antiguo y con más encanto.',
             tip: 'Lleva calzado cómodo para las calles empedradas.',
-            alternative: 'Explorar por libre usando el tranvía histórico 28.'
+            alternative: 'Explorar por libre usando el tranvía histórico 28.',
+            lat: 38.7128,
+            lng: -9.1303
           },
           {
             time: '13:00',
@@ -213,7 +223,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Mercado da Ribeira',
             description: 'Mercado gastronómico con puestos de chefs locales e internacionales.',
             tip: 'Suele haber mucha gente; busca sitio para sentarte antes de pedir.',
-            alternative: 'Restaurantes tradicionales en los alrededores de Cais do Sodré.'
+            alternative: 'Restaurantes tradicionales en los alrededores de Cais do Sodré.',
+            lat: 38.7069,
+            lng: -9.1459
           },
           {
             time: '18:00',
@@ -225,7 +237,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Dársena de Belém',
             description: 'Observa los monumentos de Lisboa desde una perspectiva única al atardecer.',
             tip: 'Lleva una chaqueta fina ya que en el río refresca al anochecer.',
-            alternative: 'Pasear por el paseo marítimo de Belém gratis.'
+            alternative: 'Pasear por el paseo marítimo de Belém gratis.',
+            lat: 38.6961,
+            lng: -9.2160
           },
           {
             time: '21:00',
@@ -237,7 +251,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Lisboa Arena',
             description: 'Espectáculo musical en el centro neurálgico cultural.',
             tip: 'Llega 15 minutos antes para pasar el control de accesos.',
-            alternative: 'Tomar una copa en las terrazas de Chiado.'
+            alternative: 'Tomar una copa en las terrazas de Chiado.',
+            lat: 38.7679,
+            lng: -9.0965
           }
         ]
       },
@@ -257,7 +273,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Estación de Rossio',
             description: 'Viaje en tren regional a la pintoresca villa de Sintra.',
             tip: 'Compra los billetes el día anterior para evitar colas por la mañana.',
-            alternative: 'Alquilar un Uber/Bolt si viajan 3 o 4 personas.'
+            alternative: 'Alquilar un Uber/Bolt si viajan 3 o 4 personas.',
+            lat: 38.7145,
+            lng: -9.1394
           },
           {
             time: '11:00',
@@ -269,7 +287,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'Quinta da Regaleira',
             description: 'Jardines románticos repletos de símbolos templarios, cuevas y el pozo iniciático.',
             tip: 'Es un recorrido muy empinado; tómalo con calma.',
-            alternative: 'Visitar el Palacio Nacional en el centro de Sintra.'
+            alternative: 'Visitar el Palacio Nacional en el centro de Sintra.',
+            lat: 38.7969,
+            lng: -9.3959
           },
           {
             time: '14:00',
@@ -280,7 +300,9 @@ export const mockTrips: Record<string, TripData> = {
             cost: 22,
             location: 'Sintra Centro Histórico',
             description: 'Prueba la Queijada y los Travesseiros, dulces típicos de la región.',
-            tip: 'Evita los restaurantes en la calle principal; busca en los callejones traseros.'
+            tip: 'Evita los restaurantes en la calle principal; busca en los callejones traseros.',
+            lat: 38.7979,
+            lng: -9.3907
           },
           {
             time: '17:00',
@@ -292,7 +314,9 @@ export const mockTrips: Record<string, TripData> = {
             location: 'LX Factory, Alcântara',
             description: 'Espacio industrial reconvertido en centro de arte, tiendas hipster y cafeterías.',
             tip: 'Visita la librería Ler Devagar, una de las más bonitas del mundo.',
-            alternative: 'Ir de compras al centro comercial de Amoreiras.'
+            alternative: 'Ir de compras al centro comercial de Amoreiras.',
+            lat: 38.7042,
+            lng: -9.1778
           }
         ]
       }

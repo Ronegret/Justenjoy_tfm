@@ -14,7 +14,7 @@ equipo, **probar** el frontend y **contribuir** sin romper nada.
 
 ```
 Navegador ──► Frontend (Next.js 16, :3000) ──► n8n (Docker, :5678) ──► SerpAPI / OpenAI / Tavily
-                     │                              (workflow "Planificador de Viajes v27")
+                     │                              (workflow "Planificador de Viajes — v29")
                      └─ Auth: Firebase (Google Sign-In)
 ```
 
@@ -57,7 +57,7 @@ y un `N8N_ENCRYPTION_KEY` aleatorio (`openssl rand -hex 32`). Luego:
 ```bash
 docker compose up -d
 ```
-Esto crea n8n en `localhost:5678` e **importa y activa solo** el workflow v27 (no hay que
+Esto crea n8n en `localhost:5678` e **importa y activa solo** el workflow v29 (no hay que
 tocar la UI). Comprueba: `curl http://localhost:5678/healthz` → `{"status":"ok"}`.
 
 ### 3.3 Frontend — `frontend/.env.local`
@@ -85,7 +85,7 @@ itinerario servido por **tu** n8n.
 ### 3.5 Mantener el proyecto actualizado
 
 Si ya lo tienes montado y quieres traer cambios nuevos (incluidas nuevas versiones del
-workflow de n8n, p. ej. **v27**):
+workflow de n8n, p. ej. **v29**):
 
 ```bash
 git checkout develop
@@ -105,7 +105,7 @@ npm run dev
   `docker compose up -d --force-recreate n8n-import n8n`) para forzar la re-importación.
 - **No hace falta tocar** tu `.env` ni tu `frontend/.env.local` — tus claves siguen igual.
 - **Verifica**: en la UI de n8n (`localhost:5678`) el workflow debe ser la versión esperada
-  (p. ej. *"Planificador de Viajes — v27"*) y estar **activo**. Prueba generar un viaje con
+  (p. ej. *"Planificador de Viajes — v29"*) y estar **activo**. Prueba generar un viaje con
   vuelta para confirmarlo.
 - Si montaste el stack **antes** de que el volumen dejara de ser `external`, el primer `up`
   usará un volumen nuevo y n8n re-importará credenciales + workflow desde cero (pierdes estados
@@ -154,7 +154,7 @@ En **español**, imperativo, con prefijo de tipo: `feat:`, `fix:`, `docs:`, `cho
 | Ruta | Qué |
 |---|---|
 | `frontend/` | Portal web (Next.js 16 + Firebase + Tailwind) |
-| `n8n/workflows/` | Workflows versionados (el activo es **v27**) |
+| `n8n/workflows/` | Workflows versionados (el activo es **v29**) |
 | `n8n/docs/` | Arquitectura del workflow |
 | `n8n/examples/` | Ejemplos de entrada/salida para testing |
 | `docs/` | Documentación (arquitectura, specs, guías) |
