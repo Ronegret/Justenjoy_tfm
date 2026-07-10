@@ -13,6 +13,35 @@ interface TravelSummaryPanelProps {
 }
 
 export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferences }) => {
+  const getStyleLabel = (style: string) => {
+    const labels: Record<string, string> = {
+      culture: 'Cultura',
+      food: 'Gastronomía',
+      beach: 'Playa',
+      adventure: 'Aventura',
+      relax: 'Relax',
+      museums: 'Museos',
+      family: 'Familia'
+    };
+    return labels[style] || style;
+  };
+
+  const getRestrictionLabel = (restriction: string) => {
+    const labels: Record<string, string> = {
+      avoid_scales: 'Evitar escalas',
+      avoid_early_flights: 'Evitar vuelos temprano',
+      central_hotel: 'Hotel céntrico',
+      cheap_hotel: 'Hotel barato',
+      free_activities: 'Actividades gratis',
+      free_museums: 'Museos gratuitos',
+      kids_friendly: 'Viaje con niños',
+      low_walking: 'Evitar caminar mucho',
+      accessibility: 'Accesibilidad',
+      save_money: 'Ahorrar'
+    };
+    return labels[restriction] || restriction.replaceAll('_', ' ');
+  };
+
   const getBudgetLabel = (b: string) => {
     switch (b) {
       case 'low': return 'Low Cost';
@@ -41,11 +70,11 @@ export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferen
           <div className="flex items-center gap-2">
             <Compass className="w-5 h-5 text-brand-blue" />
             <h3 className="text-xs font-extrabold text-brand-dark dark:text-brand-white uppercase tracking-wider">
-              Travel Cockpit
+              Resumen del viaje
             </h3>
           </div>
           <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
-            Resumen estructurado de tu itinerario en construcción.
+            Lo importante de tu plan mientras lo vamos preparando.
           </p>
         </div>
         <div className="w-8 h-8 opacity-45 shrink-0">
@@ -180,7 +209,7 @@ export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferen
                 key={item}
                 className="px-2.5 py-0.5 rounded-md bg-brand-blue/5 text-brand-blue dark:bg-brand-blue/20 dark:text-brand-white text-[9px] font-bold uppercase tracking-wider"
               >
-                {item}
+                {getStyleLabel(item)}
               </span>
             ))
           ) : (
@@ -198,7 +227,7 @@ export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferen
           </span>
           <div className="flex flex-wrap gap-1">
             {preferences.restrictions.map((item) => {
-              const label = item.replace('_', ' ');
+              const label = getRestrictionLabel(item);
               return (
                 <span
                   key={item}

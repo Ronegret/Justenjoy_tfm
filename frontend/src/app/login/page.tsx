@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, ArrowRight, Mail, Lock, Sparkles, User,
@@ -11,7 +10,6 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
-  const router = useRouter();
   const { user, login, signup, loginWithGoogle, error, isLoading } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -30,10 +28,20 @@ export default function LoginPage() {
     '¡Listo! Entrando a JUST ENJOY...'
   ];
 
+  const getRedirectTarget = () => {
+    const next = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('next')
+      : null;
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      return next;
+    }
+    return '/dashboard';
+  };
+
   // Redirect once auth state is resolved
   useEffect(() => {
     if (!isLoading && user && !isSubmitting) {
-      window.location.href = '/dashboard';
+      window.location.href = getRedirectTarget();
     }
   }, [isLoading, user, isSubmitting]);
 
@@ -56,7 +64,7 @@ export default function LoginPage() {
         await triggerLoadingSteps();
         await signupPromise;
       }
-      window.location.href = '/dashboard';
+      window.location.href = getRedirectTarget();
     } catch (err: any) {
       setIsSubmitting(false);
       setLocalError(err.message || 'Ocurrió un error al iniciar sesión.');
@@ -71,7 +79,7 @@ export default function LoginPage() {
       await loginWithGoogle();
       // Popup succeeded — mostrar pasos de carga y redirigir
       await triggerLoadingSteps();
-      window.location.href = '/dashboard';
+      window.location.href = getRedirectTarget();
     } catch (err: any) {
       setIsSubmitting(false);
       setLocalError(err.message || 'Error al iniciar sesión con Google.');

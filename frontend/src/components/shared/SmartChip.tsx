@@ -23,10 +23,10 @@ export const SmartChip: React.FC<SmartChipProps> = ({
       whileHover={{ scale: 1.03, y: -1 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-sm transition-all border cursor-pointer ${
+      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold shadow-premium transition-all border cursor-pointer ${
         isSelected
           ? 'bg-brand-blue text-brand-white border-brand-blue'
-          : 'bg-brand-white dark:bg-brand-dark/40 text-text-dark dark:text-brand-cream border-brand-dark/10 dark:border-brand-white/10 hover:border-brand-blue/30'
+          : 'bg-brand-white dark:bg-brand-dark/40 text-text-dark dark:text-brand-cream border-brand-dark/15 dark:border-brand-white/10 hover:border-brand-blue/40 hover:shadow-premium-xl'
       }`}
     >
       {Icon && <Icon className="w-3.5 h-3.5" />}

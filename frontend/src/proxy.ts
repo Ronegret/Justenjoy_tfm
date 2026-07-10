@@ -22,7 +22,9 @@ export async function proxy(request: NextRequest) {
 }
 
 function redirectToLogin(request: NextRequest) {
-  return NextResponse.redirect(new URL('/login', request.url));
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

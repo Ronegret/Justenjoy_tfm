@@ -219,7 +219,7 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
     accommodation_type,
     flight_preferences: {
       cabin_class: prefs.budget === 'luxury' || prefs.budget === 'premium' ? 'business' : 'economy',
-      max_layover_hours: prefs.restrictions.includes('avoid_early_flights') ? 2 : 5,
+      max_layover_hours: prefs.restrictions.includes('avoid_scales') ? 2 : 8,
       preferred_airlines: []
     },
     activity_interests: prefs.style || ['culture', 'food'],

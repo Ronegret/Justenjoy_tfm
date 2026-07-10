@@ -67,6 +67,11 @@ const RESTRICTION_OPTIONS = [
   { id: 'save_money', label: 'Quiero ahorrar' }
 ];
 
+const getRestrictionLabel = (restriction: string) => {
+  const match = RESTRICTION_OPTIONS.find((item) => item.id === restriction);
+  return match?.label || restriction.replaceAll('_', ' ');
+};
+
 export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   preferences,
   onUpdatePreferences,
@@ -96,23 +101,27 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   };
 
   const handleNext = () => {
+    let nextPrefs = preferences;
+
     if (currentStep === 1) {
       if (destType === 'Ya tengo destino' && !inputDestination) {
-        updatePrefs({ destination: 'Lisboa' });
+        nextPrefs = { ...nextPrefs, destination: 'Lisboa' };
       } else if (inputDestination) {
-        updatePrefs({ destination: inputDestination });
+        nextPrefs = { ...nextPrefs, destination: inputDestination };
       } else {
-        updatePrefs({ destination: 'Recomendado por IA' });
+        nextPrefs = { ...nextPrefs, destination: 'Recomendado por IA' };
       }
+      onUpdatePreferences(nextPrefs);
     }
     if (currentStep === 2) {
-      updatePrefs({ origin: inputOrigin });
+      nextPrefs = { ...nextPrefs, origin: inputOrigin };
+      onUpdatePreferences(nextPrefs);
     }
 
     if (currentStep < 9) {
       onStepChange(currentStep + 1);
     } else {
-      onComplete(preferences);
+      onComplete(nextPrefs);
     }
   };
 
@@ -245,7 +254,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
         id: 16,
         sender: 'user',
         text: preferences.restrictions.length > 0
-          ? `Tengo los siguientes filtros: ${preferences.restrictions.map(r => r.replace('_', ' ')).join(', ')}.`
+          ? `Tengo los siguientes filtros: ${preferences.restrictions.map(getRestrictionLabel).join(', ')}.`
           : 'No tengo restricciones.',
         step: 8
       });
@@ -361,7 +370,10 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                   type="text"
                   placeholder="Ej. Lisboa, Roma, París..."
                   value={inputDestination}
-                  onChange={(e) => setInputDestination(e.target.value)}
+                  onChange={(e) => {
+                    setInputDestination(e.target.value);
+                    updatePrefs({ destination: e.target.value });
+                  }}
                   className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
                 />
               )}
@@ -376,7 +388,10 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                 type="text"
                 placeholder="Ej. Barcelona, Madrid, Valencia..."
                 value={inputOrigin}
-                onChange={(e) => setInputOrigin(e.target.value)}
+                onChange={(e) => {
+                  setInputOrigin(e.target.value);
+                  updatePrefs({ origin: e.target.value });
+                }}
                 className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
               />
             </div>

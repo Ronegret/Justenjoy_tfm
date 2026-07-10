@@ -60,6 +60,9 @@ function PlannerContent() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleUpdatePreferences = (updated: TripPreferences) => {
+    if (planWarnings) {
+      setPlanWarnings(null);
+    }
     setPreferences(updated);
   };
 
@@ -101,21 +104,39 @@ function PlannerContent() {
           el motivo real y la sugerencia en vez de generar un viaje ficticio. */}
       {planWarnings && planWarnings.length > 0 && (
         <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 pt-4">
-          <div className="rounded-2xl border border-amber-400/50 bg-amber-50 dark:bg-amber-500/10 p-4 flex flex-col gap-2">
-            <h4 className="text-sm font-extrabold text-amber-700 dark:text-amber-300 uppercase tracking-tight">
+          <div className="rounded-2xl border border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 p-5 shadow-premium flex flex-col gap-3">
+            <h4 className="text-sm font-extrabold text-amber-700 dark:text-amber-300 uppercase tracking-normal">
               No pudimos completar tu plan
             </h4>
             {planWarnings.map((w, i) => (
-              <div key={i} className="text-xs text-brand-dark dark:text-brand-white leading-relaxed">
-                <p>{w.detail || 'n8n necesita que ajustes algún dato del viaje.'}</p>
+              <div key={i} className="text-sm text-brand-dark dark:text-brand-white leading-relaxed">
+                <p>{w.detail || 'Necesitamos que ajustes algún dato del viaje.'}</p>
                 {w.proposed_change && (
                   <p className="text-text-muted mt-0.5">Sugerencia: {w.proposed_change}</p>
                 )}
               </div>
             ))}
-            <p className="text-[11px] text-text-muted mt-1">
-              Ajusta las fechas, el origen o el destino y vuelve a generar el viaje.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+              <p className="text-xs text-text-muted">
+                Para rutas largas, suele ayudar ampliar fechas o quitar filtros demasiado estrictos.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(3)}
+                  className="px-3 py-2 rounded-lg bg-brand-white text-brand-dark border border-amber-300/70 text-xs font-bold shadow-sm hover:shadow-premium transition-all"
+                >
+                  Revisar fechas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(8)}
+                  className="px-3 py-2 rounded-lg bg-amber-500 text-brand-white text-xs font-bold shadow-sm hover:shadow-premium transition-all"
+                >
+                  Revisar filtros
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

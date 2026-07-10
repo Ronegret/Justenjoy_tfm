@@ -58,14 +58,15 @@ export default function Home() {
               <span>Tu concierge inteligente de viajes</span>
             </span>
 
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-brand-dark dark:text-brand-white tracking-tight uppercase leading-[0.98] font-sans">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-brand-dark dark:text-brand-white tracking-normal uppercase leading-[1.02] font-sans">
               De 20 pestañas a tu <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-coral">viaje perfecto</span> <br />
               en 3 minutos
             </h1>
 
-            <p className="text-xs sm:text-sm text-text-muted font-bold max-w-xl mt-1 leading-relaxed">
-              Just Enjoy compara y orquesta de forma inteligente vuelos, alojamientos y actividades en tiempo real, devolviéndote una única ruta visual y completamente justificada.
+            <p className="text-base sm:text-lg text-text-muted font-semibold max-w-xl mt-1 leading-relaxed">
+              Cuéntanos cómo quieres viajar y te preparamos una propuesta clara con vuelos,
+              alojamiento, plan diario y presupuesto. Menos dudas, más ganas de hacer la maleta.
             </p>
           </motion.div>
 
@@ -75,21 +76,21 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             onSubmit={handleSearchSubmit}
-            className="w-full bg-brand-white dark:bg-brand-dark/50 p-2 rounded-2xl md:rounded-full border border-brand-dark/10 dark:border-brand-white/10 shadow-premium flex flex-col md:flex-row gap-2 items-center"
+            className="w-full bg-brand-white dark:bg-brand-dark/50 p-2.5 rounded-2xl md:rounded-full border border-brand-dark/10 dark:border-brand-white/10 shadow-premium-xl flex flex-col md:flex-row gap-2 items-center"
           >
             <div className="flex items-center gap-3 flex-grow w-full px-4 py-2 md:py-0">
               <Compass className="w-5 h-5 text-brand-blue shrink-0 animate-spin-slow" />
               <input
                 type="text"
-                placeholder="¿A dónde quieres ir? (Ej. Lisboa, Roma, París...)"
+                placeholder="¿A dónde quieres ir? Ej. Lisboa, Roma, París..."
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                className="w-full bg-transparent border-0 text-brand-dark dark:text-brand-white placeholder-text-muted text-sm font-bold focus:outline-hidden focus:ring-0 uppercase tracking-wider"
+                className="w-full bg-transparent border-0 text-brand-dark dark:text-brand-white placeholder-text-muted text-base font-semibold focus:outline-hidden focus:ring-0 tracking-normal"
               />
             </div>
             <button
               type="submit"
-              className="w-full md:w-auto px-8 py-3.5 rounded-xl md:rounded-full bg-brand-blue hover:bg-brand-blue/90 text-brand-white font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full md:w-auto px-8 py-4 rounded-xl md:rounded-full bg-brand-blue hover:bg-brand-blue/90 text-brand-white font-black text-sm uppercase tracking-normal shadow-premium hover:shadow-premium-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Crear mi viaje</span>
               <ArrowRight className="w-4 h-4" />
@@ -103,7 +104,7 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="flex flex-col gap-3"
           >
-            <span className="text-[11px] font-bold text-text-muted uppercase tracking-widest">Ideas rápidas de viaje</span>
+            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Ideas rápidas de viaje</span>
             <div className="flex flex-wrap gap-2">
               {quickChips.map((chip) => (
                 <SmartChip
@@ -174,14 +175,14 @@ export default function Home() {
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             whileHover={{ scale: 1.03 }}
-            className="absolute top-8 left-4 w-52 p-4 bg-brand-white dark:bg-brand-dark/80 rounded-2xl border border-brand-dark/5 dark:border-brand-white/5 shadow-premium-xl z-20"
+            className="absolute top-8 left-4 w-56 p-5 bg-brand-white dark:bg-brand-dark/80 rounded-2xl border border-brand-dark/10 dark:border-brand-white/5 shadow-premium-xl z-20"
           >
             <div className="flex items-center justify-between border-b border-brand-dark/5 pb-2">
-              <span className="text-xs font-bold uppercase text-brand-blue tracking-wider">Just Enjoy Match</span>
+              <span className="text-xs font-bold uppercase text-brand-blue tracking-wider">Encaje contigo</span>
               <span className="text-sm font-black text-brand-teal">94%</span>
             </div>
-            <p className="text-xs text-text-muted mt-2 leading-relaxed font-bold">
-              Lisboa encaja con tus preferencias por su clima, precio y baja fricción de vuelos.
+            <p className="text-sm text-text-muted mt-3 leading-relaxed font-semibold">
+              Lisboa encaja con tu presupuesto, fechas y forma de viajar.
             </p>
           </motion.div>
 
@@ -191,7 +192,7 @@ export default function Home() {
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
             whileHover={{ scale: 1.03, rotate: -1 }}
-            className="absolute top-1/3 left-12 w-64 p-4 bg-brand-white dark:bg-brand-dark/80 rounded-2xl border border-brand-dark/10 dark:border-brand-white/10 shadow-premium-xl rotate-[-2deg] z-30"
+            className="absolute top-1/3 left-12 w-72 p-5 bg-brand-white dark:bg-brand-dark/80 rounded-2xl border border-brand-dark/10 dark:border-brand-white/10 shadow-premium-xl rotate-[-2deg] z-30"
           >
             <div className="flex items-center justify-between border-b border-brand-dark/5 pb-2 mb-2">
               <span className="text-xs font-bold text-brand-dark uppercase tracking-wider flex items-center gap-1.5">
@@ -209,7 +210,7 @@ export default function Home() {
             </div>
             <div className="flex justify-between items-center mt-2 border-t border-brand-dark/5 pt-2 text-xs font-bold text-text-muted">
               <span>Vueling Airlines</span>
-              <span className="text-brand-dark font-extrabold text-sm">145€</span>
+              <span className="text-brand-dark font-extrabold text-base">145€</span>
             </div>
           </motion.div>
 
@@ -219,7 +220,7 @@ export default function Home() {
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
             whileHover={{ scale: 1.03, rotate: 1 }}
-            className="absolute bottom-8 right-6 w-60 p-4 bg-brand-white dark:bg-brand-dark/80 rounded-2xl border border-brand-dark/10 dark:border-brand-white/10 shadow-premium-xl rotate-[1.5deg] z-40"
+            className="absolute bottom-8 right-6 w-64 p-5 bg-brand-white dark:bg-brand-dark/80 rounded-2xl border border-brand-dark/10 dark:border-brand-white/10 shadow-premium-xl rotate-[1.5deg] z-40"
           >
             <div className="flex justify-between items-start">
               <div>
@@ -233,7 +234,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2 bg-brand-blue/5 border border-brand-blue/10 p-2.5 rounded-lg text-xs text-brand-blue font-bold mt-3">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>A 350m del centro, óptimo para evitar cuestas.</span>
+              <span>A 350 m del centro, ideal para moverte sin complicarte.</span>
             </div>
           </motion.div>
 
@@ -250,47 +251,47 @@ export default function Home() {
               Planificar un viaje no debería sentirse como trabajar
             </h2>
             <p className="text-sm text-text-muted leading-relaxed font-bold">
-              La sobrecarga de información arruina la ilusión del viaje. JUST ENJOY ordena el caos al instante.
+              La sobrecarga de información puede quitar ilusión. Just Enjoy ordena el caos y te deja una decisión fácil de entender.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Prob 1 */}
-            <div className="bg-brand-cream/20 dark:bg-brand-dark/30 border border-brand-dark/5 dark:border-brand-white/5 rounded-3xl p-6 flex flex-col gap-4">
+            <div className="bg-brand-cream/20 dark:bg-brand-dark/30 border border-brand-dark/10 dark:border-brand-white/5 rounded-3xl p-7 flex flex-col gap-4 shadow-premium">
               <div className="w-10 h-10 rounded-xl bg-brand-coral/10 text-brand-coral flex items-center justify-center">
                 <Compass className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-extrabold text-brand-dark dark:text-brand-white uppercase tracking-tight">
                 Demasiadas pestañas abiertas
               </h3>
-              <p className="text-xs text-text-muted leading-relaxed font-medium">
-                Saltas constantemente entre Booking, aerolíneas, Civitatis, mapas y blogs de viaje. Acabas con 20 pestañas abiertas y dolor de cabeza.
+              <p className="text-sm text-text-muted leading-relaxed font-medium">
+                Saltas entre webs de vuelos, hoteles, mapas y actividades. Al final tienes mucha información, pero poca claridad.
               </p>
             </div>
 
             {/* Prob 2 */}
-            <div className="bg-brand-cream/20 dark:bg-brand-dark/30 border border-brand-dark/5 dark:border-brand-white/5 rounded-3xl p-6 flex flex-col gap-4">
+            <div className="bg-brand-cream/20 dark:bg-brand-dark/30 border border-brand-dark/10 dark:border-brand-white/5 rounded-3xl p-7 flex flex-col gap-4 shadow-premium">
               <div className="w-10 h-10 rounded-xl bg-brand-coral/10 text-brand-coral flex items-center justify-center">
                 <EyeOff className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-extrabold text-brand-dark dark:text-brand-white uppercase tracking-tight">
-                Parálisis por análisis
+                Demasiadas opciones parecidas
               </h3>
-              <p className="text-xs text-text-muted leading-relaxed font-medium">
-                Las plataformas convencionales te dan 100 hoteles y 50 vuelos. No sabes cuál elegir porque hay demasiadas alternativas genéricas y confusas.
+              <p className="text-sm text-text-muted leading-relaxed font-medium">
+                Ver cientos de hoteles y rutas no ayuda si nadie te explica cuál encaja mejor contigo.
               </p>
             </div>
 
             {/* Prob 3 */}
-            <div className="bg-brand-cream/20 dark:bg-brand-dark/30 border border-brand-dark/5 dark:border-brand-white/5 rounded-3xl p-6 flex flex-col gap-4">
+            <div className="bg-brand-cream/20 dark:bg-brand-dark/30 border border-brand-dark/10 dark:border-brand-white/5 rounded-3xl p-7 flex flex-col gap-4 shadow-premium">
               <div className="w-10 h-10 rounded-xl bg-brand-coral/10 text-brand-coral flex items-center justify-center">
                 <Clock className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-extrabold text-brand-dark dark:text-brand-white uppercase tracking-tight">
-                Pérdida de horas y días
+                Horas que se van sin darte cuenta
               </h3>
-              <p className="text-xs text-text-muted leading-relaxed font-medium">
-                Investigar la ubicación idónea del hotel, cuadrar horarios de trenes, reservar tours y comprobar horarios de museos consume tu valioso tiempo libre.
+              <p className="text-sm text-text-muted leading-relaxed font-medium">
+                Cuadrar zonas, horarios, traslados y presupuesto consume tiempo que podrías dedicar a disfrutar el viaje.
               </p>
             </div>
           </div>
@@ -303,13 +304,14 @@ export default function Home() {
         {/* Text */}
         <div className="w-full lg:w-1/2 flex flex-col gap-6">
           <div>
-            <span className="text-xs font-bold text-brand-blue uppercase tracking-widest">La decisión inteligente</span>
+            <span className="text-xs font-bold text-brand-blue uppercase tracking-wider">Una decisión clara</span>
             <h2 className="text-3xl lg:text-4xl font-black text-brand-dark dark:text-brand-white uppercase mt-3">
               No te damos una lista infinita. <br />
               Te damos una decisión clara.
             </h2>
-            <p className="text-sm text-text-muted mt-2 leading-relaxed font-bold">
-              La mayoría de plataformas te muestran opciones y delegan el trabajo en ti. Just Enjoy las analiza por ti en segundo plano cruzando vuelos, hoteles céntricos y actividades, y te justifica cuál es la mejor ruta.
+            <p className="text-base text-text-muted mt-3 leading-relaxed font-semibold">
+              La mayoría de plataformas te enseñan opciones y te dejan todo el trabajo.
+              Just Enjoy prepara una propuesta ordenada y te explica por qué merece la pena.
             </p>
           </div>
 
@@ -317,22 +319,22 @@ export default function Home() {
             <div className="flex gap-3 items-start">
               <CheckCircle2 className="w-5 h-5 text-brand-teal shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-bold text-brand-dark dark:text-brand-white uppercase">Explicabilidad Algorítmica</h4>
-                <p className="text-xs text-text-muted mt-0.5 leading-relaxed font-semibold">Te detallamos de forma transparente los motivos específicos de cada recomendación según tu perfil.</p>
+                <h4 className="text-sm font-bold text-brand-dark dark:text-brand-white uppercase">Recomendaciones con motivo</h4>
+                <p className="text-sm text-text-muted mt-0.5 leading-relaxed font-medium">Sabes por qué se propone cada vuelo, hotel o actividad según tu forma de viajar.</p>
               </div>
             </div>
             <div className="flex gap-3 items-start">
               <CheckCircle2 className="w-5 h-5 text-brand-teal shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-bold text-brand-dark dark:text-brand-white uppercase">Travel Cockpit todo en uno</h4>
-                <p className="text-xs text-text-muted mt-0.5 leading-relaxed font-semibold">Vuelos, alojamientos, mapas de coordenadas, itinerarios y desgloses de presupuestos consolidados en un panel interactivo.</p>
+                <h4 className="text-sm font-bold text-brand-dark dark:text-brand-white uppercase">Todo en una misma propuesta</h4>
+                <p className="text-sm text-text-muted mt-0.5 leading-relaxed font-medium">Vuelos, alojamiento, actividades, mapa y presupuesto aparecen juntos, sin obligarte a perseguir enlaces.</p>
               </div>
             </div>
             <div className="flex gap-3 items-start">
               <CheckCircle2 className="w-5 h-5 text-brand-teal shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-bold text-brand-dark dark:text-brand-white uppercase">Landing compartible privada</h4>
-                <p className="text-xs text-text-muted mt-0.5 leading-relaxed font-semibold">Cada propuesta de viaje se guarda y genera una web privada compartible con tus acompañantes.</p>
+                <h4 className="text-sm font-bold text-brand-dark dark:text-brand-white uppercase">Fácil de guardar y compartir</h4>
+                <p className="text-sm text-text-muted mt-0.5 leading-relaxed font-medium">Tu propuesta queda guardada para revisarla después o compartirla con quien viaja contigo.</p>
               </div>
             </div>
           </div>
@@ -340,7 +342,7 @@ export default function Home() {
           <div className="mt-2">
             <Link
               href="/planner"
-              className="inline-flex items-center gap-1.5 px-6 py-3 rounded-full bg-brand-dark hover:bg-brand-dark/95 dark:bg-brand-white dark:text-brand-dark dark:hover:bg-brand-white/90 text-brand-white font-black text-xs uppercase tracking-wider shadow-sm transition-all"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-brand-dark hover:bg-brand-dark/95 dark:bg-brand-white dark:text-brand-dark dark:hover:bg-brand-white/90 text-brand-white font-black text-sm uppercase tracking-normal shadow-premium transition-all"
             >
               <span>Probar el Planificador</span>
               <ArrowRight className="w-4 h-4" />
@@ -349,17 +351,17 @@ export default function Home() {
         </div>
 
         {/* Visual Mockup Card */}
-        <div className="w-full lg:w-1/2 bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-6 shadow-lg relative flex flex-col gap-5">
+        <div className="w-full lg:w-1/2 bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-7 shadow-premium-xl relative flex flex-col gap-5">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-brand-dark/5 dark:border-brand-white/5 pb-3">
-            <span className="text-xs font-bold text-brand-blue uppercase tracking-widest font-sans">COCKPIT DEMO</span>
+            <span className="text-xs font-bold text-brand-blue uppercase tracking-wider font-sans">Vista previa</span>
             <span className="text-xs font-bold text-brand-teal bg-brand-teal/10 px-2.5 py-0.5 rounded-full border border-brand-teal/20 font-sans">MATCH 94%</span>
           </div>
 
           {/* Decision Mock */}
           <div className="flex flex-col gap-4">
             <div className="p-3.5 bg-brand-cream/40 dark:bg-brand-white/5 rounded-xl border border-brand-dark/5 text-sm text-brand-dark dark:text-brand-cream leading-relaxed italic font-semibold">
-              "Lisboa es la mejor opción para tu escapada porque equilibra precio, cercanía, clima y disponibilidad de actividades en tus fechas."
+              "Lisboa encaja muy bien para tu escapada porque equilibra precio, cercanía, clima y actividades disponibles en tus fechas."
             </div>
 
             <div className="flex flex-col gap-2 font-sans">
