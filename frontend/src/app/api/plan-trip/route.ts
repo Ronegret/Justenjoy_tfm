@@ -658,8 +658,12 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   // Fotos reales de Google Places para las paradas del itinerario (spec
   // "imagenes-y-mapas"): solo se piden para bloques con nombre real de lugar
   // (actividad/comida), no para rellenos genéricos como "Explorar la ciudad".
-  // Si falta la API key o falla la llamada, DestinationImage ya cae a su
+  // Incluye también una foto del destino en sí para la cabecera del viaje
+  // (antes usaba una imagen local fija de una lista de 10 ciudades y caía a
+  // Barcelona para cualquier destino no listado — p. ej. Río de Janeiro).
+  // Si falta la API key o falla la llamada, los componentes ya caen a su
   // placeholder — nunca bloquea la generación del plan.
+  let destinationImageUrl: string | undefined;
   const placesApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
   if (placesApiKey && placesApiKey !== 'changeme') {
     const isRealPlaceBlock = (b: ItineraryBlock) =>
@@ -668,6 +672,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
       .flatMap((day) => day.blocks)
       .filter(isRealPlaceBlock)
       .map((b) => `${b.title} ${destination}`);
+    photoQueries.push(destination);
     const photoMap = await fetchPlacePhotos(photoQueries, placesApiKey);
     mappedItinerary.forEach((day) => {
       day.blocks.forEach((b) => {
@@ -676,6 +681,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
         }
       });
     });
+    destinationImageUrl = photoMap.get(destination);
   }
 
   // 5. Mapear desglose de presupuesto.
@@ -747,6 +753,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
       summary: plan.plan_notes?.join('. ') || `Hemos seleccionado este itinerario a ${destination} por encajar óptimamente en tus fechas, ritmo de viaje y presupuesto.`,
       estimated_total: totalCost,
       currency: 'EUR',
+      imageUrl: destinationImageUrl,
       why_selected: plan.plan_notes || [
         'Vuelo conveniente reservado para tus fechas',
         'Hotel con gran relación calidad-precio y notas excelentes',
@@ -804,46 +811,66 @@ export async function POST(req: NextRequest) {
     // -------------------------------------------------------------------------
     if (process.env.N8N_WEBHOOK_URL) {
       console.log('Forwarding request to n8n webhook:', process.env.N8N_WEBHOOK_URL);
-      try {
-        // Mapear los datos de entrada al formato de n8n
-        const n8nInputBody = mapPreferencesToN8n(body);
-        console.log('Mapped input for n8n:', n8nInputBody);
+      const n8nInputBody = mapPreferencesToN8n(body);
+      console.log('Mapped input for n8n:', n8nInputBody);
 
-        const response = await fetch(process.env.N8N_WEBHOOK_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(n8nInputBody),
-        });
+      // Reintenta antes de degradar al respaldo de OpenAI directo (sin n8n),
+      // que no lleva coordenadas, links de reserva reales ni fotos: un fallo
+      // transitorio de n8n (p. ej. rate limit de OpenAI dentro del workflow,
+      // que devuelve 200 con cuerpo vacío) NO debe tirar toda la experiencia
+      // completa por la borda. El propio error de OpenAI indica que se
+      // resuelve en segundos, así que un reintento corto suele bastar.
+      const maxAttempts = 2;
+      const retryDelayMs = 20000;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const response = await fetch(process.env.N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(n8nInputBody),
+          });
 
-        if (response.ok) {
-          const n8nData = await response.json();
-          console.log('Trip successfully orchestrated by n8n. Response received.');
-
-          // Detectar si la respuesta viene con el esquema oficial de n8n o es directa
-          const rawData = Array.isArray(n8nData) ? n8nData[0] : n8nData;
-          if (rawData && (rawData.plan || rawData.status)) {
-            // Si n8n no pudo completar el plan (p. ej. sin vuelos), NO fingimos un
-            // viaje con defaults: devolvemos su señal y sus avisos para que el
-            // frontend los muestre y el usuario ajuste la entrada.
-            if (isUnusableN8nPlan(rawData)) {
-              console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
-              const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
-              return NextResponse.json({ status: 'needs_user_input', warnings });
+          if (response.ok) {
+            const rawText = await response.text();
+            if (!rawText) {
+              throw new Error('n8n devolvió un cuerpo vacío (probable fallo interno transitorio)');
             }
-            console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
-            const mappedData = await mapN8nToTripData(n8nData, body);
-            return NextResponse.json(mappedData);
+            const n8nData = JSON.parse(rawText);
+            console.log('Trip successfully orchestrated by n8n. Response received.');
+
+            // Detectar si la respuesta viene con el esquema oficial de n8n o es directa
+            const rawData = Array.isArray(n8nData) ? n8nData[0] : n8nData;
+            if (rawData && (rawData.plan || rawData.status)) {
+              // Si n8n no pudo completar el plan (p. ej. sin vuelos), NO fingimos un
+              // viaje con defaults: devolvemos su señal y sus avisos para que el
+              // frontend los muestre y el usuario ajuste la entrada.
+              if (isUnusableN8nPlan(rawData)) {
+                console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
+                const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
+                return NextResponse.json({ status: 'needs_user_input', warnings });
+              }
+              console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
+              const mappedData = await mapN8nToTripData(n8nData, body);
+              return NextResponse.json(mappedData);
+            } else {
+              console.log('n8n response does not match G7 schema; returning directly as TripData.');
+              return NextResponse.json(n8nData);
+            }
           } else {
-            console.log('n8n response does not match G7 schema; returning directly as TripData.');
-            return NextResponse.json(n8nData);
+            throw new Error(`n8n webhook error: ${response.statusText}`);
           }
-        } else {
-          console.warn(`n8n webhook error: ${response.statusText}. Trying direct LLM API...`);
+        } catch (e: unknown) {
+          const isLastAttempt = attempt === maxAttempts;
+          console.warn(
+            `n8n webhook attempt ${attempt}/${maxAttempts} failed: ${getErrorMessage(e)}.` +
+            (isLastAttempt ? ' Trying direct LLM API...' : ` Reintentando en ${retryDelayMs / 1000}s...`)
+          );
+          if (!isLastAttempt) {
+            await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          }
         }
-      } catch (e: unknown) {
-        console.warn('Failed to contact n8n webhook, trying direct LLM API:', getErrorMessage(e));
       }
     }
 

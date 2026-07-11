@@ -119,6 +119,7 @@ export interface TripOption {
   currency: string;
   why_selected: string[];
   tradeoffs: string[];
+  imageUrl?: string;
 }
 
 export interface AlternativeOption {
