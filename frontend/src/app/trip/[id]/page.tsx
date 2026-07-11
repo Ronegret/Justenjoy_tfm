@@ -26,13 +26,15 @@ export default function DynamicTripPage({ params }: TripPageProps) {
   const { id } = use(params);
   const { currentTrip, setCurrentTripById, isLoading } = useTrips();
 
-  // Interactive checklist state
+  // Interactive checklist state — todas empiezan sin marcar; las marca el
+  // usuario a medida que completa cada tarea (antes 3 venían pre-marcadas
+  // sin que el usuario hubiera hecho nada).
   const [checklist, setChecklist] = useState([
-    { id: 'pass', label: 'Pasaporte / DNI en vigor', checked: true },
+    { id: 'pass', label: 'Pasaporte / DNI en vigor', checked: false },
     { id: 'insurance', label: 'Seguro médico de viaje', checked: false },
-    { id: 'hotel-res', label: 'Reserva de hotel confirmada', checked: true },
+    { id: 'hotel-res', label: 'Reserva de hotel confirmada', checked: false },
     { id: 'airport-transit', label: 'Transporte desde aeropuerto reservado', checked: false },
-    { id: 'activity-tickets', label: 'Entradas para museos reservadas', checked: true },
+    { id: 'activity-tickets', label: 'Entradas para museos reservadas', checked: false },
     { id: 'luggage', label: 'Equipaje de cabina pesado y medido', checked: false },
     { id: 'charger', label: 'Adaptador de corriente universal', checked: false }
   ]);

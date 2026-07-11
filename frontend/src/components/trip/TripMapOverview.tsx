@@ -1,9 +1,13 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
-import { Map as MapIcon, Navigation, MapPin } from 'lucide-react';
+import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
+import { Map as MapIcon, Navigation, MapPin, ExternalLink } from 'lucide-react';
 import { DayPlan } from '@/types/trip';
+
+function directionsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+}
 
 interface TripMapOverviewProps {
   itinerary: DayPlan[];
@@ -19,6 +23,7 @@ interface MapPoint {
 
 export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) => {
   const [activeDayFilter, setActiveDayFilter] = useState<number | 'all'>('all');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const points: MapPoint[] = useMemo(() => {
     const pts: MapPoint[] = [];
@@ -72,7 +77,7 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
           <div className="flex items-center gap-1 bg-brand-dark/5 dark:bg-brand-white/5 p-1 rounded-lg flex-wrap">
             <button
               type="button"
-              onClick={() => setActiveDayFilter('all')}
+              onClick={() => { setActiveDayFilter('all'); setSelectedKey(null); }}
               className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase transition-all cursor-pointer ${
                 activeDayFilter === 'all'
                   ? 'bg-brand-blue text-brand-white shadow-xs'
@@ -85,7 +90,7 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
               <button
                 key={day}
                 type="button"
-                onClick={() => setActiveDayFilter(day)}
+                onClick={() => { setActiveDayFilter(day); setSelectedKey(null); }}
                 className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase transition-all cursor-pointer ${
                   activeDayFilter === day
                     ? 'bg-brand-blue text-brand-white shadow-xs'
@@ -120,8 +125,32 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
             {/* key fuerza remount al cambiar de día para recentrar el mapa (defaultCenter es no-controlado) */}
             <Map key={activeDayFilter} defaultCenter={center} defaultZoom={13} gestureHandling="greedy" disableDefaultUI={false}>
               {filteredPoints.map((p) => (
-                <Marker key={p.key} position={{ lat: p.lat, lng: p.lng }} title={p.title} />
+                <Marker
+                  key={p.key}
+                  position={{ lat: p.lat, lng: p.lng }}
+                  title={p.title}
+                  onClick={() => setSelectedKey(p.key)}
+                />
               ))}
+              {selectedKey && (() => {
+                const p = filteredPoints.find((pt) => pt.key === selectedKey);
+                if (!p) return null;
+                return (
+                  <InfoWindow position={{ lat: p.lat, lng: p.lng }} onCloseClick={() => setSelectedKey(null)}>
+                    <div className="flex flex-col gap-1.5 p-1 max-w-[180px]">
+                      <span className="text-xs font-bold text-brand-dark">{p.title}</span>
+                      <a
+                        href={directionsUrl(p.lat, p.lng)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-blue hover:underline"
+                      >
+                        Cómo llegar <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </InfoWindow>
+                );
+              })()}
             </Map>
           </APIProvider>
         </div>
