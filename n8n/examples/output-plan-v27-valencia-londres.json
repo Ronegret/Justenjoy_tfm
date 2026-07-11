@@ -1,1 +1,250 @@
-{"session_id":"session_1783196877447_izvjlbr0u","status":"plan_ready","revision_count":0,"revision_snapshot":0,"generated_at":"2026-07-04T20:28:24.632Z","steps_executed":"all","warnings":[],"plan":{"segments":[{"segment_index":0,"origin":"Valencia","destination":"Londres","flights":{"outbound":{"airline":"British Airways","flight_no":"BA 409","origin":"VLC","destination":"LHR","departure_datetime":"2026-08-10T20:30:00","arrival_datetime":"2026-08-10T21:55:00","layovers":[],"price_usd":111,"booking_url":"https://www.google.com/flights?hl=es#flt=VLC.LHR.2026-08-10*LHR.VLC.2026-08-16"},"return":{"airline":"British Airways","flight_no":"BA 408","origin":"LHR","destination":"VLC","departure_datetime":"2026-08-16T16:55:00","arrival_datetime":"2026-08-16T20:25:00","layovers":[],"price_usd":243,"booking_url":"https://www.google.com/flights?hl=es#flt=LHR.VLC.2026-08-16*VLC.LHR.2026-08-10"}},"hotel":{"name":"The Rose & Crown, London Bridge (PUBLOVE)","address":"","stars":null,"rating":4.2,"check_in":"2026-08-10","check_out":"2026-08-16","price_per_night_usd":26,"total_usd":157,"booking_url":"http://www.publove.co.uk/"},"activities":[{"name":"Romanian Cultural Institute","date":"2026-08-11","start_time":"10:00","duration_hours":3,"price_usd":0,"booking_url":"","category":"Cultural center","source":"google_maps"},{"name":"Liszt Institute - Hungarian Cultural Centre London","date":"2026-08-12","start_time":"10:00","duration_hours":3,"price_usd":0,"booking_url":"","category":"Cultural center","source":"google_maps"},{"name":"Korean Cultural Centre UK","date":"2026-08-13","start_time":"10:00","duration_hours":3,"price_usd":0,"booking_url":"","category":"Cultural center","source":"google_maps"},{"name":"The National Gallery","date":"2026-08-14","start_time":"10:00","duration_hours":3,"price_usd":0,"booking_url":"","category":"Art museum","source":"google_maps"},{"name":"Romanian Cultural Centre","date":"2026-08-15","start_time":"10:00","duration_hours":3,"price_usd":0,"booking_url":"","category":"Cultural center","source":"google_maps"}]}],"cost_summary":{"flights_usd":354,"hotel_usd":157,"activities_usd":0,"inter_city_transport_usd":0,"estimated_local_transport_usd":null,"local_transport_data_source":null,"total_usd":511,"budget_total_usd":900,"budget_remaining_usd":389},"trip_summary":"Viaje de 6 noches a Londres con alojamiento céntrico y bien valorado. El itinerario se centra en experiencias culturales, visitando institutos y museos destacados de la ciudad. Ideal para sumergirse en la vida cultural londinense y disfrutar de días completos explorando sus principales centros artísticos.","daily_itinerary":[{"day":1,"date":"2026-08-10","title":"Día de llegada a Londres","summary":"Llegada a Londres por la noche y traslado al hotel para hacer el check-in. Aprovecha para dar un paseo corto por los alrededores y cenar en algún restaurante cercano. Descansa para comenzar el itinerario cultural al día siguiente.","activities":[]},{"day":2,"date":"2026-08-11","title":"Romanian Cultural Institute","summary":"Comienza el día visitando el Romanian Cultural Institute, un espacio dedicado a la promoción de la cultura rumana en Londres. Después, explora los alrededores y disfruta de algún café local. Por la tarde, puedes pasear por los parques cercanos o visitar tiendas típicas.","activities":[{"time":"10:00","name":"Romanian Cultural Institute","duration_hours":3,"price_usd":0,"booking_url":""}]},{"day":3,"date":"2026-08-12","title":"Liszt Institute - Hungarian Cultural Centre London","summary":"Visita el Liszt Institute, centro cultural húngaro con exposiciones y eventos. Aprovecha para conocer la zona de Cockspur Street y almorzar en alguno de sus restaurantes. Por la tarde, puedes recorrer Trafalgar Square y sus alrededores.","activities":[{"time":"10:00","name":"Liszt Institute - Hungarian Cultural Centre London","duration_hours":3,"price_usd":0,"booking_url":""}]},{"day":4,"date":"2026-08-13","title":"Korean Cultural Centre UK","summary":"Dedica la mañana al Korean Cultural Centre UK, donde podrás conocer más sobre la cultura coreana. Después, disfruta de un paseo por la zona de Strand y prueba la gastronomía internacional en los alrededores.","activities":[{"time":"10:00","name":"Korean Cultural Centre UK","duration_hours":3,"price_usd":0,"booking_url":""}]},{"day":5,"date":"2026-08-14","title":"The National Gallery","summary":"Visita la famosa National Gallery, uno de los museos de arte más importantes del mundo. Disfruta de las colecciones y aprovecha para recorrer Trafalgar Square. Por la tarde, relájate en un café o explora Covent Garden.","activities":[{"time":"10:00","name":"The National Gallery","duration_hours":3,"price_usd":0,"booking_url":""}]},{"day":6,"date":"2026-08-15","title":"Romanian Cultural Centre","summary":"Último día completo en Londres para visitar el Romanian Cultural Centre y conocer más sobre la diversidad cultural de la ciudad. Aprovecha la tarde para compras o paseos por barrios emblemáticos como Soho o Notting Hill.","activities":[{"time":"10:00","name":"Romanian Cultural Centre","duration_hours":3,"price_usd":0,"booking_url":""}]},{"day":7,"date":"2026-08-16","title":"Último día en Londres — Regreso a Valencia","summary":"Haz el check-out del hotel y disfruta de unas horas libres para pasear o tomar un café antes del vuelo de regreso, que sale por la tarde. Despídete de Londres tras una semana llena de cultura y arte.","activities":[]}],"plan_notes":["Visa: Verificar requisitos de entrada para ciudadanos de Valencia en Londres.","Clima: Consultar previsión meteorológica para Londres en agosto.","Transporte local: Se recomienda usar metro y/o taxi para desplazarse por Londres."],"revision_snapshot":0},"error_detail":"","_debug":{"token_usage":null,"execution_time_ms":17,"plan_metrics":{"activities_found":5,"itinerary_days":7,"plan_notes":3,"warnings":0,"has_flights":true,"has_hotel":true,"tools_called":"all"}}}
+{
+  "session_id": "session_1783196877447_izvjlbr0u",
+  "status": "plan_ready",
+  "revision_count": 0,
+  "revision_snapshot": 0,
+  "generated_at": "2026-07-04T20:28:24.632Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Valencia",
+        "destination": "Londres",
+        "flights": {
+          "outbound": {
+            "airline": "British Airways",
+            "flight_no": "BA 409",
+            "origin": "VLC",
+            "destination": "LHR",
+            "departure_datetime": "2026-08-10T20:30:00",
+            "arrival_datetime": "2026-08-10T21:55:00",
+            "layovers": [],
+            "price_usd": 111,
+            "booking_url": "https://www.google.com/flights?hl=es#flt=VLC.LHR.2026-08-10*LHR.VLC.2026-08-16"
+          },
+          "return": {
+            "airline": "British Airways",
+            "flight_no": "BA 408",
+            "origin": "LHR",
+            "destination": "VLC",
+            "departure_datetime": "2026-08-16T16:55:00",
+            "arrival_datetime": "2026-08-16T20:25:00",
+            "layovers": [],
+            "price_usd": 243,
+            "booking_url": "https://www.google.com/flights?hl=es#flt=LHR.VLC.2026-08-16*VLC.LHR.2026-08-10"
+          }
+        },
+        "hotel": {
+          "name": "The Rose & Crown, London Bridge (PUBLOVE)",
+          "address": "",
+          "stars": null,
+          "rating": 4.2,
+          "check_in": "2026-08-10",
+          "check_out": "2026-08-16",
+          "price_per_night_usd": 26,
+          "total_usd": 157,
+          "booking_url": "http://www.publove.co.uk/",
+          "lat": 51.5045,
+          "lng": -0.0865
+        },
+        "activities": [
+          {
+            "name": "Romanian Cultural Institute",
+            "date": "2026-08-11",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Cultural center",
+            "source": "google_maps",
+            "lat": 51.5219,
+            "lng": -0.1494
+          },
+          {
+            "name": "Liszt Institute - Hungarian Cultural Centre London",
+            "date": "2026-08-12",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Cultural center",
+            "source": "google_maps",
+            "lat": 51.5142,
+            "lng": -0.1494
+          },
+          {
+            "name": "Korean Cultural Centre UK",
+            "date": "2026-08-13",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Cultural center",
+            "source": "google_maps",
+            "lat": 51.5057,
+            "lng": -0.1379
+          },
+          {
+            "name": "The National Gallery",
+            "date": "2026-08-14",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Art museum",
+            "source": "google_maps",
+            "lat": 51.5089,
+            "lng": -0.1283
+          },
+          {
+            "name": "Romanian Cultural Centre",
+            "date": "2026-08-15",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Cultural center",
+            "source": "google_maps",
+            "lat": 51.5219,
+            "lng": -0.1494
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 354,
+      "hotel_usd": 157,
+      "activities_usd": 0,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": null,
+      "local_transport_data_source": null,
+      "total_usd": 511,
+      "budget_total_usd": 900,
+      "budget_remaining_usd": 389
+    },
+    "trip_summary": "Viaje de 6 noches a Londres con alojamiento céntrico y bien valorado. El itinerario se centra en experiencias culturales, visitando institutos y museos destacados de la ciudad. Ideal para sumergirse en la vida cultural londinense y disfrutar de días completos explorando sus principales centros artísticos.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-08-10",
+        "title": "Día de llegada a Londres",
+        "summary": "Llegada a Londres por la noche y traslado al hotel para hacer el check-in. Aprovecha para dar un paseo corto por los alrededores y cenar en algún restaurante cercano. Descansa para comenzar el itinerario cultural al día siguiente.",
+        "activities": []
+      },
+      {
+        "day": 2,
+        "date": "2026-08-11",
+        "title": "Romanian Cultural Institute",
+        "summary": "Comienza el día visitando el Romanian Cultural Institute, un espacio dedicado a la promoción de la cultura rumana en Londres. Después, explora los alrededores y disfruta de algún café local. Por la tarde, puedes pasear por los parques cercanos o visitar tiendas típicas.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Romanian Cultural Institute",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 51.5219,
+            "lng": -0.1494
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "date": "2026-08-12",
+        "title": "Liszt Institute - Hungarian Cultural Centre London",
+        "summary": "Visita el Liszt Institute, centro cultural húngaro con exposiciones y eventos. Aprovecha para conocer la zona de Cockspur Street y almorzar en alguno de sus restaurantes. Por la tarde, puedes recorrer Trafalgar Square y sus alrededores.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Liszt Institute - Hungarian Cultural Centre London",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 51.5142,
+            "lng": -0.1494
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "date": "2026-08-13",
+        "title": "Korean Cultural Centre UK",
+        "summary": "Dedica la mañana al Korean Cultural Centre UK, donde podrás conocer más sobre la cultura coreana. Después, disfruta de un paseo por la zona de Strand y prueba la gastronomía internacional en los alrededores.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Korean Cultural Centre UK",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 51.5057,
+            "lng": -0.1379
+          }
+        ]
+      },
+      {
+        "day": 5,
+        "date": "2026-08-14",
+        "title": "The National Gallery",
+        "summary": "Visita la famosa National Gallery, uno de los museos de arte más importantes del mundo. Disfruta de las colecciones y aprovecha para recorrer Trafalgar Square. Por la tarde, relájate en un café o explora Covent Garden.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "The National Gallery",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 51.5089,
+            "lng": -0.1283
+          }
+        ]
+      },
+      {
+        "day": 6,
+        "date": "2026-08-15",
+        "title": "Romanian Cultural Centre",
+        "summary": "Último día completo en Londres para visitar el Romanian Cultural Centre y conocer más sobre la diversidad cultural de la ciudad. Aprovecha la tarde para compras o paseos por barrios emblemáticos como Soho o Notting Hill.",
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Romanian Cultural Centre",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 51.5219,
+            "lng": -0.1494
+          }
+        ]
+      },
+      {
+        "day": 7,
+        "date": "2026-08-16",
+        "title": "Último día en Londres — Regreso a Valencia",
+        "summary": "Haz el check-out del hotel y disfruta de unas horas libres para pasear o tomar un café antes del vuelo de regreso, que sale por la tarde. Despídete de Londres tras una semana llena de cultura y arte.",
+        "activities": []
+      }
+    ],
+    "plan_notes": [
+      "Visa: Verificar requisitos de entrada para ciudadanos de Valencia en Londres.",
+      "Clima: Consultar previsión meteorológica para Londres en agosto.",
+      "Transporte local: Se recomienda usar metro y/o taxi para desplazarse por Londres."
+    ],
+    "revision_snapshot": 0
+  },
+  "error_detail": "",
+  "_debug": {
+    "token_usage": null,
+    "execution_time_ms": 17,
+    "plan_metrics": {
+      "activities_found": 5,
+      "itinerary_days": 7,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  }
+}

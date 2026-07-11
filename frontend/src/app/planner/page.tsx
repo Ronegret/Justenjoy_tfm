@@ -8,6 +8,7 @@ import { N8nWarning } from '@/types/planResult';
 import { ChatPlanner } from '@/components/planner/ChatPlanner';
 import { TravelSummaryPanel } from '@/components/planner/TravelSummaryPanel';
 import { AiProcessingScreen } from '@/components/planner/AiProcessingScreen';
+import { defaultTripDates } from '@/lib/dates';
 
 function PlannerContent() {
   const router = useRouter();
@@ -19,8 +20,7 @@ function PlannerContent() {
     origin: 'Barcelona',
     destination: '',
     dates: {
-      start: '2026-05-01',
-      end: '2026-05-04',
+      ...defaultTripDates(),
       flexible: true
     },
     travelers: {

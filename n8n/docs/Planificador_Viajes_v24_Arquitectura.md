@@ -254,7 +254,10 @@ El restrictor elimina `other_flights[]` y metadata. Reducción ~95% de tokens.
 | q | `hotels in [destination] [location_preference] [accommodation_type]` |
 | check_in / check_out | fechas REALES del vuelo confirmado |
 | rating | `8` · sort_by | `3` (mayor valoración primero) |
-| json_restrictor | `properties[].{name,hotel_class,overall_rating,...}` |
+| json_restrictor | `properties[].{name,hotel_class,overall_rating,...,gps_coordinates}` |
+
+`gps_coordinates.{latitude,longitude}` → `plan.segments[].hotel.{lat,lng}` en el output (mapa del
+hotel en el frontend). El agente NUNCA debe copiar estas coordenadas al campo `address`.
 
 ### Tool: Google Maps (Actividades)
 | Campo | Valor |
@@ -262,8 +265,13 @@ El restrictor elimina `other_flights[]` y metadata. Reducción ~95% de tokens.
 | Motor | `google_maps` · type | `search` |
 | query | `[activity_interests[0]] in [destination]` |
 | ll | `destination_city_ll` (@lat,lng,15z) — **crítico** |
+| json_restrictor | `local_results[].{title,type,rating,reviews,address,hours,price,links.website,gps_coordinates}` |
 
 Sin `ll`, SerpAPI usa geolocalización del servidor (EEUU) y devuelve resultados incorrectos.
+
+`gps_coordinates.{latitude,longitude}` → `activities[].{lat,lng}` y se repite en
+`daily_itinerary[].activities[].{lat,lng}` (mapa por actividad en el frontend, componente
+`MapViewer`). Actividades de fallback vía Tavily no traen coordenadas → `lat`/`lng`: `null`.
 
 ### Tool: Google Maps Directions
 | Campo | Valor |

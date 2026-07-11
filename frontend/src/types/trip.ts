@@ -50,6 +50,8 @@ export interface Hotel {
   pros: string[];
   cons: string[];
   booking_url: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Activity {

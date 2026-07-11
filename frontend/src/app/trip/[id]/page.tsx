@@ -11,7 +11,7 @@ import {
 import { useTrips } from '@/context/TripContext';
 import { PrivateTripHero } from '@/components/trip/PrivateTripHero';
 import { ItineraryTimeline } from '@/components/trip/ItineraryTimeline';
-import { MapPreview } from '@/components/trip/MapPreview';
+import { TripMapOverview } from '@/components/trip/TripMapOverview';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
 import { BudgetBreakdown } from '@/components/trip/BudgetBreakdown';
@@ -130,8 +130,8 @@ export default function DynamicTripPage({ params }: TripPageProps) {
           {/* RIGHT COLUMN: MAP PREVIEW, CHECKLISTS, TOOLS (1/3 width) */}
           <div className="flex flex-col gap-8">
 
-            {/* Vector Map Preview */}
-            <MapPreview />
+            {/* Trip Map Overview */}
+            <TripMapOverview itinerary={trip.itinerary} />
 
             {/* Checklist card */}
             <div className="bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-6 shadow-md flex flex-col gap-4">

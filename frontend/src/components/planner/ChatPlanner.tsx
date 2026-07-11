@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { TripPreferences } from '@/types/trip';
 import { SmartChip } from '../shared/SmartChip';
+import { todayISO } from '@/lib/dates';
 
 interface ChatPlannerProps {
   preferences: TripPreferences;
@@ -418,12 +419,14 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                 <input
                   type="date"
                   value={preferences.dates.start}
+                  min={todayISO()}
                   onChange={(e) => updatePrefs({ dates: { ...preferences.dates, start: e.target.value } })}
                   className="px-3.5 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white"
                 />
                 <input
                   type="date"
                   value={preferences.dates.end}
+                  min={preferences.dates.start || todayISO()}
                   onChange={(e) => updatePrefs({ dates: { ...preferences.dates, end: e.target.value } })}
                   className="px-3.5 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white"
                 />

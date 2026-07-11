@@ -240,6 +240,16 @@ function isGpsCoordinates(value: string): boolean {
 }
 
 /**
+ * Fallback por si el agente aún no sigue la instrucción de rellenar hotel.lat/lng
+ * y sigue colando las coordenadas crudas en address (ver isGpsCoordinates).
+ */
+function parseGpsCoordinates(value: string): { lat: number; lng: number } | null {
+  if (!isGpsCoordinates(value)) return null;
+  const [lat, lng] = value.split(',').map((n) => parseFloat(n.trim()));
+  return { lat, lng };
+}
+
+/**
  * Duración del viaje en días, derivada de las fechas reales (misma convención
  * que mapPreferencesToN8n: ceil de la diferencia). Fallback a las fechas de
  * check-in/check-out del hotel. Devuelve 0 si no hay fechas usables, para que
@@ -277,6 +287,8 @@ interface N8nFlightLeg {
 interface N8nHotel {
   name?: string;
   address?: string;
+  lat?: number | null;
+  lng?: number | null;
   rating?: number;
   price_per_night_usd?: number;
   total_usd?: number;
@@ -294,6 +306,8 @@ interface N8nActivity {
   booking_url?: string;
   start_time?: string;
   time?: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 interface N8nDay {
@@ -401,6 +415,7 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
   // 2. Mapear hoteles
   const mappedHotels: Hotel[] = [];
   if (hotel.name) {
+    const hotelGps = hotel.address ? parseGpsCoordinates(hotel.address) : null;
     mappedHotels.push({
       provider: 'Booking.com',
       name: hotel.name,
@@ -415,7 +430,9 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
       cons: [
         'Sujeto a disponibilidad de tarifas'
       ],
-      booking_url: hotel.booking_url || 'https://www.booking.com'
+      booking_url: hotel.booking_url || 'https://www.booking.com',
+      lat: hotel.lat ?? hotelGps?.lat,
+      lng: hotel.lng ?? hotelGps?.lng
     });
   } else {
     mappedHotels.push({
@@ -469,7 +486,9 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
         cost: act.price_usd || 0,
         location: actName,
         description: `Visita recomendada a ${actName}.`,
-        tip: act.booking_url ? 'Se aconseja reservar online con antelación.' : undefined
+        tip: act.booking_url ? 'Se aconseja reservar online con antelación.' : undefined,
+        lat: act.lat ?? undefined,
+        lng: act.lng ?? undefined
       };
     });
 
@@ -478,6 +497,9 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
     // devolver pocas entradas con números de día salteados (p. ej. 1, 2, 15),
     // así que comparar dayPlan.day contra la longitud nunca acertaba el último día.
     if (blocks.length === 0) {
+      const hotelGps = hotel.address ? parseGpsCoordinates(hotel.address) : null;
+      const hotelLat = hotel.lat ?? hotelGps?.lat;
+      const hotelLng = hotel.lng ?? hotelGps?.lng;
       if (index === 0) {
         blocks.push({
           time: '15:00',
@@ -487,7 +509,9 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
           duration: '1h',
           cost: 0,
           location: hotel.name || 'Alojamiento',
-          description: 'Llegada y check-in en tu hotel para dejar el equipaje y descansar.'
+          description: 'Llegada y check-in en tu hotel para dejar el equipaje y descansar.',
+          lat: hotelLat,
+          lng: hotelLng
         });
       } else if (index === rawItinerary.length - 1) {
         blocks.push({
@@ -498,6 +522,8 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
           duration: '2h',
           cost: 0,
           location: hotel.name || 'Alojamiento',
+          lat: hotelLat,
+          lng: hotelLng,
           description: 'Registro de salida en el alojamiento y viaje hacia el aeropuerto para tu vuelo de regreso.'
         });
       } else {
