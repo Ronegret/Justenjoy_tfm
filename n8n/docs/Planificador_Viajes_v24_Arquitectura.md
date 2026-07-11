@@ -439,6 +439,8 @@ Para añadir una ciudad: editar el nodo `Convertir Ciudades a IATA` (tres tablas
 | v24 | GPS coordinates, Google Maps Directions, Logger de métricas, tabla de aeropuertos |
 | v26 | Ampliación de ciudades ES en la tabla IATA (Valencia/Sevilla/Málaga/Bilbao/Palma/Alicante) |
 | **v27** | **Vuelos ida/vuelta como DOS búsquedas one-way (`type=2`) → arregla la vuelta que fallaba de forma intermitente (`no_valid_flight`) por el `departure_token` que el restrictor eliminaba** |
+| v28 | Ajustes menores del planificador (sin cambio de contrato) |
+| **v29** | **Persistencia del plan en Supabase (tabla `travel_plans`): nodos `Preparar Payload Supabase` → `¿Guardar en Supabase?` → `Extraer Record` → `Supabase — Guardar Plan`, en paralelo al responder (no bloquea la respuesta). Credencial `supabaseApi` vía `{{ $env.SUPABASE_HOST }}` / `{{ $env.SUPABASE_SERVICE_ROLE_KEY }}`. La respuesta del webhook incluye campos internos `_supabase_record`/`_skip_supabase`/`_debug`. Nota: el nodo Supabase usa `onError: continueRegularOutput`, así que si faltan las vars el guardado falla en silencio pero el plan se sigue devolviendo** |
 
 ---
 

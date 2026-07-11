@@ -40,13 +40,13 @@ docker compose up -d
 Esto, en un equipo nuevo:
 1. Crea un volumen vacío para n8n.
 2. **Importa automáticamente** las credenciales (leen tus claves del `.env`) **y el
-   workflow `Planificador de Viajes v27`**, y lo deja **activo** (webhook registrado).
+   workflow `Planificador de Viajes — v29`**, y lo deja **activo** (webhook registrado).
 
 Comprueba que está sano y el webhook responde:
 ```bash
 curl http://localhost:5678/healthz          # -> {"status":"ok"}
 ```
-La UI de n8n está en `http://localhost:5678` (deberías ver el workflow v27 activo).
+La UI de n8n está en `http://localhost:5678` (deberías ver el workflow v29 activo).
 
 ## 3. Configurar el frontend (`frontend/.env.local`)
 
