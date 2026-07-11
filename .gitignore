@@ -92,7 +92,10 @@ ngrok.yml
 # Los datos de volúmenes locales de Docker no se versionan
 n8n_data/
 botpress_data/
-# docker-compose.override.yml SÍ puede versionarse si es conveniente
-# pero .env nunca (ya está arriba)
+# docker-compose.override.yml: override LOCAL por máquina (contiene rutas
+# absolutas y la CA de Norton) — NO versionar. Y .env nunca (ya está arriba).
+docker-compose.override.yml
+# CA raíz local (MITM de Norton) montada por el override — fuera de git
+/certs/
 
 .vercel
