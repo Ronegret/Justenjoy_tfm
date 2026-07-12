@@ -32,7 +32,11 @@ export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare,
 
   const weather = getWeather(trip.best_option.destination);
 
-  const getDestinationImage = (dest: string) => {
+  // Antes caía a una lista fija de 10 ciudades (y a la imagen de Barcelona
+  // para cualquier destino no listado, ej. Río de Janeiro). Ahora usa la foto
+  // real del destino que trae el plan (Google Places); esta lista local queda
+  // solo como último respaldo si esa foto no llegó.
+  const getFallbackDestinationImage = (dest: string) => {
     const d = dest.toLowerCase();
     if (d.includes('lisboa')) return '/images/destinations/lisboa.png';
     if (d.includes('porto') || d.includes('oport')) return '/images/destinations/oporto.png';
@@ -47,7 +51,7 @@ export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare,
     return '/images/destinations/barcelona.png';
   };
 
-  const bgImage = getDestinationImage(trip.best_option.destination);
+  const bgImage = trip.best_option.imageUrl || getFallbackDestinationImage(trip.best_option.destination);
 
   return (
     <div className="w-full relative h-[360px] md:h-[420px] rounded-3xl overflow-hidden shadow-lg border border-brand-dark/10 dark:border-brand-white/10 mb-8 bg-brand-dark">

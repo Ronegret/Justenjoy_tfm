@@ -2,12 +2,17 @@
 
 import React from "react";
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps";
+import { Navigation } from "lucide-react";
 
 interface MapViewerProps {
   latitude: number;
   longitude: number;
   zoom?: number;
   title?: string;
+}
+
+function directionsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
 export default function MapViewer({
@@ -36,7 +41,7 @@ export default function MapViewer({
   }
 
   return (
-    <div className="w-full h-64 sm:h-80 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+    <div className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden shadow-sm border border-gray-200">
       <APIProvider apiKey={apiKey}>
         <Map
           defaultCenter={position}
@@ -47,6 +52,15 @@ export default function MapViewer({
           <Marker position={position} title={title} />
         </Map>
       </APIProvider>
+      <a
+        href={directionsUrl(latitude, longitude)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 bg-white text-brand-dark text-xs font-bold px-3 py-2 rounded-full shadow-md hover:shadow-lg transition-shadow"
+      >
+        <Navigation className="w-3.5 h-3.5 text-brand-coral" />
+        Cómo llegar
+      </a>
     </div>
   );
 }

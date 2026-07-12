@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { TripPreferences } from '@/types/trip';
 import { SmartChip } from '../shared/SmartChip';
+import { defaultTripDates, todayISO } from '@/lib/dates';
 
 interface PreferenceWizardProps {
   onComplete: (prefs: TripPreferences) => void;
@@ -74,8 +75,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
     origin: 'Barcelona',
     destination: '',
     dates: {
-      start: '2026-05-01',
-      end: '2026-05-04',
+      ...defaultTripDates(),
       flexible: true
     },
     travelers: {
@@ -306,6 +306,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
                     <input
                       type="date"
                       value={prefs.dates.start}
+                      min={todayISO()}
                       onChange={(e) => updatePrefs({ dates: { ...prefs.dates, start: e.target.value } })}
                       className="px-4 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-text-dark dark:text-brand-white text-sm"
                     />
@@ -315,6 +316,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
                     <input
                       type="date"
                       value={prefs.dates.end}
+                      min={prefs.dates.start || todayISO()}
                       onChange={(e) => updatePrefs({ dates: { ...prefs.dates, end: e.target.value } })}
                       className="px-4 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-text-dark dark:text-brand-white text-sm"
                     />

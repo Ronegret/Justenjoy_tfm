@@ -219,7 +219,7 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
     accommodation_type,
     flight_preferences: {
       cabin_class: prefs.budget === 'luxury' || prefs.budget === 'premium' ? 'business' : 'economy',
-      max_layover_hours: prefs.restrictions.includes('avoid_early_flights') ? 2 : 5,
+      max_layover_hours: prefs.restrictions.includes('avoid_scales') ? 2 : 8,
       preferred_airlines: []
     },
     activity_interests: prefs.style || ['culture', 'food'],
@@ -237,6 +237,73 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
  */
 function isGpsCoordinates(value: string): boolean {
   return /^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(value);
+}
+
+/**
+ * Fallback por si el agente aún no sigue la instrucción de rellenar hotel.lat/lng
+ * y sigue colando las coordenadas crudas en address (ver isGpsCoordinates).
+ */
+function parseGpsCoordinates(value: string): { lat: number; lng: number } | null {
+  if (!isGpsCoordinates(value)) return null;
+  const [lat, lng] = value.split(',').map((n) => parseFloat(n.trim()));
+  return { lat, lng };
+}
+
+/**
+ * Construye enlaces de búsqueda de forma determinista en vez de confiar en que
+ * el LLM escriba una URL correcta (comprobado: el formato de Google Flights que
+ * generaba n8n usaba el hash "#flt=" descontinuado, que ya no aplica la búsqueda).
+ */
+function buildGoogleFlightsSearchUrl(originIata: string, destIata: string, date: string): string {
+  const query = `Flights from ${originIata} to ${destIata} on ${date}`;
+  return `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}`;
+}
+
+function buildBookingSearchUrl(hotelName: string, destination: string, checkIn?: string, checkOut?: string): string {
+  const params = new URLSearchParams({ ss: `${hotelName} ${destination}` });
+  if (checkIn) params.set('checkin', checkIn);
+  if (checkOut) params.set('checkout', checkOut);
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
+}
+
+function buildGoogleMapsSearchUrl(placeName: string, destination: string): string {
+  const query = `${placeName} ${destination}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+/**
+ * Busca una foto real del lugar vía Google Places (Find Place From Text +
+ * Place Photo). Devuelve undefined ante cualquier fallo (API no habilitada,
+ * sin resultados, etc.) para que DestinationImage caiga a su placeholder —
+ * nunca debe romper la generación del plan.
+ */
+async function fetchPlacePhotoUrl(query: string, apiKey: string): Promise<string | undefined> {
+  try {
+    const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=photos&key=${apiKey}`;
+    const res = await fetch(findUrl);
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    const photoRef = data?.candidates?.[0]?.photos?.[0]?.photo_reference;
+    if (!photoRef) return undefined;
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${apiKey}`;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resuelve fotos reales para un conjunto de lugares en paralelo, con caché
+ * por nombre para no repetir llamadas al mismo lugar dentro del mismo viaje.
+ */
+async function fetchPlacePhotos(queries: string[], apiKey: string): Promise<Map<string, string>> {
+  const uniqueQueries = Array.from(new Set(queries));
+  const results = await Promise.all(uniqueQueries.map((q) => fetchPlacePhotoUrl(q, apiKey)));
+  const map = new Map<string, string>();
+  uniqueQueries.forEach((q, i) => {
+    const url = results[i];
+    if (url) map.set(q, url);
+  });
+  return map;
 }
 
 /**
@@ -277,6 +344,8 @@ interface N8nFlightLeg {
 interface N8nHotel {
   name?: string;
   address?: string;
+  lat?: number | null;
+  lng?: number | null;
   rating?: number;
   price_per_night_usd?: number;
   total_usd?: number;
@@ -294,6 +363,8 @@ interface N8nActivity {
   booking_url?: string;
   start_time?: string;
   time?: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 interface N8nDay {
@@ -302,6 +373,11 @@ interface N8nDay {
   title?: string;
   summary?: string;
   activities?: N8nActivity[];
+  // v31: coordenada garantizada por día, calculada en n8n (geocoding de
+  // points_of_interest vía Nominatim/OpenStreetMap, sin coste de tokens LLM).
+  lat?: number | null;
+  lng?: number | null;
+  coordinate_source?: string;
 }
 
 interface N8nCostSummary {
@@ -353,7 +429,7 @@ function isUnusableN8nPlan(rawData: N8nResponse): boolean {
  * Mapea la respuesta generada por n8n (output-plan.json) a la interfaz
  * TripData requerida por la interfaz gráfica del frontend.
  */
-function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPrefs: TripPreferences): TripData {
+async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPrefs: TripPreferences): Promise<TripData> {
   const data = Array.isArray(n8nResponse) ? n8nResponse[0] : n8nResponse;
 
   const plan: NonNullable<N8nResponse['plan']> = data?.plan ?? {};
@@ -366,41 +442,53 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
   const generatedId = data?.session_id || `justenjoy-${destination.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
 
   // 1. Mapear vuelos
+  // booking_url: se usa el enlace REAL de n8n si lo trae (booking_options vía
+  // booking_token — ver prompt del agente), y solo si no lo trae se construye
+  // una búsqueda en código como respaldo. El LLM antes generaba URLs de Google
+  // Flights con el hash "#flt=" descontinuado, que abre la home sin buscar; la
+  // query "q=" en texto natural sí funciona como último recurso.
   const mappedFlights: Flight[] = [];
   if (flights.outbound) {
+    const outboundOrigin = flights.outbound.origin || originalPrefs.origin;
+    const outboundDest = flights.outbound.destination || destination;
+    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || '';
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.outbound.airline || 'Aerolínea',
-      from: flights.outbound.origin || originalPrefs.origin,
-      to: flights.outbound.destination || destination,
+      from: outboundOrigin,
+      to: outboundDest,
       departure: flights.outbound.departure_datetime ? flights.outbound.departure_datetime.split('T')[1]?.substring(0, 5) || '09:00' : '09:00',
       arrival: flights.outbound.arrival_datetime ? flights.outbound.arrival_datetime.split('T')[1]?.substring(0, 5) || '11:00' : '11:00',
       duration: flights.outbound.duration || '2h',
       stops: Array.isArray(flights.outbound.layovers) ? flights.outbound.layovers.length : 0,
       price: flights.outbound.price_usd || 150,
       baggage: 'Maleta de cabina de 10kg incluida',
-      booking_url: flights.outbound.booking_url || 'https://www.google.com/travel/flights'
+      booking_url: flights.outbound.booking_url || buildGoogleFlightsSearchUrl(outboundOrigin, outboundDest, outboundDate)
     });
   }
   if (flights.return) {
+    const returnOrigin = flights.return.origin || destination;
+    const returnDest = flights.return.destination || originalPrefs.origin;
+    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || '';
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.return.airline || 'Aerolínea',
-      from: flights.return.origin || destination,
-      to: flights.return.destination || originalPrefs.origin,
+      from: returnOrigin,
+      to: returnDest,
       departure: flights.return.departure_datetime ? flights.return.departure_datetime.split('T')[1]?.substring(0, 5) || '15:00' : '15:00',
       arrival: flights.return.arrival_datetime ? flights.return.arrival_datetime.split('T')[1]?.substring(0, 5) || '17:00' : '17:00',
       duration: flights.return.duration || '2h',
       stops: Array.isArray(flights.return.layovers) ? flights.return.layovers.length : 0,
       price: flights.return.price_usd || 150,
       baggage: 'Maleta de cabina de 10kg incluida',
-      booking_url: flights.return.booking_url || 'https://www.google.com/travel/flights'
+      booking_url: flights.return.booking_url || buildGoogleFlightsSearchUrl(returnOrigin, returnDest, returnDate)
     });
   }
 
   // 2. Mapear hoteles
   const mappedHotels: Hotel[] = [];
   if (hotel.name) {
+    const hotelGps = hotel.address ? parseGpsCoordinates(hotel.address) : null;
     mappedHotels.push({
       provider: 'Booking.com',
       name: hotel.name,
@@ -415,7 +503,12 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
       cons: [
         'Sujeto a disponibilidad de tarifas'
       ],
-      booking_url: hotel.booking_url || 'https://www.booking.com'
+      // Se usa el link real que devuelve Google Hotels vía SerpAPI (el mismo que
+      // usa su botón "Ver oferta"); solo si falta se cae a una búsqueda en
+      // Booking.com como respaldo.
+      booking_url: hotel.booking_url || buildBookingSearchUrl(hotel.name, destination, hotel.check_in, hotel.check_out),
+      lat: hotel.lat ?? hotelGps?.lat,
+      lng: hotel.lng ?? hotelGps?.lng
     });
   } else {
     mappedHotels.push({
@@ -442,12 +535,20 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
     requires_booking: !!act.booking_url,
     opening_hours: '09:00 - 18:00',
     best_time: act.start_time || '10:00',
-    booking_url: act.booking_url || 'https://www.google.com/maps',
+    // Si no hay link.website real, buscar el lugar en Google Maps en vez de
+    // abrir la home genérica de Maps sin ninguna búsqueda aplicada.
+    booking_url: act.booking_url || buildGoogleMapsSearchUrl(act.name || 'actividad', destination),
     why: `Seleccionada especialmente por encajar en tu perfil de viaje.`
   }));
 
   // 4. Mapear itinerario diario
   const rawItinerary = plan.daily_itinerary || [];
+  // Fallback de ubicación para bloques sin coordenadas propias (días libres,
+  // check-in/check-out, o actividades de Tavily sin gps_coordinates): usar el
+  // hotel como aproximación, para que el mapa por día nunca quede vacío.
+  const hotelGpsFallback = hotel.address ? parseGpsCoordinates(hotel.address) : null;
+  const hotelLat = hotel.lat ?? hotelGpsFallback?.lat;
+  const hotelLng = hotel.lng ?? hotelGpsFallback?.lng;
   const mappedItinerary: DayPlan[] = rawItinerary.map((dayPlan: N8nDay, index: number) => {
     const dayActivities = dayPlan.activities || [];
 
@@ -469,7 +570,11 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
         cost: act.price_usd || 0,
         location: actName,
         description: `Visita recomendada a ${actName}.`,
-        tip: act.booking_url ? 'Se aconseja reservar online con antelación.' : undefined
+        tip: act.booking_url ? 'Se aconseja reservar online con antelación.' : undefined,
+        // Prioridad: coordenada de la actividad real > coordenada del día
+        // (geocoding de points_of_interest en n8n, v31) > hotel como último recurso.
+        lat: act.lat ?? dayPlan.lat ?? hotelLat,
+        lng: act.lng ?? dayPlan.lng ?? hotelLng
       };
     });
 
@@ -487,7 +592,9 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
           duration: '1h',
           cost: 0,
           location: hotel.name || 'Alojamiento',
-          description: 'Llegada y check-in en tu hotel para dejar el equipaje y descansar.'
+          description: 'Llegada y check-in en tu hotel para dejar el equipaje y descansar.',
+          lat: hotelLat,
+          lng: hotelLng
         });
       } else if (index === rawItinerary.length - 1) {
         blocks.push({
@@ -498,9 +605,14 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
           duration: '2h',
           cost: 0,
           location: hotel.name || 'Alojamiento',
+          lat: hotelLat,
+          lng: hotelLng,
           description: 'Registro de salida en el alojamiento y viaje hacia el aeropuerto para tu vuelo de regreso.'
         });
       } else {
+        // Sin actividad propia asignada ese día: usa la coordenada geocodificada
+        // del día (points_of_interest, v31) si existe, y el hotel como último
+        // recurso, para que ese día no quede vacío en el filtro por día del mapa.
         blocks.push({
           time: '10:00',
           period: 'Mañana',
@@ -509,7 +621,9 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
           duration: '4h',
           cost: 0,
           location: destination,
-          description: 'Día libre sugerido para pasear por los rincones más bonitos del destino.'
+          description: 'Día libre sugerido para pasear por los rincones más bonitos del destino.',
+          lat: dayPlan.lat ?? hotelLat,
+          lng: dayPlan.lng ?? hotelLng
         });
       }
     }
@@ -546,6 +660,35 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
         }
       ]
     });
+  }
+
+  // Fotos reales de Google Places para las paradas del itinerario (spec
+  // "imagenes-y-mapas"): solo se piden para bloques con nombre real de lugar
+  // (actividad/comida), no para rellenos genéricos como "Explorar la ciudad".
+  // Incluye también una foto del destino en sí para la cabecera del viaje
+  // (antes usaba una imagen local fija de una lista de 10 ciudades y caía a
+  // Barcelona para cualquier destino no listado — p. ej. Río de Janeiro).
+  // Si falta la API key o falla la llamada, los componentes ya caen a su
+  // placeholder — nunca bloquea la generación del plan.
+  let destinationImageUrl: string | undefined;
+  const placesApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  if (placesApiKey && placesApiKey !== 'changeme') {
+    const isRealPlaceBlock = (b: ItineraryBlock) =>
+      (b.type === 'activity' || b.type === 'food') && b.title !== 'Explorar la ciudad';
+    const photoQueries = mappedItinerary
+      .flatMap((day) => day.blocks)
+      .filter(isRealPlaceBlock)
+      .map((b) => `${b.title} ${destination}`);
+    photoQueries.push(destination);
+    const photoMap = await fetchPlacePhotos(photoQueries, placesApiKey);
+    mappedItinerary.forEach((day) => {
+      day.blocks.forEach((b) => {
+        if (isRealPlaceBlock(b)) {
+          b.imageUrl = photoMap.get(`${b.title} ${destination}`);
+        }
+      });
+    });
+    destinationImageUrl = photoMap.get(destination);
   }
 
   // 5. Mapear desglose de presupuesto.
@@ -617,6 +760,7 @@ function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], originalPref
       summary: plan.plan_notes?.join('. ') || `Hemos seleccionado este itinerario a ${destination} por encajar óptimamente en tus fechas, ritmo de viaje y presupuesto.`,
       estimated_total: totalCost,
       currency: 'EUR',
+      imageUrl: destinationImageUrl,
       why_selected: plan.plan_notes || [
         'Vuelo conveniente reservado para tus fechas',
         'Hotel con gran relación calidad-precio y notas excelentes',
@@ -674,46 +818,66 @@ export async function POST(req: NextRequest) {
     // -------------------------------------------------------------------------
     if (process.env.N8N_WEBHOOK_URL) {
       console.log('Forwarding request to n8n webhook:', process.env.N8N_WEBHOOK_URL);
-      try {
-        // Mapear los datos de entrada al formato de n8n
-        const n8nInputBody = mapPreferencesToN8n(body);
-        console.log('Mapped input for n8n:', n8nInputBody);
+      const n8nInputBody = mapPreferencesToN8n(body);
+      console.log('Mapped input for n8n:', n8nInputBody);
 
-        const response = await fetch(process.env.N8N_WEBHOOK_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(n8nInputBody),
-        });
+      // Reintenta antes de degradar al respaldo de OpenAI directo (sin n8n),
+      // que no lleva coordenadas, links de reserva reales ni fotos: un fallo
+      // transitorio de n8n (p. ej. rate limit de OpenAI dentro del workflow,
+      // que devuelve 200 con cuerpo vacío) NO debe tirar toda la experiencia
+      // completa por la borda. El propio error de OpenAI indica que se
+      // resuelve en segundos, así que un reintento corto suele bastar.
+      const maxAttempts = 2;
+      const retryDelayMs = 20000;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const response = await fetch(process.env.N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(n8nInputBody),
+          });
 
-        if (response.ok) {
-          const n8nData = await response.json();
-          console.log('Trip successfully orchestrated by n8n. Response received.');
-
-          // Detectar si la respuesta viene con el esquema oficial de n8n o es directa
-          const rawData = Array.isArray(n8nData) ? n8nData[0] : n8nData;
-          if (rawData && (rawData.plan || rawData.status)) {
-            // Si n8n no pudo completar el plan (p. ej. sin vuelos), NO fingimos un
-            // viaje con defaults: devolvemos su señal y sus avisos para que el
-            // frontend los muestre y el usuario ajuste la entrada.
-            if (isUnusableN8nPlan(rawData)) {
-              console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
-              const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
-              return NextResponse.json({ status: 'needs_user_input', warnings });
+          if (response.ok) {
+            const rawText = await response.text();
+            if (!rawText) {
+              throw new Error('n8n devolvió un cuerpo vacío (probable fallo interno transitorio)');
             }
-            console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
-            const mappedData = mapN8nToTripData(n8nData, body);
-            return NextResponse.json(mappedData);
+            const n8nData = JSON.parse(rawText);
+            console.log('Trip successfully orchestrated by n8n. Response received.');
+
+            // Detectar si la respuesta viene con el esquema oficial de n8n o es directa
+            const rawData = Array.isArray(n8nData) ? n8nData[0] : n8nData;
+            if (rawData && (rawData.plan || rawData.status)) {
+              // Si n8n no pudo completar el plan (p. ej. sin vuelos), NO fingimos un
+              // viaje con defaults: devolvemos su señal y sus avisos para que el
+              // frontend los muestre y el usuario ajuste la entrada.
+              if (isUnusableN8nPlan(rawData)) {
+                console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
+                const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
+                return NextResponse.json({ status: 'needs_user_input', warnings });
+              }
+              console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
+              const mappedData = await mapN8nToTripData(n8nData, body);
+              return NextResponse.json(mappedData);
+            } else {
+              console.log('n8n response does not match G7 schema; returning directly as TripData.');
+              return NextResponse.json(n8nData);
+            }
           } else {
-            console.log('n8n response does not match G7 schema; returning directly as TripData.');
-            return NextResponse.json(n8nData);
+            throw new Error(`n8n webhook error: ${response.statusText}`);
           }
-        } else {
-          console.warn(`n8n webhook error: ${response.statusText}. Trying direct LLM API...`);
+        } catch (e: unknown) {
+          const isLastAttempt = attempt === maxAttempts;
+          console.warn(
+            `n8n webhook attempt ${attempt}/${maxAttempts} failed: ${getErrorMessage(e)}.` +
+            (isLastAttempt ? ' Trying direct LLM API...' : ` Reintentando en ${retryDelayMs / 1000}s...`)
+          );
+          if (!isLastAttempt) {
+            await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          }
         }
-      } catch (e: unknown) {
-        console.warn('Failed to contact n8n webhook, trying direct LLM API:', getErrorMessage(e));
       }
     }
 

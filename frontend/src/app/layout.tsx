@@ -3,31 +3,8 @@ import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { TripProvider } from "@/context/TripContext";
 import { AuthProvider } from "@/context/AuthContext";
-import { ThemeProvider } from "@/context/ThemeContext";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
-
-// Script anti-flash (FOUC): se ejecuta de forma síncrona antes del primer
-// pintado y fija la clase `.dark` en <html> según la preferencia guardada o, si
-// no hay, según el sistema. Debe ir inline y antes del contenido para que no
-// haya parpadeo claro→oscuro al recargar. La <html> lleva suppressHydrationWarning
-// porque este script muta su className fuera de React.
-// NOTA: la clave 'justenjoy-theme' debe coincidir con THEME_STORAGE_KEY de
-// ThemeContext; al ser un script inyectado como string no puede importar la
-// constante, así que se mantiene el literal sincronizado a mano.
-const themeInitScript = `
-(function() {
-  try {
-    var t = localStorage.getItem('justenjoy-theme');
-    if (t !== 'light' && t !== 'dark') {
-      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    if (t === 'dark') document.documentElement.classList.add('dark');
-  } catch (e) {
-    // Sin acceso a localStorage/matchMedia: se mantiene el tema claro por defecto.
-  }
-})();
-`;
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -61,17 +38,14 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${plusJakartaSans.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-brand-cream text-brand-dark dark:bg-brand-dark dark:text-brand-white">
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <ThemeProvider>
-          <AuthProvider>
-            <TripProvider>
-              <Navbar />
-              <main className="flex-grow flex flex-col">{children}</main>
-              <Footer />
-            </TripProvider>
-          </AuthProvider>
-        </ThemeProvider>
+      <body className="min-h-full flex flex-col bg-brand-cream text-brand-dark">
+        <AuthProvider>
+          <TripProvider>
+            <Navbar />
+            <main className="flex-grow flex flex-col">{children}</main>
+            <Footer />
+          </TripProvider>
+        </AuthProvider>
         {/* Service Worker PWA Registration Script — solo en producción (en dev provoca bucles con Fast Refresh) */}
         {process.env.NODE_ENV === 'production' && (
           <script
