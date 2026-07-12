@@ -4,10 +4,34 @@
 > **Versión:** v31
 > **Plataforma:** n8n 2.23.2 (Self Hosted)
 > **Estado:** Estable — versión activa del proyecto (TFM)
-> **Workflow:** 1 main workflow (27 nodos)
+> **Workflow:** 1 main workflow (28 nodos)
 > **Modelo Motor Planificador:** GPT-4.1 (maxTokens 4096, temperature 0.1, retry on fail 65s)
 > **Modelo Agente Refinamiento:** GPT-4o-mini (maxTokens 1024, temperature 0.1)
 > **Persistencia:** Supabase (tabla `travel_plans`)
+
+## Actualizaciones sobre este documento (reconciliación con feature/mapas-e-imagenes-destino)
+
+Esta rama portó las siguientes mejoras al v31 original de `master`, manteniendo intacto
+el motor de geocoding por día (Nominatim) descrito abajo:
+
+- **Reserva real de vuelos (probado y descartado)**: se implementó un nodo
+  `Tool: SerpApi Google Flights - Reserva` que usaba el `booking_token` de cada vuelo para
+  pedir `booking_options[]` a SerpAPI y obtener la URL de reserva del proveedor. Verificado
+  con una petición real: SerpAPI devuelve `booking_request.url` = la MISMA url genérica
+  `https://www.google.com/travel/clk/f` para TODOS los proveedores (Wizz Air, Booking.com,
+  Expedia, etc.) — sin los datos adicionales que la API no expone, esa url da 404. Se
+  descartó el nodo y se volvió al enlace de búsqueda `travel/flights?q=...` (verificado con
+  petición real: HTTP 200, precarga ruta y fecha correctas), que es fiable aunque no aterrice
+  en el checkout exacto.
+- **Coordenadas de hotel**: `hotel.lat`/`hotel.lng` en el contrato, poblados desde
+  `gps_coordinates` de Google Hotels (el restrictor ya lo traía, solo faltaba pedirlo).
+- **Itinerario completo por día**: la sección "ITINERARIO DÍA A DÍA" ahora exige
+  mañana/mediodía/tarde/noche en cada día intermedio (actividad real cuando existe,
+  sugerencia libre sin inventar negocios cuando no) en vez de una sola actividad suelta.
+  `points_of_interest` se mantiene intacto para el nodo de geocoding.
+- **Presupuesto verificado en código**: `Validar Output del Planificador` recalcula el
+  coste total de forma determinista y fuerza `needs_user_input` + `budget_exceeded` si el
+  LLM no se autovalidó bien la aritmética.
 
 ---
 

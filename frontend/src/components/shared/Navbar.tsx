@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { Compass, Briefcase, CreditCard, Info, Plus, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
@@ -16,7 +15,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { name: 'Inicio', href: '/', icon: Compass },
     { name: 'Mis Viajes', href: '/dashboard', icon: Briefcase },
-    { name: 'Precios', href: '/pricing', icon: CreditCard },
+    { name: 'Próximamente', href: '/pricing', icon: CreditCard },
     { name: 'Nosotros', href: '/about', icon: Info },
   ];
 
@@ -70,9 +69,6 @@ export const Navbar: React.FC = () => {
 
           {/* Right side: theme + auth + CTA + hamburger */}
           <div className="flex items-center gap-3">
-            {/* Toggle de tema (claro/oscuro), visible en todos los tamaños */}
-            <ThemeToggle />
-
             {/* Auth area (desktop) */}
             {isAuthenticated ? (
               <div className="hidden sm:flex items-center gap-3">
