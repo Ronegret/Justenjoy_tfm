@@ -4,10 +4,30 @@
 > **Versión:** v31
 > **Plataforma:** n8n 2.23.2 (Self Hosted)
 > **Estado:** Estable — versión activa del proyecto (TFM)
-> **Workflow:** 1 main workflow (27 nodos)
+> **Workflow:** 1 main workflow (28 nodos)
 > **Modelo Motor Planificador:** GPT-4.1 (maxTokens 4096, temperature 0.1, retry on fail 65s)
 > **Modelo Agente Refinamiento:** GPT-4o-mini (maxTokens 1024, temperature 0.1)
 > **Persistencia:** Supabase (tabla `travel_plans`)
+
+## Actualizaciones sobre este documento (reconciliación con feature/mapas-e-imagenes-destino)
+
+Esta rama portó las siguientes mejoras al v31 original de `master`, manteniendo intacto
+el motor de geocoding por día (Nominatim) descrito abajo:
+
+- **Reserva real de vuelos**: nuevo nodo `Tool: SerpApi Google Flights - Reserva` (28º nodo).
+  Usa el `booking_token` de cada vuelo elegido para pedir `booking_options[]` a SerpAPI y
+  obtener la URL real de reserva (`booking_options[].together.booking_request.url`), en vez
+  de solo el enlace de búsqueda `travel/flights?q=...`. Si falla, cae al enlace de búsqueda
+  (el safety net de `Validar Output` ahora es condicional, no sobreescribe una URL real).
+- **Coordenadas de hotel**: `hotel.lat`/`hotel.lng` en el contrato, poblados desde
+  `gps_coordinates` de Google Hotels (el restrictor ya lo traía, solo faltaba pedirlo).
+- **Itinerario completo por día**: la sección "ITINERARIO DÍA A DÍA" ahora exige
+  mañana/mediodía/tarde/noche en cada día intermedio (actividad real cuando existe,
+  sugerencia libre sin inventar negocios cuando no) en vez de una sola actividad suelta.
+  `points_of_interest` se mantiene intacto para el nodo de geocoding.
+- **Presupuesto verificado en código**: `Validar Output del Planificador` recalcula el
+  coste total de forma determinista y fuerza `needs_user_input` + `budget_exceeded` si el
+  LLM no se autovalidó bien la aritmética.
 
 ---
 

@@ -373,6 +373,11 @@ interface N8nDay {
   title?: string;
   summary?: string;
   activities?: N8nActivity[];
+  // v31: coordenada garantizada por día, calculada en n8n (geocoding de
+  // points_of_interest vía Nominatim/OpenStreetMap, sin coste de tokens LLM).
+  lat?: number | null;
+  lng?: number | null;
+  coordinate_source?: string;
 }
 
 interface N8nCostSummary {
@@ -566,8 +571,10 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
         location: actName,
         description: `Visita recomendada a ${actName}.`,
         tip: act.booking_url ? 'Se aconseja reservar online con antelación.' : undefined,
-        lat: act.lat ?? hotelLat,
-        lng: act.lng ?? hotelLng
+        // Prioridad: coordenada de la actividad real > coordenada del día
+        // (geocoding de points_of_interest en n8n, v31) > hotel como último recurso.
+        lat: act.lat ?? dayPlan.lat ?? hotelLat,
+        lng: act.lng ?? dayPlan.lng ?? hotelLng
       };
     });
 
@@ -603,9 +610,9 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
           description: 'Registro de salida en el alojamiento y viaje hacia el aeropuerto para tu vuelo de regreso.'
         });
       } else {
-        // Sin coordenadas propias (es un día libre sin actividad asignada):
-        // se usa la ubicación del hotel como aproximación, para que ese día
-        // no quede vacío en el filtro por día del mapa del viaje.
+        // Sin actividad propia asignada ese día: usa la coordenada geocodificada
+        // del día (points_of_interest, v31) si existe, y el hotel como último
+        // recurso, para que ese día no quede vacío en el filtro por día del mapa.
         blocks.push({
           time: '10:00',
           period: 'Mañana',
@@ -615,8 +622,8 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
           cost: 0,
           location: destination,
           description: 'Día libre sugerido para pasear por los rincones más bonitos del destino.',
-          lat: hotelLat,
-          lng: hotelLng
+          lat: dayPlan.lat ?? hotelLat,
+          lng: dayPlan.lng ?? hotelLng
         });
       }
     }
