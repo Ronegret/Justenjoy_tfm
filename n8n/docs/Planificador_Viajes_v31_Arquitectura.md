@@ -14,11 +14,15 @@
 Esta rama portó las siguientes mejoras al v31 original de `master`, manteniendo intacto
 el motor de geocoding por día (Nominatim) descrito abajo:
 
-- **Reserva real de vuelos**: nuevo nodo `Tool: SerpApi Google Flights - Reserva` (28º nodo).
-  Usa el `booking_token` de cada vuelo elegido para pedir `booking_options[]` a SerpAPI y
-  obtener la URL real de reserva (`booking_options[].together.booking_request.url`), en vez
-  de solo el enlace de búsqueda `travel/flights?q=...`. Si falla, cae al enlace de búsqueda
-  (el safety net de `Validar Output` ahora es condicional, no sobreescribe una URL real).
+- **Reserva real de vuelos (probado y descartado)**: se implementó un nodo
+  `Tool: SerpApi Google Flights - Reserva` que usaba el `booking_token` de cada vuelo para
+  pedir `booking_options[]` a SerpAPI y obtener la URL de reserva del proveedor. Verificado
+  con una petición real: SerpAPI devuelve `booking_request.url` = la MISMA url genérica
+  `https://www.google.com/travel/clk/f` para TODOS los proveedores (Wizz Air, Booking.com,
+  Expedia, etc.) — sin los datos adicionales que la API no expone, esa url da 404. Se
+  descartó el nodo y se volvió al enlace de búsqueda `travel/flights?q=...` (verificado con
+  petición real: HTTP 200, precarga ruta y fecha correctas), que es fiable aunque no aterrice
+  en el checkout exacto.
 - **Coordenadas de hotel**: `hotel.lat`/`hotel.lng` en el contrato, poblados desde
   `gps_coordinates` de Google Hotels (el restrictor ya lo traía, solo faltaba pedirlo).
 - **Itinerario completo por día**: la sección "ITINERARIO DÍA A DÍA" ahora exige
