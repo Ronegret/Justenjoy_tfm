@@ -71,7 +71,7 @@ try {
 # ── Paso 3: Validar que los JSONs de n8n son validos ─────────────────────────
 Write-Step "Validando JSON de workflows n8n"
 
-$jsonFiles = Get-ChildItem -Path "n8n/workflows" -Filter "*.json" -ErrorAction SilentlyContinue
+$jsonFiles = Get-ChildItem -Path "n8n/workflows" -Filter "*.json" -Recurse -ErrorAction SilentlyContinue
 if ($jsonFiles.Count -eq 0) {
     Write-SKIP "No hay workflows JSON en n8n/workflows/ todavia"
 } else {
@@ -117,12 +117,13 @@ if (-not $toolPresent) {
     $precommitOk = $true
 }
 
-# ── Paso 6: Calidad del frontend (typecheck duro + lint informativo) ──────────
-# `tsc --noEmit` es GATE DURO: hoy pasa limpio y atrapa regresiones de tipos.
-# `npm run lint` es INFORMATIVO (WARN): hay deuda de ESLint conocida que NO bloquea
-# `next build` (Next 16) y que se esta reduciendo; cuando el lint quede limpio,
-# eleva ese bloque a Write-FAIL (gate duro). `next build` queda fuera por lentitud
-# (comprobacion manual: cd frontend; npm run build).
+# ── Paso 6: Calidad del frontend (typecheck + lint, ambos GATE DURO) ──────────
+# `tsc --noEmit` es GATE DURO: atrapa regresiones de tipos.
+# `npm run lint` es GATE DURO desde que la deuda de ERRORES bajo a 0: ESLint sale
+# con codigo != 0 solo si hay errores (los warnings no rompen el gate), asi que
+# cualquier error nuevo bloquea el commit. Los warnings restantes (deuda conocida:
+# imports sin usar, <img>, exhaustive-deps) se siguen reportando como informativos.
+# `next build` queda fuera por lentitud (comprobacion manual: cd frontend; npm run build).
 Write-Step "Comprobando la calidad del frontend (typecheck + lint)"
 
 $frontendDir = "frontend"
@@ -143,16 +144,31 @@ if (-not (Test-Path $frontendDir)) {
             Write-FAIL "TypeScript: hay errores de tipos. Revisa con: cd frontend; npx tsc --noEmit"
         }
 
-        # Lint: informativo, no bloquea (deuda conocida)
+        # Lint: GATE DURO. `npm run lint` (eslint) sale != 0 SOLO si hay errores;
+        # los warnings no rompen el gate. Cualquier error nuevo bloquea el commit.
         if ($null -ne (Get-Command npm -ErrorAction SilentlyContinue)) {
             $lintOut = & npm run --silent lint 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-OK "ESLint: limpio"
+            $lintExit = $LASTEXITCODE
+            $joined = ($lintOut -join "`n")
+            # Conteo fiable desde la linea resumen de eslint ("N problems (X errors, Y
+            # warnings)"), no de contar la palabra "error" por toda la salida. Si no
+            # aparece (salida limpia sin problemas), asumimos 0/0.
+            $summary = [regex]::Match($joined, '\((\d+)\s+errors?,\s+(\d+)\s+warnings?\)')
+            $errCount  = if ($summary.Success) { [int]$summary.Groups[1].Value } else { 0 }
+            $warnCount = if ($summary.Success) { [int]$summary.Groups[2].Value } else { 0 }
+            if ($lintExit -eq 0) {
+                # Puede haber warnings (deuda conocida) que no rompen el gate; los reportamos.
+                if ($warnCount -gt 0) {
+                    Write-OK "ESLint: 0 errores ($warnCount warnings informativos, no bloquean)"
+                } else {
+                    Write-OK "ESLint: limpio (0 errores, 0 warnings)"
+                }
+            } elseif ($summary.Success) {
+                Write-FAIL "ESLint: $errCount errores que bloquean el gate ($warnCount warnings). Revisa con: cd frontend; npm run lint"
             } else {
-                $joined = ($lintOut -join "`n")
-                $errCount  = ([regex]::Matches($joined, "\berror\b")).Count
-                $warnCount = ([regex]::Matches($joined, "\bwarning\b")).Count
-                Write-WARN "ESLint: $errCount errores / $warnCount warnings (deuda conocida; no bloquea el gate). Detalle: cd frontend; npm run lint"
+                # Salida != 0 sin linea resumen: fallo de la propia herramienta (config
+                # rota, crash), no de reglas de lint. Igualmente bloquea, pero lo aclara.
+                Write-FAIL "ESLint fallo (codigo $lintExit) por un motivo no-lint (config/herramienta). Revisa con: cd frontend; npm run lint"
             }
         } else {
             Write-SKIP "npm no esta en el PATH; se omite el lint del frontend"

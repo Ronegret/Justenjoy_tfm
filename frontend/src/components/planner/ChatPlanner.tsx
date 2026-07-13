@@ -53,7 +53,7 @@ const PACE_OPTIONS = [
   { value: 'medium', label: 'Medio (Equilibrio perfecto)' },
   { value: 'intense', label: 'Intenso (Ver lo máximo posible)' },
   { value: 'all', label: '¡Quiero verlo todo!' }
-];
+] as const;
 
 const RESTRICTION_OPTIONS = [
   { id: 'avoid_scales', label: 'Evitar escalas' },
@@ -514,7 +514,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                 {PACE_OPTIONS.map((paceOpt) => (
                   <button
                     key={paceOpt.value}
-                    onClick={() => updatePrefs({ pace: paceOpt.value as any })}
+                    onClick={() => updatePrefs({ pace: paceOpt.value })}
                     className={`text-left p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
                       preferences.pace === paceOpt.value
                         ? 'border-brand-blue bg-brand-blue/5 dark:bg-brand-blue/15 text-brand-dark dark:text-brand-white'

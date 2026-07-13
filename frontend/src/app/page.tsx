@@ -361,7 +361,7 @@ export default function Home() {
           {/* Decision Mock */}
           <div className="flex flex-col gap-4">
             <div className="p-3.5 bg-brand-cream/40 dark:bg-brand-white/5 rounded-xl border border-brand-dark/5 text-sm text-brand-dark dark:text-brand-cream leading-relaxed italic font-semibold">
-              "Lisboa encaja muy bien para tu escapada porque equilibra precio, cercanía, clima y actividades disponibles en tus fechas."
+              &quot;Lisboa encaja muy bien para tu escapada porque equilibra precio, cercanía, clima y actividades disponibles en tus fechas.&quot;
             </div>
 
             <div className="flex flex-col gap-2 font-sans">

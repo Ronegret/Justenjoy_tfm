@@ -50,7 +50,7 @@ const PACE_OPTIONS = [
   { value: 'medium', label: 'Medio (Equilibrio perfecto)' },
   { value: 'intense', label: 'Intenso (Ver lo máximo posible)' },
   { value: 'all', label: '¡Quiero verlo todo!' }
-];
+] as const;
 
 const RESTRICTION_OPTIONS = [
   { id: 'avoid_scales', label: 'Evitar escalas' },
@@ -462,7 +462,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
                     <button
                       key={paceOpt.value}
                       type="button"
-                      onClick={() => updatePrefs({ pace: paceOpt.value as any })}
+                      onClick={() => updatePrefs({ pace: paceOpt.value })}
                       className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                         prefs.pace === paceOpt.value
                           ? 'border-brand-blue bg-brand-blue/5 dark:bg-brand-blue/10 text-brand-dark dark:text-brand-white font-semibold'
