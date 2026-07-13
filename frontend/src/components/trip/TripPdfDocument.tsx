@@ -29,7 +29,7 @@ const eur = (value: number | undefined) =>
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 36,
+    paddingTop: 50,
     paddingBottom: 48,
     paddingHorizontal: 40,
     fontSize: 10,
@@ -55,7 +55,8 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 4,
+    lineHeight: 1.2,
+    marginBottom: 10,
   },
   heroSubtitle: {
     fontSize: 10,
@@ -185,6 +186,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
   },
+  // Tarjeta a ancho completo (presupuesto). No usa flex: 1 porque, como hijo
+  // único de una columna de altura automática, flexBasis:0 colapsaría su altura
+  // y las filas se solaparían.
+  fullCard: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    padding: 12,
+  },
   cardTitle: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
@@ -237,6 +247,29 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     paddingTop: 6,
   },
+  // Encabezado repetido desde la página 2 (se posiciona en absoluto para no
+  // empujar el hero de la página 1; el paddingTop de la página deja el hueco).
+  headerSlot: {
+    position: 'absolute',
+    top: 20,
+    left: 40,
+    right: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: 8,
+    color: COLORS.muted,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingBottom: 6,
+  },
+  headerBrand: {
+    fontFamily: 'Helvetica-Bold',
+    letterSpacing: 1,
+    color: COLORS.dark,
+  },
 });
 
 interface TripPdfDocumentProps {
@@ -266,6 +299,20 @@ export const TripPdfDocument: React.FC<TripPdfDocumentProps> = ({ trip }) => {
       author="Just Enjoy"
     >
       <Page size="A4" style={styles.page} wrap>
+        {/* Encabezado repetido a partir de la página 2 (incluida) */}
+        <View
+          style={styles.headerSlot}
+          fixed
+          render={({ pageNumber }) =>
+            pageNumber > 1 ? (
+              <View style={styles.header}>
+                <Text style={styles.headerBrand}>JUST ENJOY</Text>
+                <Text>Viaje a {best_option.destination}</Text>
+              </View>
+            ) : null
+          }
+        />
+
         {/* Cabecera */}
         <View style={styles.hero}>
           <Text style={styles.kicker}>RUTA OPTIMIZADA · JUST ENJOY</Text>
@@ -426,7 +473,7 @@ export const TripPdfDocument: React.FC<TripPdfDocumentProps> = ({ trip }) => {
         {/* Presupuesto */}
         <View style={styles.section} wrap={false}>
           <Text style={styles.sectionTitle}>Estudio de costes estimados</Text>
-          <View style={styles.card}>
+          <View style={styles.fullCard}>
             {budgetLines.map(([label, value]) => (
               <View style={styles.row} key={`bud-${label}`}>
                 <Text style={styles.rowLabel}>{label}</Text>

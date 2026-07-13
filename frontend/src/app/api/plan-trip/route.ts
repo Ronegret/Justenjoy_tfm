@@ -12,6 +12,7 @@ import {
   BudgetBreakdown
 } from '@/types/trip';
 import { N8nWarning } from '@/types/planResult';
+import { todayISO } from '@/lib/dates';
 
 const SYSTEM_PROMPT = `
 Eres el motor de orquestación de viajes de "JUST ENJOY". Tu tarea es actuar como un agente de viajes experto y automatizado, generando un itinerario completo, justificado y optimizado basado en las preferencias de viaje del usuario.
@@ -451,14 +452,14 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   if (flights.outbound) {
     const outboundOrigin = flights.outbound.origin || originalPrefs.origin;
     const outboundDest = flights.outbound.destination || destination;
-    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || '';
+    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || todayISO();
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.outbound.airline || 'Aerolínea',
       from: outboundOrigin,
       to: outboundDest,
-      departure: flights.outbound.departure_datetime ? flights.outbound.departure_datetime.split('T')[1]?.substring(0, 5) || '09:00' : '09:00',
-      arrival: flights.outbound.arrival_datetime ? flights.outbound.arrival_datetime.split('T')[1]?.substring(0, 5) || '11:00' : '11:00',
+      departure: flights.outbound.departure_datetime || `${outboundDate}T09:00:00`,
+      arrival: flights.outbound.arrival_datetime || `${outboundDate}T11:00:00`,
       duration: flights.outbound.duration || '2h',
       stops: Array.isArray(flights.outbound.layovers) ? flights.outbound.layovers.length : 0,
       price: flights.outbound.price_usd || 150,
@@ -469,14 +470,14 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   if (flights.return) {
     const returnOrigin = flights.return.origin || destination;
     const returnDest = flights.return.destination || originalPrefs.origin;
-    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || '';
+    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || todayISO();
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.return.airline || 'Aerolínea',
       from: returnOrigin,
       to: returnDest,
-      departure: flights.return.departure_datetime ? flights.return.departure_datetime.split('T')[1]?.substring(0, 5) || '15:00' : '15:00',
-      arrival: flights.return.arrival_datetime ? flights.return.arrival_datetime.split('T')[1]?.substring(0, 5) || '17:00' : '17:00',
+      departure: flights.return.departure_datetime || `${returnDate}T15:00:00`,
+      arrival: flights.return.arrival_datetime || `${returnDate}T17:00:00`,
       duration: flights.return.duration || '2h',
       stops: Array.isArray(flights.return.layovers) ? flights.return.layovers.length : 0,
       price: flights.return.price_usd || 150,
