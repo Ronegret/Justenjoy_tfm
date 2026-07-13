@@ -9,22 +9,22 @@ interface FlightCardProps {
 }
 
 export const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
+  // new Date() no lanza ante una fecha invalida: devuelve un Invalid Date cuyo
+  // toLocale* imprime el literal "Invalid Date". Por eso hay que comprobar
+  // isNaN(getTime()) en vez de envolver en try/catch.
   const formatTime = (isoString: string) => {
-    try {
-      const date = new Date(isoString);
-      return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return isoString.substring(11, 16);
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      // Si llega solo "HH:MM" u otro formato no ISO, muestralo tal cual.
+      return /^\d{1,2}:\d{2}/.test(isoString) ? isoString.slice(0, 5) : '';
     }
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatDate = (isoString: string) => {
-    try {
-      const date = new Date(isoString);
-      return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-    } catch {
-      return '';
-    }
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   };
 
   return (

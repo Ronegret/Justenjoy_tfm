@@ -12,6 +12,7 @@ import {
   BudgetBreakdown
 } from '@/types/trip';
 import { N8nWarning } from '@/types/planResult';
+import { todayISO } from '@/lib/dates';
 
 const SYSTEM_PROMPT = `
 Eres el motor de orquestación de viajes de "JUST ENJOY". Tu tarea es actuar como un agente de viajes experto y automatizado, generando un itinerario completo, justificado y optimizado basado en las preferencias de viaje del usuario.
@@ -451,7 +452,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   if (flights.outbound) {
     const outboundOrigin = flights.outbound.origin || originalPrefs.origin;
     const outboundDest = flights.outbound.destination || destination;
-    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || '';
+    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || todayISO();
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.outbound.airline || 'Aerolínea',
@@ -469,7 +470,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   if (flights.return) {
     const returnOrigin = flights.return.origin || destination;
     const returnDest = flights.return.destination || originalPrefs.origin;
-    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || '';
+    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || todayISO();
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.return.airline || 'Aerolínea',
