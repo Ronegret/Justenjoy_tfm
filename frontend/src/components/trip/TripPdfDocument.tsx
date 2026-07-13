@@ -15,9 +15,18 @@ import { budgetLabel } from '@/lib/tripLabels';
 // Las fuentes integradas del PDF (Helvetica) solo cubren Latin-1: los nombres y
 // direcciones en cirílico (p. ej. hoteles de Moscú) salían como glifos
 // superpuestos e ilegibles. Roboto (servida localmente desde /public/fonts, sin
-// CDN externo por el CSP) incluye latino + cirílico + griego. Se registran dos
-// familias para poder seguir seleccionando la negrita por nombre de familia.
-Font.register({ family: 'Roboto', src: '/fonts/Roboto-Regular.ttf' });
+// CDN externo por el CSP) incluye latino + cirílico + griego. La negrita va en
+// una familia aparte para seleccionarla por nombre; la itálica va como variante
+// de la familia base porque, a diferencia de Helvetica-Oblique (integrada), una
+// fuente propia debe registrar su itálica o @react-pdf lanza "Could not resolve
+// font" cuando un estilo hereda Roboto con fontStyle: 'italic' (p. ej. daySummary).
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: '/fonts/Roboto-Regular.ttf' },
+    { src: '/fonts/Roboto-Italic.ttf', fontStyle: 'italic' },
+  ],
+});
 Font.register({ family: 'Roboto-Bold', src: '/fonts/Roboto-Bold.ttf' });
 
 // Paleta de marca (espejo de globals.css @theme). @react-pdf no lee Tailwind,
