@@ -70,7 +70,9 @@ La lógica vive en herramientas de orquestación y en LLMs, conectados mediante 
 
 ### 2. n8n — Orquestador (Curación + Transacción)
 - **Rol:** motor del sistema. Gestiona toda la lógica condicional y las llamadas a APIs.
-- **Versión en producción:** v24 (ver `n8n/docs/Planificador_Viajes_v24_Arquitectura.md`).
+- **Versión canónica:** v31 (ver `n8n/docs/Planificador_Viajes_v31_Arquitectura.md`).
+  El código de sus 10 nodos Code vive versionado en `n8n/nodes-code/`. Las versiones
+  anteriores (v24–v29) están congeladas en `n8n/workflows/archive/`.
 - **Despliegue:** self-hosted. URL expuesta via ngrok en desarrollo.
 - **Workflow único:** simplifica el testeo (una sola importación en n8n).
 
@@ -138,6 +140,9 @@ Ver `n8n/examples/output-plan.json` (genérico) y
 Campos clave: `status`, `plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`,
 `warnings[]`, `_debug`. Desde v29 la respuesta añade además campos internos de la
 persistencia en Supabase (`_supabase_record`, `_skip_supabase`); el frontend los ignora.
+Desde v31 cada elemento de `plan.daily_itinerary[]` incluye `lat`, `lng` y
+`coordinate_source` (`activity` | `geocoded` | `city_center` | `none`), que alimentan el
+mapa del portal del viajero (nodo "Enriquecer Coordenadas (OpenStreetMap)").
 
 ### Refinamiento (POST `/webhook/travel-refine`)
 Entrada: `{ session_id, feedback_text }`.

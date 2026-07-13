@@ -39,7 +39,8 @@ El sistema cubre el ciclo completo de una agencia de viajes digital:
 ```
 TFM_G7_Just_Enjoy/
 ├── n8n/                  Motor del sistema (workflow orquestador)
-│   ├── workflows/        JSONs de workflows importables en n8n
+│   ├── workflows/        Workflow canónico (v31); archive/ guarda versiones antiguas
+│   ├── nodes-code/       Código Code de v31 versionado (fuente de verdad) + _inject.py
 │   ├── docs/             Documentación de arquitectura de cada workflow
 │   └── examples/         Ejemplos de entrada/salida para testing
 ├── frontend/             Portal del viajero (en desarrollo)
@@ -101,14 +102,19 @@ docker compose down
 
 n8n estará disponible en: **http://localhost:5678**
 
-### 3. Importar el workflow en n8n
+### 3. El workflow ya se importa solo
 
 > Cómo iniciar sesión en n8n (local y vía ngrok): ver [docs/acceso-n8n.md](docs/acceso-n8n.md).
 
-1. Abre http://localhost:5678
-2. Ve a **Workflows → Import from File**
-3. Selecciona `n8n/workflows/Planificador de Viajes v26.json` (versión más reciente)
-4. Activa el workflow con el toggle **Publish**
+No necesitas importar nada a mano. Al arrancar el stack, el servicio efímero
+`n8n-import` (corre antes que n8n) importa y **activa** la versión canónica
+`n8n/workflows/Planificador_de_Viajes_v31.json`, por lo que el webhook queda
+registrado en cuanto n8n arranca. Basta con abrir http://localhost:5678.
+
+> **No uses el toggle Publish/Unpublish en caliente** para (re)aprovisionar: corrompe
+> el volumen. Si editas el JSON del workflow, reimporta vía el servicio `n8n-import`
+> (`docker compose up n8n-import`) o por CLI con upsert de ID (ver
+> [n8n/nodes-code/README.md](n8n/nodes-code/README.md)).
 
 > **Credenciales — ya automatizadas.** No hace falta introducir las API keys a mano
 > en la UI. Al arrancar el stack, el servicio `n8n-import` importa la estructura de
@@ -158,7 +164,7 @@ docker compose down && docker compose up -d
 pre-commit run --all-files
 
 # Validar JSON de workflow
-Get-Content n8n/workflows/Planificador_de_Viajes_v24.json | ConvertFrom-Json
+Get-Content n8n/workflows/Planificador_de_Viajes_v31.json | ConvertFrom-Json
 ```
 
 ---
