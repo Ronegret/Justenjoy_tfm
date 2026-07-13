@@ -854,8 +854,29 @@ export async function POST(req: NextRequest) {
               // viaje con defaults: devolvemos su señal y sus avisos para que el
               // frontend los muestre y el usuario ajuste la entrada.
               if (isUnusableN8nPlan(rawData)) {
-                console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
-                const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
+                const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? [...rawData.warnings] : [];
+                // n8n puede cortar con status "error" y warnings vacío: p. ej. el
+                // motor planificador devuelve JSON truncado en viajes largos (la
+                // salida del LLM excede su límite de tokens y el parser la rechaza).
+                // Sin un aviso legible, el planner pinta la cabecera de error pero
+                // una lista vacía ("error en blanco"). Garantizamos al menos un aviso
+                // accionable para que el usuario sepa qué ajustar y reintente.
+                if (warnings.length === 0) {
+                  warnings.push(
+                    rawData.status === 'error'
+                      ? {
+                          type: 'plan_generation_failed',
+                          detail: 'No hemos podido generar el plan completo para este viaje. Suele ocurrir en viajes de muchos días.',
+                          proposed_change: 'Prueba con menos días o divide el viaje en tramos más cortos y vuelve a intentarlo.'
+                        }
+                      : {
+                          type: 'incomplete_plan',
+                          detail: 'No hemos podido completar el plan con los datos indicados.',
+                          proposed_change: 'Revisa el origen, el destino y las fechas, y vuelve a intentarlo.'
+                        }
+                  );
+                }
+                console.warn(`n8n devolvió un plan no utilizable (status=${rawData.status}). Propagando ${warnings.length} aviso(s).`);
                 return NextResponse.json({ status: 'needs_user_input', warnings });
               }
               console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
