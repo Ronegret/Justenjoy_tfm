@@ -671,8 +671,19 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   // Si falta la API key o falla la llamada, los componentes ya caen a su
   // placeholder — nunca bloquea la generación del plan.
   let destinationImageUrl: string | undefined;
-  const placesApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-  if (placesApiKey && placesApiKey !== 'changeme') {
+  // Estas llamadas corren en el servidor y NO llevan referrer, así que necesitan
+  // una clave sin restricción de referrer (restringida por API a solo Places).
+  // Preferimos GOOGLE_PLACES_API_KEY (server-only) y caemos a la pública si no
+  // está definida, para no romper entornos que aún usan una sola clave.
+  // Un valor placeholder ('changeme', que es lo que trae .env.example) cuenta
+  // como NO definida: si no, el || lo elegiría por ser truthy y romperíamos el
+  // fallback a la clave pública.
+  const isUsableKey = (k: string | undefined): k is string =>
+    !!k && k !== 'changeme';
+  const placesApiKey = isUsableKey(process.env.GOOGLE_PLACES_API_KEY)
+    ? process.env.GOOGLE_PLACES_API_KEY
+    : process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  if (isUsableKey(placesApiKey)) {
     const isRealPlaceBlock = (b: ItineraryBlock) =>
       (b.type === 'activity' || b.type === 'food') && b.title !== 'Explorar la ciudad';
     const photoQueries = mappedItinerary
