@@ -7,9 +7,18 @@ import {
   View,
   Text,
   StyleSheet,
+  Font,
 } from '@react-pdf/renderer';
 import { TripData } from '@/types/trip';
 import { budgetLabel } from '@/lib/tripLabels';
+
+// Las fuentes integradas del PDF (Helvetica) solo cubren Latin-1: los nombres y
+// direcciones en cirílico (p. ej. hoteles de Moscú) salían como glifos
+// superpuestos e ilegibles. Roboto (servida localmente desde /public/fonts, sin
+// CDN externo por el CSP) incluye latino + cirílico + griego. Se registran dos
+// familias para poder seguir seleccionando la negrita por nombre de familia.
+Font.register({ family: 'Roboto', src: '/fonts/Roboto-Regular.ttf' });
+Font.register({ family: 'Roboto-Bold', src: '/fonts/Roboto-Bold.ttf' });
 
 // Paleta de marca (espejo de globals.css @theme). @react-pdf no lee Tailwind,
 // así que replicamos los colores como constantes.
@@ -33,7 +42,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     paddingHorizontal: 40,
     fontSize: 10,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Roboto',
     color: COLORS.dark,
     lineHeight: 1.4,
   },
@@ -49,12 +58,12 @@ const styles = StyleSheet.create({
     fontSize: 8,
     letterSpacing: 1.5,
     color: COLORS.teal,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     marginBottom: 6,
   },
   heroTitle: {
     fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     lineHeight: 1.2,
     marginBottom: 10,
   },
@@ -78,12 +87,12 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: 'rgba(250,248,245,0.6)',
     letterSpacing: 1,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     marginBottom: 2,
   },
   statValue: {
     fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     color: COLORS.white,
   },
   // Secciones
@@ -92,7 +101,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     color: COLORS.dark,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
@@ -111,7 +120,7 @@ const styles = StyleSheet.create({
   bulletDot: {
     width: 10,
     color: COLORS.teal,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
   },
   // Día
   dayCard: {
@@ -128,7 +137,7 @@ const styles = StyleSheet.create({
   },
   dayTitle: {
     fontSize: 12,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     color: COLORS.blue,
   },
   dayDate: {
@@ -147,7 +156,7 @@ const styles = StyleSheet.create({
   },
   blockTime: {
     width: 52,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     color: COLORS.coral,
     fontSize: 9,
   },
@@ -158,7 +167,7 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
   blockTitle: {
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     fontSize: 10,
   },
   blockMeta: {
@@ -197,7 +206,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 11,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     marginBottom: 6,
   },
   row: {
@@ -211,7 +220,7 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     fontSize: 9,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
   },
   totalRow: {
     flexDirection: 'row',
@@ -222,11 +231,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   totalLabel: {
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     fontSize: 11,
   },
   totalValue: {
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     fontSize: 11,
     color: COLORS.blue,
   },
@@ -266,7 +275,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   headerBrand: {
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto-Bold',
     letterSpacing: 1,
     color: COLORS.dark,
   },
