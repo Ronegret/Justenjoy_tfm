@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, FileText, Calendar, Mail, Check, Link2 } from 'lucide-react';
+import { Share2, FileText, Calendar, Mail, Check, Link2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ShareTripPanelProps {
   url: string;
+  onPdf?: () => void;
+  isGeneratingPdf?: boolean;
 }
 
-export const ShareTripPanel: React.FC<ShareTripPanelProps> = ({ url }) => {
+export const ShareTripPanel: React.FC<ShareTripPanelProps> = ({ url, onPdf, isGeneratingPdf }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -63,11 +65,21 @@ export const ShareTripPanel: React.FC<ShareTripPanelProps> = ({ url }) => {
 
         {/* Download PDF */}
         <button
-          onClick={() => alert('Generando exportación en formato PDF de alta calidad con mapas y checklists... La descarga se iniciará en unos segundos.')}
-          className="flex items-center justify-center gap-2 p-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 hover:border-brand-blue bg-brand-white dark:bg-brand-dark hover:bg-brand-blue/5 transition-all text-xs font-bold text-brand-dark dark:text-brand-white cursor-pointer select-none"
+          onClick={onPdf}
+          disabled={isGeneratingPdf}
+          className="flex items-center justify-center gap-2 p-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 hover:border-brand-blue bg-brand-white dark:bg-brand-dark hover:bg-brand-blue/5 transition-all text-xs font-bold text-brand-dark dark:text-brand-white cursor-pointer select-none disabled:opacity-60 disabled:cursor-wait"
         >
-          <FileText className="w-4 h-4 text-brand-blue" />
-          <span>Exportar a PDF</span>
+          {isGeneratingPdf ? (
+            <>
+              <Loader2 className="w-4 h-4 text-brand-blue animate-spin" />
+              <span>Generando...</span>
+            </>
+          ) : (
+            <>
+              <FileText className="w-4 h-4 text-brand-blue" />
+              <span>Exportar a PDF</span>
+            </>
+          )}
         </button>
       </div>
 
