@@ -11,11 +11,20 @@ import {
   createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { auth, googleProvider } from '@/lib/firebase';
 
 interface User {
   name: string;
   email: string;
+}
+
+// Normaliza un error desconocido de un catch a { code, message } sin usar `any`.
+// Firebase lanza FirebaseError (con `code`); el resto se degrada a Error/string.
+function firebaseErr(err: unknown): { code: string; message: string } {
+  if (err instanceof FirebaseError) return { code: err.code, message: err.message };
+  if (err instanceof Error) return { code: '', message: err.message };
+  return { code: '', message: String(err) };
 }
 
 interface AuthContextType {
@@ -80,10 +89,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       })
-      .catch((err: any) => {
-        if (err.code === 'auth/no-auth-event') return; // Normal on non-redirect loads
-        console.error('[Auth] getRedirectResult error — code:', err.code, err.message);
-        setError(mapFirebaseError(err.code));
+      .catch((err: unknown) => {
+        const { code, message } = firebaseErr(err);
+        if (code === 'auth/no-auth-event') return; // Normal on non-redirect loads
+        console.error('[Auth] getRedirectResult error — code:', code, message);
+        setError(mapFirebaseError(code));
       });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -136,9 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (err: any) {
-      console.error('[Auth] login error:', err.code, err.message);
-      const msg = mapFirebaseError(err.code);
+    } catch (err: unknown) {
+      const { code, message } = firebaseErr(err);
+      console.error('[Auth] login error:', code, message);
+      const msg = mapFirebaseError(code);
       setError(msg);
       throw new Error(msg);
     }
@@ -152,9 +163,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await updateProfile(cred.user, { displayName: name });
         setUser({ name, email });
       }
-    } catch (err: any) {
-      console.error('[Auth] signup error:', err.code, err.message);
-      const msg = mapFirebaseError(err.code);
+    } catch (err: unknown) {
+      const { code, message } = firebaseErr(err);
+      console.error('[Auth] signup error:', code, message);
+      const msg = mapFirebaseError(code);
       setError(msg);
       throw new Error(msg);
     }
@@ -165,30 +177,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Attempt popup first — faster UX, no cross-origin cookie dependency
       await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
-      console.error('[Auth] signInWithPopup error:', err.code, err.message);
+    } catch (err: unknown) {
+      const { code, message } = firebaseErr(err);
+      console.error('[Auth] signInWithPopup error:', code, message);
 
       if (
-        err.code === 'auth/popup-blocked' ||
-        err.code === 'auth/cancelled-popup-request' ||
-        err.code === 'auth/popup-closed-by-user' ||
-        err.code === 'auth/cross-origin-opener-policy-same-origin'
+        code === 'auth/popup-blocked' ||
+        code === 'auth/cancelled-popup-request' ||
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cross-origin-opener-policy-same-origin'
       ) {
         // Fallback: full-page redirect if popup is blocked or closed
         try {
           await signInWithRedirect(auth, googleProvider);
           // Wait indefinitely while browser navigates away, to prevent success logic from firing
           return new Promise<void>(() => {});
-        } catch (redirectErr: any) {
-          console.error('[Auth] signInWithRedirect error:', redirectErr.code, redirectErr.message);
-          const msg = mapFirebaseError(redirectErr.code);
+        } catch (redirectErr: unknown) {
+          const re = firebaseErr(redirectErr);
+          console.error('[Auth] signInWithRedirect error:', re.code, re.message);
+          const msg = mapFirebaseError(re.code);
           setError(msg);
           throw new Error(msg);
         }
       }
 
       // Any other error: show message
-      const msg = mapFirebaseError(err.code);
+      const msg = mapFirebaseError(code);
       setError(msg);
       throw new Error(msg);
     }
