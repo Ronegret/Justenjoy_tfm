@@ -1,6 +1,10 @@
 # Planificador de Viajes — v24
 ## Documentación de Arquitectura y Setup
 
+> ⚠️ **DOCUMENTO HISTÓRICO — v24 está archivada.** La versión canónica es **v31**:
+> ver [`Planificador_Viajes_v31_Arquitectura.md`](Planificador_Viajes_v31_Arquitectura.md).
+> El JSON de v24 vive en `../workflows/archive/`. Se conserva solo como referencia.
+
 > **Versión:** v24
 > **Plataforma:** n8n 2.23.2 (Self Hosted)
 > **Estado:** Funcional — output completo con actividades, itinerario día a día y métricas de ejecución

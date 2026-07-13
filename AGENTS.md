@@ -24,7 +24,7 @@
 | Bug | Solo el fichero afectado y sus tests |
 | Refactor | `docs/ARCHITECTURE.md` + ficheros afectados |
 | Docs | El fichero a actualizar + `README.md` |
-| Workflow n8n | `n8n/docs/Planificador_Viajes_v24_Arquitectura.md` + el JSON del workflow |
+| Workflow n8n | `n8n/docs/Planificador_Viajes_v31_Arquitectura.md` + el JSON del workflow |
 
 Regla: ante la duda, carga menos. No leas todo el repo antes de preguntar.
 
@@ -70,7 +70,7 @@ pre-commit install
 pre-commit run --all-files
 
 # Validar JSON de workflow manualmente
-Get-Content n8n/workflows/Planificador_de_Viajes_v24.json | ConvertFrom-Json
+Get-Content n8n/workflows/Planificador_de_Viajes_v31.json | ConvertFrom-Json
 ```
 
 # Frontend (Next.js 16 — directorio frontend/)
@@ -187,7 +187,7 @@ siendo agente único. Esto ahorra tokens sin añadir complejidad de coordinació
 5. **Docs actualizadas si cambió la arquitectura o el contrato:**
    Si tocaste nodos del workflow, el contrato JSON de entrada/salida, o la
    arquitectura general, actualiza `docs/ARCHITECTURE.md` y/o
-   `n8n/docs/Planificador_Viajes_v24_Arquitectura.md` en el mismo commit.
+   `n8n/docs/Planificador_Viajes_v31_Arquitectura.md` en el mismo commit.
 
 6. **Commit conforme a la convención:** mensaje en **español**, en imperativo,
    con prefijo de tipo:
@@ -212,7 +212,7 @@ Si algún punto no se cumple, complétalo ANTES de commitear; no dejes el cierre
 | Si tocas... | Actualiza también... | Requiere... |
 |---|---|---|
 | Contrato JSON entrada/salida del webhook | `docs/ARCHITECTURE.md` + ejemplo en `n8n/examples/` | Aprobación previa |
-| Nodos o conexiones del workflow n8n | `n8n/docs/Planificador_Viajes_v24_Arquitectura.md` | Aprobación previa |
+| Nodos o conexiones del workflow n8n | `n8n/docs/Planificador_Viajes_v31_Arquitectura.md` | Aprobación previa |
 | Variables de entorno nuevas | `.env.example` | — |
 | Nuevas dependencias | Auditoría de seguridad + CONTRIBUTING.md §Dependencias | Aprobación previa |
 | Estructura de carpetas | Este fichero §1 + README.md | — |
