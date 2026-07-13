@@ -50,7 +50,7 @@ services:
       - SERPAPI_KEY=${SERPAPI_KEY:-}
       - TAVILY_API_KEY=${TAVILY_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      # Supabase — persistencia del plan (workflow v29). La credencial
+      # Supabase — persistencia del plan (workflow v31). La credencial
       # supabaseApi las lee como {{ $env.SUPABASE_* }} (ver n8n/credentials/).
       - SUPABASE_HOST=${SUPABASE_HOST:-}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
@@ -89,14 +89,14 @@ services:
       - n8n_n8n_data:/home/node/.n8n
       # Monta el JSON de credenciales versionado (solo lectura)
       - ./n8n/credentials:/import:ro
-      # Monta los workflows versionados (solo lectura) para importar el v29
+      # Monta los workflows versionados (solo lectura) para importar el v31
       - ./n8n/workflows:/import-workflows:ro
     networks:
       - just_enjoy_net
 
 volumes:
   # Volumen gestionado por compose: se crea vacío en cada equipo nuevo y el
-  # servicio n8n-import lo rellena (credenciales + workflow v29). Reproducible.
+  # servicio n8n-import lo rellena (credenciales + workflow v31). Reproducible.
   # (Antes era external: reutilizaba el volumen de un equipo concreto.)
   n8n_n8n_data:
 
