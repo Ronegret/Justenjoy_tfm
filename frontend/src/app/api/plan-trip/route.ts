@@ -12,6 +12,7 @@ import {
   BudgetBreakdown
 } from '@/types/trip';
 import { N8nWarning } from '@/types/planResult';
+import { todayISO } from '@/lib/dates';
 
 const SYSTEM_PROMPT = `
 Eres el motor de orquestación de viajes de "JUST ENJOY". Tu tarea es actuar como un agente de viajes experto y automatizado, generando un itinerario completo, justificado y optimizado basado en las preferencias de viaje del usuario.
@@ -451,14 +452,14 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   if (flights.outbound) {
     const outboundOrigin = flights.outbound.origin || originalPrefs.origin;
     const outboundDest = flights.outbound.destination || destination;
-    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || '';
+    const outboundDate = flights.outbound.departure_datetime?.split('T')[0] || originalPrefs.dates?.start || todayISO();
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.outbound.airline || 'Aerolínea',
       from: outboundOrigin,
       to: outboundDest,
-      departure: flights.outbound.departure_datetime ? flights.outbound.departure_datetime.split('T')[1]?.substring(0, 5) || '09:00' : '09:00',
-      arrival: flights.outbound.arrival_datetime ? flights.outbound.arrival_datetime.split('T')[1]?.substring(0, 5) || '11:00' : '11:00',
+      departure: flights.outbound.departure_datetime || `${outboundDate}T09:00:00`,
+      arrival: flights.outbound.arrival_datetime || `${outboundDate}T11:00:00`,
       duration: flights.outbound.duration || '2h',
       stops: Array.isArray(flights.outbound.layovers) ? flights.outbound.layovers.length : 0,
       price: flights.outbound.price_usd || 150,
@@ -469,14 +470,14 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   if (flights.return) {
     const returnOrigin = flights.return.origin || destination;
     const returnDest = flights.return.destination || originalPrefs.origin;
-    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || '';
+    const returnDate = flights.return.departure_datetime?.split('T')[0] || originalPrefs.dates?.end || todayISO();
     mappedFlights.push({
       provider: 'SerpAPI Google Flights',
       airline: flights.return.airline || 'Aerolínea',
       from: returnOrigin,
       to: returnDest,
-      departure: flights.return.departure_datetime ? flights.return.departure_datetime.split('T')[1]?.substring(0, 5) || '15:00' : '15:00',
-      arrival: flights.return.arrival_datetime ? flights.return.arrival_datetime.split('T')[1]?.substring(0, 5) || '17:00' : '17:00',
+      departure: flights.return.departure_datetime || `${returnDate}T15:00:00`,
+      arrival: flights.return.arrival_datetime || `${returnDate}T17:00:00`,
       duration: flights.return.duration || '2h',
       stops: Array.isArray(flights.return.layovers) ? flights.return.layovers.length : 0,
       price: flights.return.price_usd || 150,
@@ -671,8 +672,19 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   // Si falta la API key o falla la llamada, los componentes ya caen a su
   // placeholder — nunca bloquea la generación del plan.
   let destinationImageUrl: string | undefined;
-  const placesApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-  if (placesApiKey && placesApiKey !== 'changeme') {
+  // Estas llamadas corren en el servidor y NO llevan referrer, así que necesitan
+  // una clave sin restricción de referrer (restringida por API a solo Places).
+  // Preferimos GOOGLE_PLACES_API_KEY (server-only) y caemos a la pública si no
+  // está definida, para no romper entornos que aún usan una sola clave.
+  // Un valor placeholder ('changeme', que es lo que trae .env.example) cuenta
+  // como NO definida: si no, el || lo elegiría por ser truthy y romperíamos el
+  // fallback a la clave pública.
+  const isUsableKey = (k: string | undefined): k is string =>
+    !!k && k !== 'changeme';
+  const placesApiKey = isUsableKey(process.env.GOOGLE_PLACES_API_KEY)
+    ? process.env.GOOGLE_PLACES_API_KEY
+    : process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  if (isUsableKey(placesApiKey)) {
     const isRealPlaceBlock = (b: ItineraryBlock) =>
       (b.type === 'activity' || b.type === 'food') && b.title !== 'Explorar la ciudad';
     const photoQueries = mappedItinerary
@@ -854,8 +866,29 @@ export async function POST(req: NextRequest) {
               // viaje con defaults: devolvemos su señal y sus avisos para que el
               // frontend los muestre y el usuario ajuste la entrada.
               if (isUnusableN8nPlan(rawData)) {
-                console.warn('n8n devolvió un plan no utilizable (needs_user_input / vacío). Propagando warnings.');
-                const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? rawData.warnings : [];
+                const warnings: N8nWarning[] = Array.isArray(rawData.warnings) ? [...rawData.warnings] : [];
+                // n8n puede cortar con status "error" y warnings vacío: p. ej. el
+                // motor planificador devuelve JSON truncado en viajes largos (la
+                // salida del LLM excede su límite de tokens y el parser la rechaza).
+                // Sin un aviso legible, el planner pinta la cabecera de error pero
+                // una lista vacía ("error en blanco"). Garantizamos al menos un aviso
+                // accionable para que el usuario sepa qué ajustar y reintente.
+                if (warnings.length === 0) {
+                  warnings.push(
+                    rawData.status === 'error'
+                      ? {
+                          type: 'plan_generation_failed',
+                          detail: 'No hemos podido generar el plan completo para este viaje. Suele ocurrir en viajes de muchos días.',
+                          proposed_change: 'Prueba con menos días o divide el viaje en tramos más cortos y vuelve a intentarlo.'
+                        }
+                      : {
+                          type: 'incomplete_plan',
+                          detail: 'No hemos podido completar el plan con los datos indicados.',
+                          proposed_change: 'Revisa el origen, el destino y las fechas, y vuelve a intentarlo.'
+                        }
+                  );
+                }
+                console.warn(`n8n devolvió un plan no utilizable (status=${rawData.status}). Propagando ${warnings.length} aviso(s).`);
                 return NextResponse.json({ status: 'needs_user_input', warnings });
               }
               console.log('Detected n8n G7 workflow schema. Mapping to TripData...');

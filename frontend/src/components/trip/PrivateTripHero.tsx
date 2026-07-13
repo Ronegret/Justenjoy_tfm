@@ -1,27 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Users, Share2, Download, Compass, CloudSun } from 'lucide-react';
+import { Calendar, Users, Share2, Download, Compass, CloudSun, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TripData } from '@/types/trip';
+import { budgetLabel } from '@/lib/tripLabels';
 
 interface PrivateTripHeroProps {
   trip: TripData;
   onShare?: () => void;
   onPdf?: () => void;
+  isGeneratingPdf?: boolean;
 }
 
-export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare, onPdf }) => {
-  const getBudgetLabel = (b: string) => {
-    switch (b) {
-      case 'low': return 'Económico';
-      case 'balanced': return 'Equilibrado';
-      case 'premium': return 'Premium';
-      case 'luxury': return 'Lujo';
-      default: return 'Equilibrado';
-    }
-  };
-
+export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare, onPdf, isGeneratingPdf }) => {
   // Mock weather based on destination
   const getWeather = (dest: string) => {
     const d = dest.toLowerCase();
@@ -84,10 +76,15 @@ export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare,
             </button>
             <button
               onClick={onPdf}
-              className="p-2.5 rounded-full bg-brand-white/10 hover:bg-brand-white/20 backdrop-blur-md border border-brand-white/10 transition-all cursor-pointer"
-              title="Descargar itinerario PDF"
+              disabled={isGeneratingPdf}
+              className="p-2.5 rounded-full bg-brand-white/10 hover:bg-brand-white/20 backdrop-blur-md border border-brand-white/10 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+              title={isGeneratingPdf ? 'Generando PDF...' : 'Descargar itinerario PDF'}
             >
-              <Download className="w-4 h-4" />
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -139,7 +136,7 @@ export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare,
 
             <div className="flex items-center gap-2">
               <div className="px-3 py-1 rounded-md bg-brand-coral/20 border border-brand-coral/30 text-brand-coral text-xs font-black uppercase tracking-wider">
-                Presupuesto {getBudgetLabel(trip.user_preferences.budget)}
+                Presupuesto {budgetLabel(trip.user_preferences.budget)}
               </div>
             </div>
 

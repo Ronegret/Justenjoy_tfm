@@ -41,7 +41,7 @@ export default function LoginPage() {
   // Redirect once auth state is resolved
   useEffect(() => {
     if (!isLoading && user && !isSubmitting) {
-      window.location.href = getRedirectTarget();
+      window.location.assign(getRedirectTarget());
     }
   }, [isLoading, user, isSubmitting]);
 
@@ -64,10 +64,10 @@ export default function LoginPage() {
         await triggerLoadingSteps();
         await signupPromise;
       }
-      window.location.href = getRedirectTarget();
-    } catch (err: any) {
+      window.location.assign(getRedirectTarget());
+    } catch (err: unknown) {
       setIsSubmitting(false);
-      setLocalError(err.message || 'Ocurrió un error al iniciar sesión.');
+      setLocalError(err instanceof Error && err.message ? err.message : 'Ocurrió un error al iniciar sesión.');
     }
   };
 
@@ -79,10 +79,10 @@ export default function LoginPage() {
       await loginWithGoogle();
       // Popup succeeded — mostrar pasos de carga y redirigir
       await triggerLoadingSteps();
-      window.location.href = getRedirectTarget();
-    } catch (err: any) {
+      window.location.assign(getRedirectTarget());
+    } catch (err: unknown) {
       setIsSubmitting(false);
-      setLocalError(err.message || 'Error al iniciar sesión con Google.');
+      setLocalError(err instanceof Error && err.message ? err.message : 'Error al iniciar sesión con Google.');
     }
   };
 

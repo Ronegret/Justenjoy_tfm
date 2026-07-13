@@ -9,6 +9,7 @@ import {
   Building, Plane, Landmark, CreditCard, ChevronRight
 } from 'lucide-react';
 import { useTrips } from '@/context/TripContext';
+import { downloadTripPdf } from '@/lib/tripPdf';
 import { PrivateTripHero } from '@/components/trip/PrivateTripHero';
 import { ItineraryTimeline } from '@/components/trip/ItineraryTimeline';
 import { TripMapOverview } from '@/components/trip/TripMapOverview';
@@ -29,6 +30,8 @@ export default function DynamicTripPage({ params }: TripPageProps) {
   // Interactive checklist state — todas empiezan sin marcar; las marca el
   // usuario a medida que completa cada tarea (antes 3 venían pre-marcadas
   // sin que el usuario hubiera hecho nada).
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   const [checklist, setChecklist] = useState([
     { id: 'pass', label: 'Pasaporte / DNI en vigor', checked: false },
     { id: 'insurance', label: 'Seguro médico de viaje', checked: false },
@@ -69,6 +72,19 @@ export default function DynamicTripPage({ params }: TripPageProps) {
     );
   };
 
+  const handleDownloadPdf = async () => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    try {
+      await downloadTripPdf(trip);
+    } catch (err) {
+      console.error('Error generando el PDF del viaje:', err);
+      alert('No se pudo generar el PDF del viaje. Inténtalo de nuevo en unos segundos.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const getFrictionLabelColor = (label: string) => {
     switch (label) {
       case 'Baja': return 'text-brand-teal bg-brand-teal/10';
@@ -85,7 +101,8 @@ export default function DynamicTripPage({ params }: TripPageProps) {
         <PrivateTripHero
           trip={trip}
           onShare={() => alert('¡Enlace de viaje copiado al portapapeles!')}
-          onPdf={() => alert('Preparando PDF para descarga...')}
+          onPdf={handleDownloadPdf}
+          isGeneratingPdf={isGeneratingPdf}
         />
 
         {/* DETAILED DOUBLE COLUMN VIEW */}
@@ -170,7 +187,11 @@ export default function DynamicTripPage({ params }: TripPageProps) {
             </div>
 
             {/* Share controls panel */}
-            <ShareTripPanel url={`/trip/${trip.trip_id}`} />
+            <ShareTripPanel
+              url={`/trip/${trip.trip_id}`}
+              onPdf={handleDownloadPdf}
+              isGeneratingPdf={isGeneratingPdf}
+            />
 
           </div>
 

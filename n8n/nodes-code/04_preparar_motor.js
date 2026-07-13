@@ -1,57 +1,50 @@
-// Nodo Code: "Preparar Motor Planificador" (compartido Ruta A + Ruta B)
-// ---------------------------------------------------------------------------
-// Unifica la entrada de ambas rutas. Construye segments[] (soporta multi-
-// destino). Extrae steps_to_run, existing_plan y feedback_instruction para
-// pasarlos al Agente Motor. Ver doc de arquitectura, seccion 4.4.
+// Preparar session_state para el motor planificador
+// Unifica ambas rutas (formulario inicial y refinamiento)
+const input = $input.first().json;
 
-const incoming = $input.first().json;
+const sessionState = input.session_state;
+const tb = sessionState.travel_brief || {};
+const revisionCount = sessionState.revision_count || 0;
+const stepsToRun = sessionState.steps_to_run || 'all';
 
-// session_state puede venir de "Validar Formulario" (Ruta A) o de
-// "Parsear Refinamiento" (Ruta B).
-const session_state = incoming.session_state;
-if (!session_state || !session_state.travel_brief) {
-  throw new Error('Preparar Motor: falta session_state.travel_brief en la entrada');
+// Construir segmentos
+const destinations = tb.destination_city || [];
+const segments = [];
+
+if (destinations.length === 1) {
+  segments.push({
+    segment_index: 0,
+    origin: tb.origin_city,
+    destination: destinations[0],
+    departure_date: tb.departure_date,
+    return_date: tb.return_date
+  });
+} else {
+  segments.push({
+    segment_index: 0,
+    origin: tb.origin_city,
+    destination: destinations[0],
+    departure_date: tb.departure_date,
+    return_date: null
+  });
+  for (let i = 1; i < destinations.length; i++) {
+    segments.push({
+      segment_index: i,
+      origin: destinations[i - 1],
+      destination: destinations[i],
+      departure_date: null,
+      return_date: i === destinations.length - 1 ? tb.return_date : null
+    });
+  }
 }
 
-const brief = session_state.travel_brief;
-const session_id = session_state.session_id;
-
-// Ruta A => ejecucion inicial completa. Ruta B => valores del refinamiento.
-const isRefine = incoming.route === 'refinamiento';
-const steps_to_run = isRefine ? incoming.steps_to_run || 'all' : 'all';
-const feedback_instruction = isRefine
-  ? incoming.feedback_instruction || 'refinamiento'
-  : '';
-const existing_plan = isRefine ? incoming.existing_plan || null : null;
-const revision_count = Number(
-  isRefine ? incoming.revision_count ?? session_state.revision_count ?? 0 : 0,
-);
-
-// Construir segments[] (un segmento por destino para soporte multi-ciudad).
-const destinations = Array.isArray(brief.destination_city)
-  ? brief.destination_city
-  : [brief.destination_city];
-
-const segments = destinations.map((dest, idx) => ({
-  segment_index: idx,
-  origin: idx === 0 ? brief.origin_city : destinations[idx - 1],
-  destination: dest,
-}));
-
-// Lista de destinos unicos para las consultas Tavily.
-const unique_destinations = [...new Set(destinations)];
-
-return [
-  {
-    json: {
-      session_id,
-      session_state,
-      segments,
-      unique_destinations,
-      steps_to_run,
-      feedback_instruction,
-      existing_plan,
-      revision_count,
-    },
-  },
-];
+return [{ json: {
+  session_state: sessionState,
+  travel_brief: tb,
+  revision_count: revisionCount,
+  steps_to_run: stepsToRun,
+  segments: segments,
+  unique_destinations: [...new Set(destinations)],
+  existing_plan: sessionState.plan || null,
+  feedback_instruction: sessionState.feedback_instruction || null
+} }];
