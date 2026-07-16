@@ -45,13 +45,6 @@ const STYLE_OPTIONS = [
   'Romántico', 'Local experience', 'Sin caminar mucho', 'Pet friendly', 'Accesible'
 ];
 
-const PACE_OPTIONS = [
-  { value: 'relax', label: 'Relax (Pocos puntos de interés al día)' },
-  { value: 'medium', label: 'Medio (Equilibrio perfecto)' },
-  { value: 'intense', label: 'Intenso (Ver lo máximo posible)' },
-  { value: 'all', label: '¡Quiero verlo todo!' }
-] as const;
-
 const RESTRICTION_OPTIONS = [
   { id: 'avoid_scales', label: 'Evitar escalas' },
   { id: 'avoid_early_flights', label: 'Evitar vuelos temprano' },
@@ -83,9 +76,9 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
       children: 0
     },
     budget: 'balanced',
-    style: ['culture', 'food'],
-    pace: 'medium',
-    restrictions: ['avoid_early_flights', 'central_hotel']
+    budgetAmountUsd: 900,
+    style: [],
+    restrictions: []
   });
 
   const [inputDestination, setInputDestination] = useState('');
@@ -114,7 +107,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
       updatePrefs({ origin: inputOrigin });
     }
 
-    if (step < 9) {
+    if (step < 8) {
       setStep(step + 1);
       if (onStepChange) onStepChange(step + 1);
     } else {
@@ -449,40 +442,8 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
               </div>
             )}
 
-            {/* STEP 7: RITMO */}
+            {/* STEP 7: RESTRICCIONES & CONVENIENCIAS */}
             {step === 7 && (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h3 className="text-lg font-bold text-brand-dark dark:text-brand-white">¿Qué ritmo prefieres para el viaje?</h3>
-                  <p className="text-xs text-text-muted">Controlamos el espacio entre actividades para evitar el cansancio.</p>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  {PACE_OPTIONS.map((paceOpt) => (
-                    <button
-                      key={paceOpt.value}
-                      type="button"
-                      onClick={() => updatePrefs({ pace: paceOpt.value })}
-                      className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
-                        prefs.pace === paceOpt.value
-                          ? 'border-brand-blue bg-brand-blue/5 dark:bg-brand-blue/10 text-brand-dark dark:text-brand-white font-semibold'
-                          : 'border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-text-muted hover:border-brand-blue/30'
-                      }`}
-                    >
-                      <span className="text-sm font-bold text-brand-dark dark:text-brand-white">{paceOpt.label}</span>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        prefs.pace === paceOpt.value ? 'border-brand-blue bg-brand-blue' : 'border-brand-dark/20'
-                      }`}>
-                        {prefs.pace === paceOpt.value && <div className="w-2.5 h-2.5 rounded-full bg-brand-white" />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* STEP 8: RESTRICCIONES & CONVENIENCIAS */}
-            {step === 8 && (
               <div className="flex flex-col gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-brand-dark dark:text-brand-white">¿Alguna restricción o filtro?</h3>
@@ -516,8 +477,8 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
               </div>
             )}
 
-            {/* STEP 9: CONFIRMACION */}
-            {step === 9 && (
+            {/* STEP 8: CONFIRMACION */}
+            {step === 8 && (
               <div className="flex flex-col gap-4">
                 <div className="text-center py-2">
                   <div className="w-12 h-12 rounded-full bg-brand-teal/20 text-brand-teal flex items-center justify-center mx-auto mb-3">
@@ -553,10 +514,6 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
                   <div className="flex items-center justify-between border-b border-brand-dark/5 dark:border-brand-white/5 pb-2.5">
                     <span className="font-semibold text-text-muted">Presupuesto:</span>
                     <span className="font-bold text-brand-dark dark:text-brand-white">{BUDGET_LABELS[prefs.budget]}</span>
-                  </div>
-                  <div className="flex items-center justify-between border-b border-brand-dark/5 dark:border-brand-white/5 pb-2.5">
-                    <span className="font-semibold text-text-muted">Ritmo:</span>
-                    <span className="font-bold text-brand-dark dark:text-brand-white capitalize">{prefs.pace}</span>
                   </div>
                   <div className="flex flex-col gap-1.5 pt-1">
                     <span className="font-semibold text-text-muted">Estilo:</span>
@@ -594,7 +551,7 @@ export const PreferenceWizard: React.FC<PreferenceWizardProps> = ({
           onClick={nextStep}
           className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:-translate-y-0.5"
         >
-          {step === 9 ? (
+          {step === 8 ? (
             <>
               <Sparkles className="w-4 h-4" />
               <span>Generar Ruta Just Enjoy</span>

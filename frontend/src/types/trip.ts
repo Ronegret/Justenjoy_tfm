@@ -11,8 +11,12 @@ export interface TripPreferences {
     children: number;
   };
   budget: 'low' | 'balanced' | 'premium' | 'luxury';
+  // Monto real en USD que el usuario fija con el slider de presupuesto. Es la
+  // fuente de verdad para `budget_total_usd` (ver mapPreferencesToN8n) — ya no
+  // se infiere solo de la categoría `budget`, que era una tarifa/día adivinada
+  // y podía quedar por debajo del coste real de la ruta.
+  budgetAmountUsd: number;
   style: string[];
-  pace: 'relax' | 'medium' | 'intense' | 'all';
   restrictions: string[];
 }
 
@@ -81,7 +85,7 @@ export interface ItineraryBlock {
   time: string;
   period: 'Mañana' | 'Mediodía' | 'Tarde' | 'Noche';
   title: string;
-  type: 'flight' | 'food' | 'activity' | 'hotel' | 'transit' | 'rest';
+  type: 'flight' | 'food' | 'activity' | 'hotel' | 'transit' | 'rest' | 'airport';
   duration: string;
   cost: number;
   location: string;
@@ -142,6 +146,11 @@ export interface TripData {
   events: Event[];
   itinerary: DayPlan[];
   budget: BudgetBreakdown;
+  // Avisos no bloqueantes que n8n emitió aunque el plan sí se completó (p. ej.
+  // "no había vuelo el día exacto, se ajustó la fecha ±1 día"). Antes se
+  // descartaban en silencio porque solo se leían los `warnings` en la rama
+  // needs_user_input.
+  notices?: string[];
   share: {
     private_url: string;
     pdf_enabled: boolean;

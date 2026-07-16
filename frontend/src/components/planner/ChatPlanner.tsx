@@ -5,11 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, Sparkles, Send, Plane, MapPin,
   Calendar as CalendarIcon, Users, Euro, Heart,
-  Gauge, ShieldAlert, Check, Plus, ArrowRight, RefreshCw
+  ShieldAlert, Check, Plus, ArrowRight, RefreshCw
 } from 'lucide-react';
 import { TripPreferences } from '@/types/trip';
 import { SmartChip } from '../shared/SmartChip';
 import { todayISO } from '@/lib/dates';
+import { budgetBounds, budgetTierFromAmount, BUDGET_TIER_LABELS, BudgetTier } from '@/lib/budget';
 
 interface ChatPlannerProps {
   preferences: TripPreferences;
@@ -35,25 +36,31 @@ const DATE_OPTIONS = [
   'Cualquier fecha barata'
 ];
 
-const BUDGET_LABELS = {
-  low: 'Low Cost (Económico)',
-  balanced: 'Equilibrado (Calidad/Precio)',
-  premium: 'Premium (Comodidad extra)',
-  luxury: 'Lujo Inteligente (Todo incluido)'
-};
 
-const STYLE_OPTIONS = [
-  'Playa', 'Cultura', 'Gastronomía', 'Relax', 'Aventura', 'Museos',
-  'Vida nocturna', 'Compras', 'Naturaleza', 'Fotografía', 'Familia',
-  'Romántico', 'Local experience', 'Sin caminar mucho', 'Pet friendly', 'Accesible'
+// `value` es lo que se envía a n8n (activity_interests) y debe quedarse en
+// inglés siempre: el motor compara contra categorías de Google Maps/Places,
+// que vienen en inglés, y mezclar idiomas debilitaba el matching de
+// actividades. `label` es solo para mostrar en la UI, en español.
+const STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'beach', label: 'Playa' },
+  { value: 'culture', label: 'Cultura' },
+  { value: 'food', label: 'Gastronomía' },
+  { value: 'relax', label: 'Relax' },
+  { value: 'adventure', label: 'Aventura' },
+  { value: 'museums', label: 'Museos' },
+  { value: 'nightlife', label: 'Vida nocturna' },
+  { value: 'shopping', label: 'Compras' },
+  { value: 'nature', label: 'Naturaleza' },
+  { value: 'photography', label: 'Fotografía' },
+  { value: 'family', label: 'Familia' },
+  { value: 'romantic', label: 'Romántico' },
+  { value: 'local_experience', label: 'Experiencia local' },
+  { value: 'low_walking', label: 'Sin caminar mucho' },
+  { value: 'pet_friendly', label: 'Viaje con mascota' },
+  { value: 'accessible', label: 'Accesible' }
 ];
 
-const PACE_OPTIONS = [
-  { value: 'relax', label: 'Relax (Pocos puntos de interés)' },
-  { value: 'medium', label: 'Medio (Equilibrio perfecto)' },
-  { value: 'intense', label: 'Intenso (Ver lo máximo posible)' },
-  { value: 'all', label: '¡Quiero verlo todo!' }
-] as const;
+const getStyleLabel = (value: string) => STYLE_OPTIONS.find((s) => s.value === value)?.label || value;
 
 const RESTRICTION_OPTIONS = [
   { id: 'avoid_scales', label: 'Evitar escalas' },
@@ -119,7 +126,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
       onUpdatePreferences(nextPrefs);
     }
 
-    if (currentStep < 9) {
+    if (currentStep < 8) {
       onStepChange(currentStep + 1);
     } else {
       onComplete(nextPrefs);
@@ -204,11 +211,10 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
     }
 
     if (currentStep > 5) {
-      const budgets = { low: 'Low Cost', balanced: 'Equilibrado', premium: 'Premium', luxury: 'Lujo Inteligente' };
       history.push({
         id: 10,
         sender: 'user',
-        text: `Presupuesto: ${budgets[preferences.budget]}.`,
+        text: `Presupuesto: $${(preferences.budgetAmountUsd || 0).toLocaleString('en-US')} USD (${BUDGET_TIER_LABELS[preferences.budget]}).`,
         step: 5
       });
       history.push({
@@ -223,47 +229,31 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
       history.push({
         id: 12,
         sender: 'user',
-        text: `Mis estilos preferidos son: ${preferences.style.join(', ')}.`,
+        text: `Mis estilos preferidos son: ${preferences.style.map(getStyleLabel).join(', ')}.`,
         step: 6
       });
       history.push({
         id: 13,
         sender: 'agent',
-        text: '¡Menudo planazo se está quedando! ¿Y a qué ritmo prefieres que nos movamos? ¿Algo tranquilo para disfrutar relajados o a tope para no perdernos nada?',
+        text: 'Por último, ¿hay algún detalle especial que deba tener en cuenta? Por ejemplo, si prefieres evitar escalas, quieres un hotel súper céntrico o evitar andar demasiado.',
         step: 7
       });
     }
 
     if (currentStep > 7) {
-      const paces = { relax: 'Relax', medium: 'Medio', intense: 'Intenso', all: 'Verlo todo' };
       history.push({
         id: 14,
         sender: 'user',
-        text: `Prefiero un ritmo: ${paces[preferences.pace]}.`,
+        text: preferences.restrictions.length > 0
+          ? `Tengo los siguientes filtros: ${preferences.restrictions.map(getRestrictionLabel).join(', ')}.`
+          : 'No tengo restricciones.',
         step: 7
       });
       history.push({
         id: 15,
         sender: 'agent',
-        text: 'Por último, ¿hay algún detalle especial que deba tener en cuenta? Por ejemplo, si prefieres evitar escalas, quieres un hotel súper céntrico o evitar andar demasiado.',
-        step: 8
-      });
-    }
-
-    if (currentStep > 8) {
-      history.push({
-        id: 16,
-        sender: 'user',
-        text: preferences.restrictions.length > 0
-          ? `Tengo los siguientes filtros: ${preferences.restrictions.map(getRestrictionLabel).join(', ')}.`
-          : 'No tengo restricciones.',
-        step: 8
-      });
-      history.push({
-        id: 17,
-        sender: 'agent',
         text: '¡De categoría! Ya tengo todo lo que necesito. Voy a ponerme a buscar las mejores combinaciones y a optimizar tu ruta. ¿Le damos caña a ese viaje?',
-        step: 9
+        step: 8
       });
     }
 
@@ -460,26 +450,64 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
           )}
 
           {/* STEP 5: PRESUPUESTO */}
-          {currentStep === 5 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Categoría de Presupuesto:</span>
-              <div className="flex flex-col gap-2">
-                {(Object.keys(BUDGET_LABELS) as Array<keyof typeof BUDGET_LABELS>).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => updatePrefs({ budget: key })}
-                    className={`text-left p-3 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
-                      preferences.budget === key
-                        ? 'border-brand-blue bg-brand-blue/5 dark:bg-brand-blue/15 text-brand-dark dark:text-brand-white'
-                        : 'border-brand-dark/5 dark:border-brand-white/5 bg-brand-white dark:bg-brand-dark/30 text-text-muted'
-                    }`}
-                  >
-                    <span>{BUDGET_LABELS[key]}</span>
-                  </button>
-                ))}
+          {currentStep === 5 && (() => {
+            const bounds = budgetBounds(preferences);
+            const amount = Math.min(Math.max(preferences.budgetAmountUsd || bounds.default, bounds.min), bounds.max);
+            const tier = budgetTierFromAmount(amount, bounds);
+            const setAmount = (value: number) => {
+              const clamped = Math.min(Math.max(value, bounds.min), bounds.max);
+              updatePrefs({ budgetAmountUsd: clamped, budget: budgetTierFromAmount(clamped, bounds) });
+            };
+            return (
+              <div className="flex flex-col gap-4">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Presupuesto total del viaje:</span>
+
+                <div className="flex flex-col gap-3 bg-brand-white dark:bg-brand-dark/40 p-4 rounded-xl border border-brand-dark/5">
+                  <div className="flex items-end justify-between">
+                    <span className="text-2xl font-black text-brand-blue">${amount.toLocaleString('en-US')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-brand-blue/10 text-brand-blue">
+                      {BUDGET_TIER_LABELS[tier]}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={bounds.min}
+                    max={bounds.max}
+                    step={10}
+                    value={amount}
+                    onChange={(e) => setAmount(Number(e.target.value))}
+                    aria-label="Presupuesto total del viaje en USD"
+                    className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-blue bg-brand-dark/10 dark:bg-brand-white/15"
+                  />
+                  <div className="flex justify-between text-[9px] font-bold text-text-muted uppercase tracking-wider">
+                    <span>${bounds.min.toLocaleString('en-US')} mínimo realista</span>
+                    <span>${bounds.max.toLocaleString('en-US')}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(BUDGET_TIER_LABELS) as BudgetTier[]).map((key) => {
+                    const presetPosition = { low: 0.1, balanced: 0.4, premium: 0.65, luxury: 0.9 }[key];
+                    const presetAmount = Math.round(bounds.min + (bounds.max - bounds.min) * presetPosition);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setAmount(presetAmount)}
+                        className={`text-center py-2 rounded-lg border text-[10px] font-bold transition-all cursor-pointer ${
+                          tier === key
+                            ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                            : 'border-brand-dark/10 dark:border-brand-white/10 text-text-muted hover:border-brand-blue/30'
+                        }`}
+                      >
+                        {BUDGET_TIER_LABELS[key]}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* STEP 6: ESTILO DE VIAJE */}
           {currentStep === 6 && (
@@ -487,16 +515,16 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
               <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Intereses de viaje:</span>
               <div className="flex flex-wrap gap-1.5">
                 {STYLE_OPTIONS.map((styleOpt) => {
-                  const isSelected = preferences.style.includes(styleOpt);
+                  const isSelected = preferences.style.includes(styleOpt.value);
                   return (
                     <SmartChip
-                      key={styleOpt}
-                      label={styleOpt}
+                      key={styleOpt.value}
+                      label={styleOpt.label}
                       isSelected={isSelected}
                       onClick={() => {
                         const updated = isSelected
-                          ? preferences.style.filter(s => s !== styleOpt)
-                          : [...preferences.style, styleOpt];
+                          ? preferences.style.filter(s => s !== styleOpt.value)
+                          : [...preferences.style, styleOpt.value];
                         updatePrefs({ style: updated });
                       }}
                     />
@@ -506,30 +534,8 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
             </div>
           )}
 
-          {/* STEP 7: RITMO */}
+          {/* STEP 7: RESTRICCIONES & CONVENIENCIAS */}
           {currentStep === 7 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Ritmo de itinerario:</span>
-              <div className="flex flex-col gap-2">
-                {PACE_OPTIONS.map((paceOpt) => (
-                  <button
-                    key={paceOpt.value}
-                    onClick={() => updatePrefs({ pace: paceOpt.value })}
-                    className={`text-left p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
-                      preferences.pace === paceOpt.value
-                        ? 'border-brand-blue bg-brand-blue/5 dark:bg-brand-blue/15 text-brand-dark dark:text-brand-white'
-                        : 'border-brand-dark/5 dark:border-brand-white/5 bg-brand-white dark:bg-brand-dark/30 text-text-muted'
-                    }`}
-                  >
-                    <span>{paceOpt.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 8: RESTRICCIONES & CONVENIENCIAS */}
-          {currentStep === 8 && (
             <div className="flex flex-col gap-3">
               <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Filtros y Restricciones:</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -558,8 +564,8 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
             </div>
           )}
 
-          {/* STEP 9: CONFIRMACION */}
-          {currentStep === 9 && (
+          {/* STEP 8: CONFIRMACION */}
+          {currentStep === 8 && (
             <div className="flex flex-col gap-3 text-center py-2">
               <div className="w-10 h-10 rounded-full bg-brand-teal/20 text-brand-teal flex items-center justify-center mx-auto">
                 <Check className="w-5 h-5 stroke-[3px]" />
@@ -573,12 +579,12 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
 
           {/* Actions button footer */}
           <div className="flex items-center justify-between border-t border-brand-dark/5 dark:border-brand-white/5 pt-4">
-            <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE 9</span>
+            <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE 8</span>
             <button
               onClick={handleNext}
               className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer select-none"
             >
-              {currentStep === 9 ? (
+              {currentStep === 8 ? (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Generar Ruta Just Enjoy</span>

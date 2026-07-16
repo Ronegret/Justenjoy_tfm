@@ -19,6 +19,7 @@ interface MapPoint {
   lng: number;
   title: string;
   day: number;
+  type: string;
 }
 
 export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) => {
@@ -30,7 +31,7 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
     itinerary.forEach((day) => {
       day.blocks.forEach((block, idx) => {
         if (typeof block.lat === 'number' && typeof block.lng === 'number') {
-          pts.push({ key: `${day.day}-${idx}`, lat: block.lat, lng: block.lng, title: block.title, day: day.day });
+          pts.push({ key: `${day.day}-${idx}`, lat: block.lat, lng: block.lng, title: block.title, day: day.day, type: block.type });
         }
       });
     });
@@ -130,6 +131,7 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
                   position={{ lat: p.lat, lng: p.lng }}
                   title={p.title}
                   onClick={() => setSelectedKey(p.key)}
+                  label={p.type === 'airport' ? { text: '✈', fontSize: '13px' } : undefined}
                 />
               ))}
               {selectedKey && (() => {
