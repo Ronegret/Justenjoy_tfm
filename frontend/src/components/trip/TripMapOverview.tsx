@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider, Map, Marker, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { Map as MapIcon, Navigation, MapPin, ExternalLink, Footprints } from 'lucide-react';
 import { DayPlan } from '@/types/trip';
@@ -30,7 +30,13 @@ interface MapPoint {
  * única coordenada geocodificada del día, así que quedan fuera (no hay nada
  * real que conectar entre ellos).
  */
-function DayRoute({ waypoints }: { waypoints: { lat: number; lng: number }[] }) {
+interface RouteInfo {
+  distanceMeters: number;
+  durationText: string;
+  day: number | 'all';
+}
+
+function DayRoute({ waypoints, day, onRouteInfo }: { waypoints: { lat: number; lng: number }[]; day: number | 'all'; onRouteInfo: (info: RouteInfo | null) => void }) {
   const map = useMap();
   const routesLibrary = useMapsLibrary('routes');
   const rendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
@@ -50,7 +56,10 @@ function DayRoute({ waypoints }: { waypoints: { lat: number; lng: number }[] }) 
   }, [routesLibrary, map]);
 
   useEffect(() => {
-    if (!rendererRef.current || !routesLibrary || waypoints.length < 2) return;
+    if (!rendererRef.current || !routesLibrary || waypoints.length < 2) {
+      onRouteInfo(null);
+      return;
+    }
     const renderer = rendererRef.current;
     const service = new routesLibrary.DirectionsService();
     const middle = waypoints.slice(1, -1).map((p) => ({ location: p, stopover: true }));
@@ -64,11 +73,24 @@ function DayRoute({ waypoints }: { waypoints: { lat: number; lng: number }[] }) 
       (result, status) => {
         // Si Google no encuentra ruta a pie (paradas muy lejos entre sí, cruzan
         // agua, etc.) simplemente no dibujamos línea — los marcadores se
-        // quedan como están, nunca fingimos un trayecto.
-        if (status === 'OK' && result) renderer.setDirections(result);
+        // quedan como están, nunca fingimos un trayecto ni una distancia.
+        if (status === 'OK' && result) {
+          renderer.setDirections(result);
+          const legs = result.routes[0]?.legs || [];
+          const distanceMeters = legs.reduce((acc, leg) => acc + (leg.distance?.value || 0), 0);
+          const durationSeconds = legs.reduce((acc, leg) => acc + (leg.duration?.value || 0), 0);
+          const durationMin = Math.round(durationSeconds / 60);
+          onRouteInfo({
+            distanceMeters,
+            durationText: durationMin < 60 ? `${durationMin} min` : `${Math.floor(durationMin / 60)}h ${durationMin % 60}min`,
+            day
+          });
+        } else {
+          onRouteInfo(null);
+        }
       }
     );
-  }, [routesLibrary, waypoints]);
+  }, [routesLibrary, waypoints, onRouteInfo, day]);
 
   return null;
 }
@@ -76,6 +98,8 @@ function DayRoute({ waypoints }: { waypoints: { lat: number; lng: number }[] }) 
 export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) => {
   const [activeDayFilter, setActiveDayFilter] = useState<number | 'all'>('all');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const handleRouteInfo = useCallback((info: RouteInfo | null) => setRouteInfo(info), []);
 
   const points: MapPoint[] = useMemo(() => {
     const pts: MapPoint[] = [];
@@ -194,7 +218,7 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
             {/* key fuerza remount al cambiar de día para recentrar el mapa (defaultCenter es no-controlado) */}
             <Map key={activeDayFilter} defaultCenter={center} defaultZoom={13} gestureHandling="greedy" disableDefaultUI={false}>
               {routeWaypoints.length >= 2 && (
-                <DayRoute waypoints={routeWaypoints.map((p) => ({ lat: p.lat, lng: p.lng }))} />
+                <DayRoute waypoints={routeWaypoints.map((p) => ({ lat: p.lat, lng: p.lng }))} day={activeDayFilter} onRouteInfo={handleRouteInfo} />
               )}
               {filteredPoints.map((p) => (
                 <Marker
@@ -235,10 +259,13 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
           <Navigation className="w-3.5 h-3.5 text-brand-coral" />
           {filteredPoints.length} {filteredPoints.length === 1 ? 'parada marcada' : 'paradas marcadas'}
         </span>
-        {routeWaypoints.length >= 2 && (
+        {/* Se filtra por día en el propio render (en vez de resetear routeInfo
+            en un efecto aparte) para no mostrar la distancia del día anterior
+            mientras se calcula la ruta nueva. */}
+        {routeInfo && routeInfo.day === activeDayFilter && (
           <span className="flex items-center gap-1 text-brand-blue">
             <Footprints className="w-3.5 h-3.5" />
-            Ruta a pie entre {routeWaypoints.length} paradas reales
+            {(routeInfo.distanceMeters / 1000).toFixed(1)} km a pie · {routeInfo.durationText} entre {routeWaypoints.length} paradas reales
           </span>
         )}
       </div>

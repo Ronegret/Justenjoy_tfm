@@ -109,10 +109,15 @@ export interface BudgetBreakdown {
   flights: number;
   hotel: number;
   activities: number;
-  transport: number;
+  // null = no se encontró ningún dato real de transporte (antes se rellenaba
+  // con 50 USD fijo, presentado como si fuera un precio real detectado).
+  transport: number | null;
   food: number;
   extras: number;
   total: number;
+  // Claves de este objeto que son una estimación genérica de guía de viaje,
+  // no un precio real detectado por ninguna búsqueda (hoy: food, extras).
+  estimatedFields: Array<'flights' | 'hotel' | 'activities' | 'transport' | 'food' | 'extras'>;
 }
 
 export interface TripOption {
@@ -124,6 +129,13 @@ export interface TripOption {
   why_selected: string[];
   tradeoffs: string[];
   imageUrl?: string;
+  // Climatología real (Open-Meteo, histórico del mismo rango de fechas hace un
+  // año) para la ubicación del hotel — ausente si la API no respondió, nunca
+  // se rellena con un valor inventado.
+  climate?: {
+    avgTempC: number;
+    description: string;
+  };
 }
 
 export interface AlternativeOption {

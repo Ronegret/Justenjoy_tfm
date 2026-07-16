@@ -328,7 +328,8 @@ export const mockTrips: Record<string, TripData> = {
       transport: 45,
       food: 180,
       extras: 60,
-      total: 1025
+      total: 1025,
+      estimatedFields: ['food', 'extras']
     },
     share: {
       private_url: '/trip/justenjoy-lisbon-2026',
@@ -483,7 +484,8 @@ export const mockTrips: Record<string, TripData> = {
       transport: 25,
       food: 110,
       extras: 30,
-      total: 605
+      total: 605,
+      estimatedFields: ['food', 'extras']
     },
     share: {
       private_url: '/trip/justenjoy-oporto-cheapest',
@@ -638,7 +640,8 @@ export const mockTrips: Record<string, TripData> = {
       transport: 80,
       food: 280,
       extras: 100,
-      total: 1550
+      total: 1550,
+      estimatedFields: ['food', 'extras']
     },
     share: {
       private_url: '/trip/justenjoy-roma-premium',

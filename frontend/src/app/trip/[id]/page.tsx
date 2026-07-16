@@ -17,6 +17,7 @@ import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
 import { BudgetBreakdown } from '@/components/trip/BudgetBreakdown';
 import { ShareTripPanel } from '@/components/trip/ShareTripPanel';
+import { PracticalInfoCard } from '@/components/trip/PracticalInfoCard';
 
 interface TripPageProps {
   params: Promise<{ id: string }>;
@@ -151,6 +152,10 @@ export default function DynamicTripPage({ params }: TripPageProps) {
 
             {/* Trip Map Overview */}
             <TripMapOverview itinerary={trip.itinerary} />
+
+            {/* Info práctica real (visado/clima/transporte) — antes solo estaba
+                en el PDF, no en la página del viaje. */}
+            <PracticalInfoCard notes={trip.best_option.why_selected} />
 
             {/* Checklist card */}
             <div className="bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-6 shadow-md flex flex-col gap-4">

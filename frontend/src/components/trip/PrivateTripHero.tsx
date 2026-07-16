@@ -14,15 +14,11 @@ interface PrivateTripHeroProps {
 }
 
 export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare, onPdf, isGeneratingPdf }) => {
-  // Mock weather based on destination
-  const getWeather = (dest: string) => {
-    const d = dest.toLowerCase();
-    if (d.includes('lisboa')) return { temp: '22°C', label: 'Despejado' };
-    if (d.includes('oporto')) return { temp: '19°C', label: 'Parcialmente Nublado' };
-    return { temp: '25°C', label: 'Soleado' };
-  };
-
-  const weather = getWeather(trip.best_option.destination);
+  // Clima real (Open-Meteo, histórico del mismo rango de fechas hace un año,
+  // ver fetchClimateAverage en route.ts) — antes esto era un mock fijo
+  // ("25°C Soleado" para casi cualquier destino, sin importar el mes del
+  // viaje). Si la API no respondió, no se muestra el dato en vez de inventarlo.
+  const climate = trip.best_option.climate;
 
   // Antes caía a una lista fija de 10 ciudades (y a la imagen de Barcelona
   // para cualquier destino no listado, ej. Río de Janeiro). Ahora usa la foto
@@ -126,13 +122,15 @@ export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare,
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <CloudSun className="w-4 h-4 text-brand-teal" />
-              <div className="flex flex-col">
-                <span className="text-[9px] text-brand-cream/60 uppercase font-bold tracking-wider">Clima Previsto</span>
-                <span className="text-xs font-bold">{weather.temp} - {weather.label}</span>
+            {climate && (
+              <div className="flex items-center gap-2">
+                <CloudSun className="w-4 h-4 text-brand-teal" />
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-brand-cream/60 uppercase font-bold tracking-wider">Clima habitual (histórico)</span>
+                  <span className="text-xs font-bold">{climate.avgTempC}°C - {climate.description}</span>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2">
               <div className="px-3 py-1 rounded-md bg-brand-coral/20 border border-brand-coral/30 text-brand-coral text-xs font-black uppercase tracking-wider">

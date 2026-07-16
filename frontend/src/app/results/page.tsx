@@ -18,6 +18,7 @@ function ResultsContent() {
   const searchParams = useSearchParams();
   const { currentTrip, setCurrentTripById, generateTrip, isLoading } = useTrips();
   const [activeAlternativeType, setActiveAlternativeType] = useState<'recommended' | 'cheapest' | 'premium'>('recommended');
+  const [regeneratingType, setRegeneratingType] = useState<'cheapest' | 'premium' | null>(null);
 
   const tripId = searchParams.get('id');
 
@@ -72,12 +73,22 @@ function ResultsContent() {
     // viaje actual (esta acción es un ajuste rápido opcional).
   };
 
+  // Las tarjetas "Más económico"/"Lujo inteligente" antes mostraban un destino,
+  // precio y match INVENTADOS (Oporto/Roma con números fijos) y al pulsarlas
+  // cambiaban a un viaje mock sin relación con la búsqueda real del usuario.
+  // Ahora disparan una búsqueda real (mismo destino, presupuesto ajustado) vía
+  // el mismo mecanismo que ya usa la barra de "Reconstruir viaje".
+  const handleSearchAlternative = async (type: 'cheapest' | 'premium') => {
+    setRegeneratingType(type);
+    try {
+      await handleRegenerateAction(type === 'cheapest' ? 'cheaper' : 'premium');
+    } finally {
+      setRegeneratingType(null);
+    }
+  };
+
   // Compile comparative cards data
   const mainOption = trip.best_option;
-  const alternatives = trip.alternatives;
-
-  const cheapestAlt = alternatives.find(a => a.type === 'cheapest');
-  const premiumAlt = alternatives.find(a => a.type === 'premium');
 
   return (
     <div className="w-full flex-grow py-8 px-4 lg:px-8 bg-brand-cream/30 dark:bg-brand-dark/10">
@@ -140,16 +151,23 @@ function ResultsContent() {
 
               <div className="flex flex-col gap-2 mt-4 text-xs">
                 <div className="flex justify-between border-b border-brand-dark/5 dark:border-brand-white/5 pb-2">
-                  <span className="text-text-muted">Ahorro Estimado:</span>
-                  <span className="font-bold text-brand-teal">~ 180€ (18% total)</span>
+                  <span className="text-text-muted">Duración del vuelo:</span>
+                  <span className="font-bold text-brand-dark dark:text-brand-white">
+                    {trip.flights[0]?.duration || 'N/D'}
+                    {trip.flights[0] && ` (${trip.flights[0].stops === 0 ? 'Directo' : `${trip.flights[0].stops} escala(s)`})`}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-brand-dark/5 dark:border-brand-white/5 pb-2">
-                  <span className="text-text-muted">Tiempo de Vuelos:</span>
-                  <span className="font-bold text-brand-dark dark:text-brand-white">{trip.flights[0]?.duration || '1h 55m'} (Directo)</span>
+                  <span className="text-text-muted">Alojamiento:</span>
+                  <span className="font-bold text-brand-dark dark:text-brand-white">
+                    {trip.hotels[0] ? `${trip.hotels[0].rating}/5 · ${trip.hotels[0].area}` : 'N/D'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-brand-dark/5 dark:border-brand-white/5 pb-2">
-                  <span className="text-text-muted">Distancia Alojamiento:</span>
-                  <span className="font-bold text-brand-dark dark:text-brand-white">350m del centro histórico</span>
+                  <span className="text-text-muted">Actividades incluidas:</span>
+                  <span className="font-bold text-brand-dark dark:text-brand-white">
+                    {trip.activities.length} {trip.activities.length === 1 ? 'actividad real' : 'actividades reales'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -189,37 +207,29 @@ function ResultsContent() {
               onSelect={() => setActiveAlternativeType('recommended')}
             />
 
-            {/* 2. Cheapest */}
+            {/* 2. Cheapest — sin precio/match inventados: busca de verdad al pulsar */}
             <TripOptionCard
               type="cheapest"
-              destination={cheapestAlt ? cheapestAlt.destination : 'Oporto'}
-              matchScore={cheapestAlt ? cheapestAlt.match : 86}
-              price={cheapestAlt ? cheapestAlt.estimated_total : 540}
-              reason={cheapestAlt ? cheapestAlt.reason : 'Alternativa económica descartando hoteles premium.'}
+              destination={mainOption.destination}
+              reason={`Misma ruta a ${mainOption.destination}, buscando de nuevo con un presupuesto más bajo (vuelos low-cost, hotel más sencillo).`}
               isSelected={activeAlternativeType === 'cheapest'}
+              isLoading={regeneratingType === 'cheapest'}
               onSelect={() => {
                 setActiveAlternativeType('cheapest');
-                if (cheapestAlt) {
-                  // Switch active route mock to cheapest option
-                  setCurrentTripById('justenjoy-oporto-cheapest');
-                }
+                handleSearchAlternative('cheapest');
               }}
             />
 
-            {/* 3. Premium */}
+            {/* 3. Premium — idem, sin inventar destino ni precio */}
             <TripOptionCard
               type="premium"
-              destination={premiumAlt ? premiumAlt.destination : 'Roma'}
-              matchScore={premiumAlt ? premiumAlt.match : 89}
-              price={premiumAlt ? premiumAlt.estimated_total : 780}
-              reason={premiumAlt ? premiumAlt.reason : 'Alternativa premium con traslados privados e históricos.'}
+              destination={mainOption.destination}
+              reason={`Misma ruta a ${mainOption.destination}, buscando de nuevo con más presupuesto (mejor hotel, vuelos más cómodos).`}
               isSelected={activeAlternativeType === 'premium'}
+              isLoading={regeneratingType === 'premium'}
               onSelect={() => {
                 setActiveAlternativeType('premium');
-                if (premiumAlt) {
-                  // Switch active route mock to premium option
-                  setCurrentTripById('justenjoy-roma-premium');
-                }
+                handleSearchAlternative('premium');
               }}
             />
           </div>

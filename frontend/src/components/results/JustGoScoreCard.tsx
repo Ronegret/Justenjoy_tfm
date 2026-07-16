@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldAlert, Compass, Sparkles } from 'lucide-react';
+import { ShieldAlert, Sparkles } from 'lucide-react';
 import { JustGoScore } from '@/types/trip';
 
 interface JustGoScoreCardProps {
@@ -106,7 +106,7 @@ export const JustGoScoreCard: React.FC<JustGoScoreCardProps> = ({ score }) => {
             <span>Just Enjoy Score</span>
           </h4>
           <p className="text-[10px] text-text-muted mt-0.5">
-            Cálculo algorítmico cruzando precio, comodidad, ubicación y clima.
+            Cálculo real cruzando precio, valoración del hotel, distancia a las actividades y escalas de vuelo.
           </p>
         </div>
 
@@ -130,13 +130,6 @@ export const JustGoScoreCard: React.FC<JustGoScoreCardProps> = ({ score }) => {
           ))}
         </div>
 
-        <div className="border-t border-brand-dark/5 dark:border-brand-white/5 pt-3 flex justify-between text-[10px] text-text-muted font-medium">
-          <span>Potencial de Ahorro: Alto</span>
-          <span className="flex items-center gap-1">
-            <Compass className="w-3 h-3 text-brand-blue" />
-            Caminabilidad: Media-Alta
-          </span>
-        </div>
       </div>
     </div>
   );
