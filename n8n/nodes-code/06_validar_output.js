@@ -121,17 +121,22 @@ if (result.plan && result.plan.cost_summary) {
   if (budget > 0 && total > budget) {
     const amountOver = Math.round((total - budget) * 100) / 100;
     result.warnings = result.warnings || [];
+    // Redondeamos el coste real hacia arriba para que, si el usuario acepta
+    // "usar este presupuesto", el reintento no vuelva a fallar por céntimos.
+    const suggestedBudget = Math.ceil(total);
     const already = result.warnings.find(w => w.type === 'budget_exceeded');
     if (already) {
       already.requires_user_approval = true;
       already.amount_over = amountOver;
+      already.suggested_budget_usd = suggestedBudget;
     } else {
       result.warnings.push({
         type: 'budget_exceeded',
         detail: `El coste total (${total.toFixed(2)} USD) supera el presupuesto solicitado (${budget.toFixed(2)} USD) en ${amountOver.toFixed(2)} USD.`,
         proposed_change: 'Sube el presupuesto, reduce noches, pide alojamiento mas economico o cambia de destino.',
         requires_user_approval: true,
-        amount_over: amountOver
+        amount_over: amountOver,
+        suggested_budget_usd: suggestedBudget
       });
     }
   }

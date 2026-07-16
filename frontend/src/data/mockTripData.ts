@@ -16,8 +16,8 @@ export const mockTrips: Record<string, TripData> = {
         children: 0
       },
       budget: 'balanced',
+      budgetAmountUsd: 900,
       style: ['culture', 'food', 'romantic', 'low-walking'],
-      pace: 'medium',
       restrictions: ['avoid_early_flights', 'central_hotel']
     },
     justgo_score: {
@@ -351,8 +351,8 @@ export const mockTrips: Record<string, TripData> = {
         children: 0
       },
       budget: 'low',
+      budgetAmountUsd: 480,
       style: ['culture', 'food', 'relax'],
-      pace: 'medium',
       restrictions: ['avoid_early_flights', 'hotel_cheap']
     },
     justgo_score: {
@@ -506,8 +506,8 @@ export const mockTrips: Record<string, TripData> = {
         children: 0
       },
       budget: 'premium',
+      budgetAmountUsd: 1800,
       style: ['culture', 'romantic', 'museums'],
-      pace: 'intense',
       restrictions: ['avoid_early_flights', 'central_hotel']
     },
     justgo_score: {
