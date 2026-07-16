@@ -9,6 +9,10 @@ import { ChatPlanner } from '@/components/planner/ChatPlanner';
 import { TravelSummaryPanel } from '@/components/planner/TravelSummaryPanel';
 import { AiProcessingScreen } from '@/components/planner/AiProcessingScreen';
 import { defaultTripDates } from '@/lib/dates';
+import { budgetBounds } from '@/lib/budget';
+
+const INITIAL_DATES = { ...defaultTripDates(), flexible: true };
+const INITIAL_TRAVELERS = { adults: 2, children: 0 };
 
 function PlannerContent() {
   const router = useRouter();
@@ -19,18 +23,12 @@ function PlannerContent() {
   const [preferences, setPreferences] = useState<TripPreferences>({
     origin: 'Barcelona',
     destination: '',
-    dates: {
-      ...defaultTripDates(),
-      flexible: true
-    },
-    travelers: {
-      adults: 2,
-      children: 0
-    },
+    dates: INITIAL_DATES,
+    travelers: INITIAL_TRAVELERS,
     budget: 'balanced',
-    style: ['culture', 'food'],
-    pace: 'medium',
-    restrictions: ['avoid_early_flights', 'central_hotel']
+    budgetAmountUsd: budgetBounds({ dates: INITIAL_DATES, travelers: INITIAL_TRAVELERS }).default,
+    style: [],
+    restrictions: []
   });
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -82,6 +80,19 @@ function PlannerContent() {
     }
   };
 
+  // Cuando el aviso es "presupuesto superado", n8n ya devuelve el coste real
+  // detectado (suggested_budget_usd). En vez de dejar al usuario en un
+  // callejón sin salida, le damos una alternativa de un clic: reintentar ya
+  // mismo con ese presupuesto real.
+  const [isRetryingWithSuggestion, setIsRetryingWithSuggestion] = useState(false);
+  const handleUseSuggestedBudget = async (amountUsd: number) => {
+    const updated = { ...preferences, budgetAmountUsd: amountUsd, budget: 'balanced' as const };
+    setPreferences(updated);
+    setIsRetryingWithSuggestion(true);
+    await handleCompleteWizard(updated);
+    setIsRetryingWithSuggestion(false);
+  };
+
   const stepsList = [
     { num: 1, label: 'Destino' },
     { num: 2, label: 'Origen' },
@@ -89,9 +100,8 @@ function PlannerContent() {
     { num: 4, label: 'Viajeros' },
     { num: 5, label: 'Presupuesto' },
     { num: 6, label: 'Estilo' },
-    { num: 7, label: 'Ritmo' },
-    { num: 8, label: 'Filtros' },
-    { num: 9, label: 'Confirmar' }
+    { num: 7, label: 'Filtros' },
+    { num: 8, label: 'Confirmar' }
   ];
 
   return (
@@ -102,44 +112,59 @@ function PlannerContent() {
 
       {/* Aviso cuando n8n no puede completar el plan (p. ej. sin vuelos): mostramos
           el motivo real y la sugerencia en vez de generar un viaje ficticio. */}
-      {planWarnings && planWarnings.length > 0 && (
-        <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 pt-4">
-          <div className="rounded-2xl border border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 p-5 shadow-premium flex flex-col gap-3">
-            <h4 className="text-sm font-extrabold text-amber-700 dark:text-amber-300 uppercase tracking-normal">
-              No pudimos completar tu plan
-            </h4>
-            {planWarnings.map((w, i) => (
-              <div key={i} className="text-sm text-brand-dark dark:text-brand-white leading-relaxed">
-                <p>{w.detail || 'Necesitamos que ajustes algún dato del viaje.'}</p>
-                {w.proposed_change && (
-                  <p className="text-text-muted mt-0.5">Sugerencia: {w.proposed_change}</p>
-                )}
-              </div>
-            ))}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-              <p className="text-xs text-text-muted">
-                Para rutas largas, suele ayudar ampliar fechas o quitar filtros demasiado estrictos.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(3)}
-                  className="px-3 py-2 rounded-lg bg-brand-white text-brand-dark border border-amber-300/70 text-xs font-bold shadow-sm hover:shadow-premium transition-all"
-                >
-                  Revisar fechas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(8)}
-                  className="px-3 py-2 rounded-lg bg-amber-500 text-brand-white text-xs font-bold shadow-sm hover:shadow-premium transition-all"
-                >
-                  Revisar filtros
-                </button>
+      {planWarnings && planWarnings.length > 0 && (() => {
+        const budgetWarning = planWarnings.find((w) => w.type === 'budget_exceeded' && w.suggested_budget_usd);
+        return (
+          <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 pt-4">
+            <div className="rounded-2xl border border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 p-5 shadow-premium flex flex-col gap-3">
+              <h4 className="text-sm font-extrabold text-amber-700 dark:text-amber-300 uppercase tracking-normal">
+                No pudimos completar tu plan con este presupuesto
+              </h4>
+              {planWarnings.map((w, i) => (
+                <div key={i} className="text-sm text-brand-dark dark:text-brand-white leading-relaxed">
+                  <p>{w.detail || 'Necesitamos que ajustes algún dato del viaje.'}</p>
+                  {w.proposed_change && (
+                    <p className="text-text-muted mt-0.5">Sugerencia: {w.proposed_change}</p>
+                  )}
+                </div>
+              ))}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+                <p className="text-xs text-text-muted">
+                  Para rutas largas, suele ayudar ampliar fechas o quitar filtros demasiado estrictos.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {budgetWarning?.suggested_budget_usd && (
+                    <button
+                      type="button"
+                      disabled={isRetryingWithSuggestion}
+                      onClick={() => handleUseSuggestedBudget(budgetWarning.suggested_budget_usd!)}
+                      className="px-3 py-2 rounded-lg bg-brand-blue text-brand-white text-xs font-bold shadow-sm hover:shadow-premium transition-all disabled:opacity-60"
+                    >
+                      {isRetryingWithSuggestion
+                        ? 'Buscando de nuevo...'
+                        : `Usar $${budgetWarning.suggested_budget_usd.toLocaleString('en-US')} y continuar`}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="px-3 py-2 rounded-lg bg-brand-white text-brand-dark border border-amber-300/70 text-xs font-bold shadow-sm hover:shadow-premium transition-all"
+                  >
+                    Revisar fechas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(7)}
+                    className="px-3 py-2 rounded-lg bg-amber-500 text-brand-white text-xs font-bold shadow-sm hover:shadow-premium transition-all"
+                  >
+                    Revisar filtros
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col lg:flex-row gap-6 p-4 lg:p-8">
 

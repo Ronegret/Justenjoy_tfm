@@ -8,6 +8,10 @@ export interface N8nWarning {
   proposed_change?: string;
   requires_user_approval?: boolean;
   amount_over?: number;
+  /** Solo en `budget_exceeded`: coste real detectado, redondeado hacia arriba.
+   * Permite ofrecer "usar este presupuesto y reintentar" en vez de un callejón
+   * sin salida. */
+  suggested_budget_usd?: number;
 }
 
 /**

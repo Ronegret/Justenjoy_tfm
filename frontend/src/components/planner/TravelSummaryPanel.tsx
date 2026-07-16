@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   MapPin, Plane, Building, Compass, Sparkles,
-  Users, Calendar, Euro, Heart, Gauge, ShieldAlert
+  Users, Calendar, Euro, Heart, ShieldAlert
 } from 'lucide-react';
 import { TripPreferences } from '@/types/trip';
 
@@ -15,13 +15,22 @@ interface TravelSummaryPanelProps {
 export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferences }) => {
   const getStyleLabel = (style: string) => {
     const labels: Record<string, string> = {
+      beach: 'Playa',
       culture: 'Cultura',
       food: 'Gastronomía',
-      beach: 'Playa',
-      adventure: 'Aventura',
       relax: 'Relax',
+      adventure: 'Aventura',
       museums: 'Museos',
-      family: 'Familia'
+      nightlife: 'Vida nocturna',
+      shopping: 'Compras',
+      nature: 'Naturaleza',
+      photography: 'Fotografía',
+      family: 'Familia',
+      romantic: 'Romántico',
+      local_experience: 'Experiencia local',
+      low_walking: 'Sin caminar mucho',
+      pet_friendly: 'Viaje con mascota',
+      accessible: 'Accesible'
     };
     return labels[style] || style;
   };
@@ -49,16 +58,6 @@ export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferen
       case 'premium': return 'Premium';
       case 'luxury': return 'Lujo';
       default: return 'Equilibrado';
-    }
-  };
-
-  const getPaceLabel = (p: string) => {
-    switch (p) {
-      case 'relax': return 'Relajado';
-      case 'medium': return 'Medio';
-      case 'intense': return 'Intenso';
-      case 'all': return 'Verlo Todo';
-      default: return 'Medio';
     }
   };
 
@@ -166,18 +165,9 @@ export const TravelSummaryPanel: React.FC<TravelSummaryPanelProps> = ({ preferen
             <span>Presupuesto</span>
           </span>
           <span className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">
-            {getBudgetLabel(preferences.budget)}
-          </span>
-        </div>
-
-        {/* Pace Info */}
-        <div className="flex flex-col gap-0.5 bg-brand-cream/30 dark:bg-brand-dark/20 p-3 rounded-xl border border-brand-dark/5 dark:border-brand-white/5">
-          <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1">
-            <Gauge className="w-3 h-3 text-brand-blue" />
-            <span>Ritmo</span>
-          </span>
-          <span className="text-xs font-black text-brand-dark dark:text-brand-white uppercase">
-            {getPaceLabel(preferences.pace)}
+            {preferences.budgetAmountUsd
+              ? `$${preferences.budgetAmountUsd.toLocaleString('en-US')} · ${getBudgetLabel(preferences.budget)}`
+              : getBudgetLabel(preferences.budget)}
           </span>
         </div>
 

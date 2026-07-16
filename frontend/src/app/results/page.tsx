@@ -52,8 +52,15 @@ function ResultsContent() {
     const updatedPrefs = {
       ...trip.user_preferences,
       budget: actionType === 'cheaper' ? 'low' : actionType === 'premium' ? 'premium' : trip.user_preferences.budget,
+      // El tier por sí solo ya no mueve el presupuesto real (ver budgetAmountUsd
+      // en mapPreferencesToN8n): ajustamos también el monto para que el botón
+      // rápido de "más barato"/"premium" tenga efecto real en la búsqueda.
+      budgetAmountUsd: actionType === 'cheaper'
+        ? Math.round(trip.user_preferences.budgetAmountUsd * 0.7)
+        : actionType === 'premium'
+          ? Math.round(trip.user_preferences.budgetAmountUsd * 1.5)
+          : trip.user_preferences.budgetAmountUsd,
       style: actionType === 'more-culture' ? [...trip.user_preferences.style, 'culture'] : trip.user_preferences.style,
-      pace: actionType === 'low-walking' ? 'relax' : trip.user_preferences.pace,
       restrictions: actionType === 'low-walking' ? [...trip.user_preferences.restrictions, 'low_walking'] : trip.user_preferences.restrictions
     };
 
@@ -104,6 +111,19 @@ function ResultsContent() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Avisos no bloqueantes de n8n (p. ej. fecha de vuelo ajustada ±1 día
+            porque no había disponibilidad exacta): el plan sí se completó, pero
+            el usuario necesita saberlo para no confundirse con lo que pidió. */}
+        {trip.notices && trip.notices.length > 0 && (
+          <div className="rounded-2xl border border-brand-blue/30 bg-brand-blue/5 dark:bg-brand-blue/10 p-4 flex flex-col gap-1.5">
+            {trip.notices.map((notice, i) => (
+              <p key={i} className="text-xs text-brand-dark dark:text-brand-white leading-relaxed">
+                <span className="font-bold text-brand-blue">Aviso: </span>{notice}
+              </p>
+            ))}
+          </div>
+        )}
 
         {/* 1. SCOREBOARD SUMMARY & JUSTIFICATION CARD */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

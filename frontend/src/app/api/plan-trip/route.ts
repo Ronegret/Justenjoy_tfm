@@ -35,7 +35,6 @@ La estructura JSON que debes devolver es la siguiente:
     },
     "budget": "low" | "balanced" | "premium" | "luxury",
     "style": ["estilos"],
-    "pace": "relax" | "medium" | "intense" | "all",
     "restrictions": ["filtros"]
   },
   "justgo_score": {
@@ -188,13 +187,19 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
   const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
   const totalTravelers = (prefs.travelers.adults || 1) + (prefs.travelers.children || 0);
 
+  // `budgetAmountUsd` es el monto real que el usuario fija con el slider del
+  // wizard: es la fuente de verdad. El cálculo por tarifa/día de abajo es solo
+  // un fallback defensivo por si llega una preferencia antigua sin ese campo
+  // (nunca debería pasar desde el wizard actual, pero evita un total de 0).
   let dailyRate = 150;
   if (prefs.budget === 'low') dailyRate = 80;
   else if (prefs.budget === 'balanced') dailyRate = 150;
   else if (prefs.budget === 'premium') dailyRate = 300;
   else if (prefs.budget === 'luxury') dailyRate = 600;
 
-  const budget_total_usd = days * totalTravelers * dailyRate;
+  const budget_total_usd = prefs.budgetAmountUsd && prefs.budgetAmountUsd > 0
+    ? prefs.budgetAmountUsd
+    : days * totalTravelers * dailyRate;
 
   let accommodation_type: 'budget' | 'mid-range' | 'luxury' = 'mid-range';
   if (prefs.budget === 'low') accommodation_type = 'budget';
@@ -223,7 +228,10 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
       max_layover_hours: prefs.restrictions.includes('avoid_scales') ? 2 : 8,
       preferred_airlines: []
     },
-    activity_interests: prefs.style || ['culture', 'food'],
+    // Sin intereses no forzamos una preselección en la UI (el usuario debe elegir
+    // libremente), pero si de verdad no marcó nada, mandamos un fallback genérico
+    // en inglés para que el motor tenga algo con que buscar actividades.
+    activity_interests: prefs.style.length > 0 ? prefs.style : ['culture', 'food'],
     special_requirements: prefs.restrictions.length > 0 ? prefs.restrictions.join(', ') : 'ninguno',
     flexible_dates: prefs.dates.flexible || false,
     hotel_location_preference,
@@ -332,6 +340,7 @@ function getErrorMessage(e: unknown): string {
 // campos son opcionales: n8n puede omitirlos y el mapper aplica defaults.
 interface N8nFlightLeg {
   airline?: string;
+  flight_no?: string;
   origin?: string;
   destination?: string;
   departure_datetime?: string;
@@ -379,6 +388,9 @@ interface N8nDay {
   lat?: number | null;
   lng?: number | null;
   coordinate_source?: string;
+  // El día de llegada/regreso usa aquí el nombre del aeropuerto (ver prompt
+  // "ITINERARIO DÍA A DÍA"); lo usamos para el punto de aeropuerto del mapa.
+  points_of_interest?: string[];
 }
 
 interface N8nCostSummary {
@@ -629,6 +641,58 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
       }
     }
 
+    // Punto de aeropuerto para el mapa: el día de llegada añade el aeropuerto de
+    // destino al principio del día, el día de regreso añade el de salida al
+    // final. Así el mapa (total y por día) marca también los tramos aéreos, no
+    // solo hotel/actividades — usa la coordenada que n8n ya geocodificó para
+    // ese día (points_of_interest[0] es el nombre del aeropuerto en llegada/
+    // regreso, ver prompt "ITINERARIO DÍA A DÍA").
+    const periodFromTime = (timeStr: string): 'Mañana' | 'Mediodía' | 'Tarde' | 'Noche' => {
+      const hr = parseInt(timeStr.split(':')[0]) || 0;
+      if (hr >= 12 && hr < 15) return 'Mediodía';
+      if (hr >= 15 && hr < 20) return 'Tarde';
+      if (hr >= 20 || hr < 6) return 'Noche';
+      return 'Mañana';
+    };
+    if (index === 0 && flights.outbound) {
+      const poi = dayPlan.points_of_interest?.[0];
+      const airportName = poi && /aeropuerto|airport/i.test(poi)
+        ? poi
+        : `Aeropuerto de ${flights.outbound.destination || destination}`;
+      const time = flights.outbound.arrival_datetime?.split('T')[1]?.slice(0, 5) || '09:00';
+      blocks.unshift({
+        time,
+        period: periodFromTime(time),
+        title: `Llegada: ${airportName}`,
+        type: 'airport',
+        duration: flights.outbound.duration || '—',
+        cost: 0,
+        location: airportName,
+        description: `Aterrizaje del vuelo ${flights.outbound.flight_no || ''} en ${airportName}.`.trim(),
+        lat: dayPlan.lat ?? hotelLat,
+        lng: dayPlan.lng ?? hotelLng
+      });
+    }
+    if (index === rawItinerary.length - 1 && flights.return) {
+      const poi = dayPlan.points_of_interest?.[0];
+      const airportName = poi && /aeropuerto|airport/i.test(poi)
+        ? poi
+        : `Aeropuerto de ${flights.return.origin || destination}`;
+      const time = flights.return.departure_datetime?.split('T')[1]?.slice(0, 5) || '18:00';
+      blocks.push({
+        time,
+        period: periodFromTime(time),
+        title: `Salida: ${airportName}`,
+        type: 'airport',
+        duration: flights.return.duration || '—',
+        cost: 0,
+        location: airportName,
+        description: `Despegue del vuelo ${flights.return.flight_no || ''} desde ${airportName}.`.trim(),
+        lat: dayPlan.lat ?? hotelLat,
+        lng: dayPlan.lng ?? hotelLng
+      });
+    }
+
     const dayNumber = dayPlan.day ?? index + 1;
     return {
       day: dayNumber,
@@ -737,7 +801,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   const score = {
     overall_match: 90,
     price_score: originalPrefs.budget === 'low' ? 95 : 88,
-    comfort_score: originalPrefs.pace === 'relax' ? 95 : 85,
+    comfort_score: originalPrefs.budget === 'premium' || originalPrefs.budget === 'luxury' ? 95 : 85,
     location_score: 92,
     activities_score: 90,
     friction_score: 15,
@@ -790,6 +854,9 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
     events: [],
     itinerary: mappedItinerary,
     budget,
+    notices: (data?.warnings || [])
+      .filter((w) => !w.requires_user_approval && w.detail)
+      .map((w) => w.detail as string),
     share: {
       private_url: `/trip/${generatedId}`,
       pdf_enabled: true,
