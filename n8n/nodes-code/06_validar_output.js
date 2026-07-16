@@ -146,47 +146,111 @@ if (result.plan && result.plan.cost_summary) {
 const hasCritical = (result.warnings || []).some(w => w.requires_user_approval === true);
 if (result.status === 'plan_ready' && hasCritical) result.status = 'needs_user_input';
 
-// ── Safety net: daily_itinerary vacío → generar estructura mínima desde activities ──
-if (result.plan && (!result.plan.daily_itinerary || result.plan.daily_itinerary.length === 0)) {
+// ── daily_itinerary: SIEMPRE construido aquí, no por el LLM ──
+// Antes el agente tenía que redactar todo daily_itinerary[] (título, resumen
+// narrativo, y 4 bloques de relleno mañana/mediodía/tarde/noche para cada
+// día sin actividad real) — mucho texto de salida, más lento y con riesgo de
+// romper la regla de "día completo". Ahora el agente solo devuelve
+// segments[].activities[] (ya lo hacía) y plan.landmarks[] (lista corta de
+// sitios reales del destino, ver prompt); el itinerario día a día se arma
+// aquí de forma determinista y siempre con la misma estructura.
+if (result.plan) {
   const seg = result.plan.segments?.[0];
   if (seg) {
     const arrivalDate = (seg.flights?.outbound?.arrival_datetime || '').substring(0, 10);
     const returnDate  = (seg.flights?.return?.departure_datetime || '').substring(0, 10);
     const dest = seg.destination || '';
+    const landmarks = Array.isArray(result.plan.landmarks) ? result.plan.landmarks.filter(Boolean) : [];
+
     if (arrivalDate && returnDate) {
       const start = new Date(arrivalDate);
       const end   = new Date(returnDate);
-      const days  = [];
       const activities = seg.activities || [];
-      // Indexar actividades por fecha
       const actByDate = {};
       activities.forEach(a => { if (a.date) { if (!actByDate[a.date]) actByDate[a.date] = []; actByDate[a.date].push(a); } });
+
+      const toBlock = (time, name, act) => ({
+        time,
+        name,
+        duration_hours: (act && act.duration_hours) || 2,
+        price_usd: (act && act.price_usd) || 0,
+        booking_url: (act && act.booking_url) || '',
+        lat: (act && typeof act.lat === 'number') ? act.lat : null,
+        lng: (act && typeof act.lng === 'number') ? act.lng : null
+      });
+      const isFood = (act) => /restaur|food|comida|café|cafe|bar\b/i.test(act.category || '');
+
+      const days = [];
       let d = new Date(start);
       let dayNum = 1;
+      let landmarkIdx = 0;
+
       while (d <= end) {
         const dateStr = d.toISOString().substring(0, 10);
-        const dayActs = (actByDate[dateStr] || []).map(a => ({
-          time: a.start_time || '10:00',
-          name: a.name,
-          duration_hours: a.duration_hours || 3,
-          price_usd: a.price_usd || 0,
-          booking_url: a.booking_url || ''
-        }));
+        const dayActs = (actByDate[dateStr] || []).slice(0, 2); // máx 2 actividades reales/día
+        const isArrival = dateStr === arrivalDate;
+        const isReturn = !isArrival && dateStr === returnDate;
+        const activityBlocks = [];
+
+        if (isArrival) {
+          activityBlocks.push(toBlock('20:00', 'Cena cerca del hotel y paseo nocturno', null));
+        } else if (isReturn) {
+          const morningAct = dayActs[0];
+          activityBlocks.push(morningAct
+            ? toBlock(morningAct.start_time || '10:00', morningAct.name, morningAct)
+            : toBlock('10:00', 'Última exploración o compras antes del check-out', null));
+        } else {
+          const foodAct = dayActs.find(isFood) || null;
+          const nonFoodActs = dayActs.filter((a) => a !== foodAct);
+          const morningAct = nonFoodActs[0] || null;
+          const afternoonAct = nonFoodActs[1] || null;
+
+          activityBlocks.push(morningAct
+            ? toBlock(morningAct.start_time || '10:00', morningAct.name, morningAct)
+            : toBlock('10:00', 'Paseo matutino por el centro histórico', null));
+          activityBlocks.push(foodAct
+            ? toBlock(foodAct.start_time || '13:00', foodAct.name, foodAct)
+            : toBlock('13:00', 'Almuerzo en un restaurante local de la zona', null));
+          activityBlocks.push(afternoonAct
+            ? toBlock(afternoonAct.start_time || '16:00', afternoonAct.name, afternoonAct)
+            : toBlock('16:00', 'Tarde libre para explorar tiendas y cafés del barrio', null));
+          activityBlocks.push(toBlock('20:00', 'Paseo nocturno y cena cerca del hotel', null));
+        }
+
+        const realNames = dayActs.map((a) => a.name).filter(Boolean);
         let title, summary;
-        if (dateStr === arrivalDate) {
+        if (isArrival) {
           title = `Día de llegada a ${dest}`;
-          summary = `Llegada a ${dest}. Check-in en el hotel. Tarde libre para explorar el barrio.`;
-        } else if (dateStr === returnDate) {
+          summary = `Llegada a ${dest}. Traslado y check-in en el hotel. Por la noche, cena cerca del hotel para empezar a disfrutar del destino.`;
+        } else if (isReturn) {
           title = `Último día en ${dest} — Regreso`;
-          summary = `Check-out del hotel. Vuelo de regreso. Mañana libre para últimas compras o paseo.`;
-        } else if (dayActs.length > 0) {
-          title = dayActs.map(a => a.name).join(' · ');
-          summary = `Día dedicado a: ${dayActs.map(a => a.name).join(', ')}.`;
+          summary = `Último día en ${dest}: check-out del hotel y vuelo de regreso. Aprovecha la mañana para una última exploración.`;
+        } else if (realNames.length > 0) {
+          title = realNames.join(' · ');
+          summary = `Día dedicado a ${realNames.join(' y ')}, con tiempo libre para seguir descubriendo ${dest} entre visita y visita.`;
         } else {
           title = `Día libre para caminar y conocer ${dest}`;
-          summary = `Día libre para explorar ${dest} a tu ritmo, descubrir mercados locales, cafés y calles del barrio.`;
+          summary = `Día libre para explorar ${dest} a tu ritmo, pasear por sus calles y descubrir rincones locales.`;
         }
-        days.push({ day: dayNum, date: dateStr, title, summary, activities: dayActs });
+
+        let pointsOfInterest;
+        if (realNames.length > 0) {
+          pointsOfInterest = [realNames[0]];
+        } else if (!isArrival && !isReturn && landmarks.length > 0) {
+          pointsOfInterest = [landmarks[landmarkIdx % landmarks.length]];
+          landmarkIdx++;
+        } else {
+          pointsOfInterest = [];
+        }
+
+        days.push({
+          day: dayNum,
+          date: dateStr,
+          title,
+          summary,
+          points_of_interest: pointsOfInterest,
+          activities: activityBlocks
+        });
         d.setDate(d.getDate() + 1);
         dayNum++;
       }

@@ -1,0 +1,675 @@
+{
+  "session_id": "session_1784242621784_vd6eye3hc",
+  "status": "plan_ready",
+  "revision_count": 0,
+  "revision_snapshot": 0,
+  "generated_at": "2026-07-16T22:57:15.093Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Barcelona",
+        "destination": "Venecia",
+        "flights": {
+          "outbound": {
+            "airline": "Ryanair",
+            "flight_no": "FR 777",
+            "origin": "BCN",
+            "destination": "VCE",
+            "departure_datetime": "2026-08-15T05:45:00",
+            "arrival_datetime": "2026-08-15T07:40:00",
+            "layovers": [],
+            "price_usd": 45,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20VCE%20from%20BCN%20on%202026-08-15"
+          },
+          "return": {
+            "airline": "Wizz Air",
+            "flight_no": "W4 6727",
+            "origin": "VCE",
+            "destination": "BCN",
+            "departure_datetime": "2026-08-19T19:15:00",
+            "arrival_datetime": "2026-08-19T21:15:00",
+            "layovers": [],
+            "price_usd": 29,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20BCN%20from%20VCE%20on%202026-08-19"
+          }
+        },
+        "hotel": {
+          "name": "MEININGER Venezia Mestre",
+          "address": "",
+          "lat": 45.4812562,
+          "lng": 12.237811899999999,
+          "stars": null,
+          "rating": 4.5,
+          "check_in": "2026-08-15",
+          "check_out": "2026-08-19",
+          "price_per_night_usd": 50,
+          "total_usd": 200,
+          "booking_url": "https://www.meininger-hotels.com/en/hotels/venice/hotel-venice-mestre/?utm_source=gmb&utm_medium=referral&utm_campaign=VEN-VM&utm_content=website"
+        },
+        "activities": [
+          {
+            "name": "Venice Carnival Museum",
+            "date": "2026-08-16",
+            "start_time": "10:00",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Art museum",
+            "source": "google_maps",
+            "lat": 45.4298638,
+            "lng": 12.325353
+          },
+          {
+            "name": "Galeries Bartoux Venice",
+            "date": "2026-08-16",
+            "start_time": "16:00",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Art center",
+            "source": "google_maps",
+            "lat": 45.4315083,
+            "lng": 12.3279277
+          },
+          {
+            "name": "European Cultural Centre (ECC) - Palazzo Bembo",
+            "date": "2026-08-17",
+            "start_time": "10:00",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Art museum",
+            "source": "google_maps",
+            "lat": 45.4370389,
+            "lng": 12.335066699999999
+          },
+          {
+            "name": "ICI- Istituto Culturale Internazionale",
+            "date": "2026-08-17",
+            "start_time": "16:00",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Arts organization",
+            "source": "google_maps",
+            "lat": 45.440714,
+            "lng": 12.324299
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 74,
+      "hotel_usd": 200,
+      "activities_usd": 0,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": null,
+      "local_transport_data_source": "tavily",
+      "total_usd": 274,
+      "budget_total_usd": 1200,
+      "budget_remaining_usd": 926
+    },
+    "trip_summary": "Viaje de 4 noches a Venecia con vuelos directos desde Barcelona y alojamiento en un hotel moderno y bien valorado. El itinerario se centra en experiencias culturales, visitando museos y centros de arte emblemáticos de la ciudad.",
+    "landmarks": [
+      "Plaza de San Marcos",
+      "Puente de Rialto",
+      "Basílica de San Marcos",
+      "Palacio Ducal",
+      "Gran Canal",
+      "Puente de los Suspiros",
+      "Gallerie dell'Accademia",
+      "Teatro La Fenice"
+    ],
+    "plan_notes": [
+      "No se requiere visado para ciudadanos españoles para viajar a Italia.",
+      "El transporte público en Venecia incluye vaporettos (autobuses acuáticos) y taxis acuáticos; los precios varían según la ruta y el tipo de servicio.",
+      "En agosto, Venecia suele ser cálida y húmeda, ideal para paseos y actividades culturales."
+    ],
+    "revision_snapshot": 0,
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-08-15",
+        "title": "Día de llegada a Venecia",
+        "summary": "Llegada a Venecia. Traslado y check-in en el hotel. Por la noche, cena cerca del hotel para empezar a disfrutar del destino.",
+        "points_of_interest": [],
+        "activities": [
+          {
+            "time": "20:00",
+            "name": "Cena cerca del hotel y paseo nocturno",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          }
+        ],
+        "lat": 45.4408,
+        "lng": 12.3155,
+        "coordinate_source": "city_center"
+      },
+      {
+        "day": 2,
+        "date": "2026-08-16",
+        "title": "Venice Carnival Museum · Galeries Bartoux Venice",
+        "summary": "Día dedicado a Venice Carnival Museum y Galeries Bartoux Venice, con tiempo libre para seguir descubriendo Venecia entre visita y visita.",
+        "points_of_interest": [
+          "Venice Carnival Museum"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Venice Carnival Museum",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 45.4298638,
+            "lng": 12.325353
+          },
+          {
+            "time": "13:00",
+            "name": "Almuerzo en un restaurante local de la zona",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          },
+          {
+            "time": "16:00",
+            "name": "Galeries Bartoux Venice",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 45.4315083,
+            "lng": 12.3279277
+          },
+          {
+            "time": "20:00",
+            "name": "Paseo nocturno y cena cerca del hotel",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          }
+        ],
+        "lat": 45.4315083,
+        "lng": 12.3279277,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 3,
+        "date": "2026-08-17",
+        "title": "European Cultural Centre (ECC) - Palazzo Bembo · ICI- Istituto Culturale Internazionale",
+        "summary": "Día dedicado a European Cultural Centre (ECC) - Palazzo Bembo y ICI- Istituto Culturale Internazionale, con tiempo libre para seguir descubriendo Venecia entre visita y visita.",
+        "points_of_interest": [
+          "European Cultural Centre (ECC) - Palazzo Bembo"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "European Cultural Centre (ECC) - Palazzo Bembo",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 45.4370389,
+            "lng": 12.335066699999999
+          },
+          {
+            "time": "13:00",
+            "name": "Almuerzo en un restaurante local de la zona",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          },
+          {
+            "time": "16:00",
+            "name": "ICI- Istituto Culturale Internazionale",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": 45.440714,
+            "lng": 12.324299
+          },
+          {
+            "time": "20:00",
+            "name": "Paseo nocturno y cena cerca del hotel",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          }
+        ],
+        "lat": 45.440714,
+        "lng": 12.324299,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 4,
+        "date": "2026-08-18",
+        "title": "Día libre para caminar y conocer Venecia",
+        "summary": "Día libre para explorar Venecia a tu ritmo, pasear por sus calles y descubrir rincones locales.",
+        "points_of_interest": [
+          "Plaza de San Marcos"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Paseo matutino por el centro histórico",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          },
+          {
+            "time": "13:00",
+            "name": "Almuerzo en un restaurante local de la zona",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          },
+          {
+            "time": "16:00",
+            "name": "Tarde libre para explorar tiendas y cafés del barrio",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          },
+          {
+            "time": "20:00",
+            "name": "Paseo nocturno y cena cerca del hotel",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          }
+        ],
+        "lat": 45.4408,
+        "lng": 12.3155,
+        "coordinate_source": "city_center"
+      },
+      {
+        "day": 5,
+        "date": "2026-08-19",
+        "title": "Último día en Venecia — Regreso",
+        "summary": "Último día en Venecia: check-out del hotel y vuelo de regreso. Aprovecha la mañana para una última exploración.",
+        "points_of_interest": [],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Última exploración o compras antes del check-out",
+            "duration_hours": 2,
+            "price_usd": 0,
+            "booking_url": "",
+            "lat": null,
+            "lng": null
+          }
+        ],
+        "lat": 45.4408,
+        "lng": 12.3155,
+        "coordinate_source": "city_center"
+      }
+    ]
+  },
+  "error_detail": "",
+  "_debug": {
+    "token_usage": null,
+    "execution_time_ms": 1740,
+    "plan_metrics": {
+      "activities_found": 4,
+      "itinerary_days": 5,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_supabase_record": {
+    "session_id": "session_1784242621784_vd6eye3hc",
+    "status": "plan_ready",
+    "destination": "Venecia",
+    "origin": "Barcelona",
+    "departure_date": "2026-08-15",
+    "return_date": "2026-08-19",
+    "budget_usd": 1200,
+    "total_cost_usd": 274,
+    "travelers_count": 2,
+    "activity_interests": [
+      "culture",
+      "food"
+    ],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Barcelona",
+          "destination": "Venecia",
+          "flights": {
+            "outbound": {
+              "airline": "Ryanair",
+              "flight_no": "FR 777",
+              "origin": "BCN",
+              "destination": "VCE",
+              "departure_datetime": "2026-08-15T05:45:00",
+              "arrival_datetime": "2026-08-15T07:40:00",
+              "layovers": [],
+              "price_usd": 45,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20VCE%20from%20BCN%20on%202026-08-15"
+            },
+            "return": {
+              "airline": "Wizz Air",
+              "flight_no": "W4 6727",
+              "origin": "VCE",
+              "destination": "BCN",
+              "departure_datetime": "2026-08-19T19:15:00",
+              "arrival_datetime": "2026-08-19T21:15:00",
+              "layovers": [],
+              "price_usd": 29,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20BCN%20from%20VCE%20on%202026-08-19"
+            }
+          },
+          "hotel": {
+            "name": "MEININGER Venezia Mestre",
+            "address": "",
+            "lat": 45.4812562,
+            "lng": 12.237811899999999,
+            "stars": null,
+            "rating": 4.5,
+            "check_in": "2026-08-15",
+            "check_out": "2026-08-19",
+            "price_per_night_usd": 50,
+            "total_usd": 200,
+            "booking_url": "https://www.meininger-hotels.com/en/hotels/venice/hotel-venice-mestre/?utm_source=gmb&utm_medium=referral&utm_campaign=VEN-VM&utm_content=website"
+          },
+          "activities": [
+            {
+              "name": "Venice Carnival Museum",
+              "date": "2026-08-16",
+              "start_time": "10:00",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Art museum",
+              "source": "google_maps",
+              "lat": 45.4298638,
+              "lng": 12.325353
+            },
+            {
+              "name": "Galeries Bartoux Venice",
+              "date": "2026-08-16",
+              "start_time": "16:00",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Art center",
+              "source": "google_maps",
+              "lat": 45.4315083,
+              "lng": 12.3279277
+            },
+            {
+              "name": "European Cultural Centre (ECC) - Palazzo Bembo",
+              "date": "2026-08-17",
+              "start_time": "10:00",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Art museum",
+              "source": "google_maps",
+              "lat": 45.4370389,
+              "lng": 12.335066699999999
+            },
+            {
+              "name": "ICI- Istituto Culturale Internazionale",
+              "date": "2026-08-17",
+              "start_time": "16:00",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Arts organization",
+              "source": "google_maps",
+              "lat": 45.440714,
+              "lng": 12.324299
+            }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 74,
+        "hotel_usd": 200,
+        "activities_usd": 0,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": null,
+        "local_transport_data_source": "tavily",
+        "total_usd": 274,
+        "budget_total_usd": 1200,
+        "budget_remaining_usd": 926
+      },
+      "trip_summary": "Viaje de 4 noches a Venecia con vuelos directos desde Barcelona y alojamiento en un hotel moderno y bien valorado. El itinerario se centra en experiencias culturales, visitando museos y centros de arte emblemáticos de la ciudad.",
+      "landmarks": [
+        "Plaza de San Marcos",
+        "Puente de Rialto",
+        "Basílica de San Marcos",
+        "Palacio Ducal",
+        "Gran Canal",
+        "Puente de los Suspiros",
+        "Gallerie dell'Accademia",
+        "Teatro La Fenice"
+      ],
+      "plan_notes": [
+        "No se requiere visado para ciudadanos españoles para viajar a Italia.",
+        "El transporte público en Venecia incluye vaporettos (autobuses acuáticos) y taxis acuáticos; los precios varían según la ruta y el tipo de servicio.",
+        "En agosto, Venecia suele ser cálida y húmeda, ideal para paseos y actividades culturales."
+      ],
+      "revision_snapshot": 0,
+      "daily_itinerary": [
+        {
+          "day": 1,
+          "date": "2026-08-15",
+          "title": "Día de llegada a Venecia",
+          "summary": "Llegada a Venecia. Traslado y check-in en el hotel. Por la noche, cena cerca del hotel para empezar a disfrutar del destino.",
+          "points_of_interest": [],
+          "activities": [
+            {
+              "time": "20:00",
+              "name": "Cena cerca del hotel y paseo nocturno",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            }
+          ],
+          "lat": 45.4408,
+          "lng": 12.3155,
+          "coordinate_source": "city_center"
+        },
+        {
+          "day": 2,
+          "date": "2026-08-16",
+          "title": "Venice Carnival Museum · Galeries Bartoux Venice",
+          "summary": "Día dedicado a Venice Carnival Museum y Galeries Bartoux Venice, con tiempo libre para seguir descubriendo Venecia entre visita y visita.",
+          "points_of_interest": [
+            "Venice Carnival Museum"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Venice Carnival Museum",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": 45.4298638,
+              "lng": 12.325353
+            },
+            {
+              "time": "13:00",
+              "name": "Almuerzo en un restaurante local de la zona",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            },
+            {
+              "time": "16:00",
+              "name": "Galeries Bartoux Venice",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": 45.4315083,
+              "lng": 12.3279277
+            },
+            {
+              "time": "20:00",
+              "name": "Paseo nocturno y cena cerca del hotel",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            }
+          ],
+          "lat": 45.4315083,
+          "lng": 12.3279277,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 3,
+          "date": "2026-08-17",
+          "title": "European Cultural Centre (ECC) - Palazzo Bembo · ICI- Istituto Culturale Internazionale",
+          "summary": "Día dedicado a European Cultural Centre (ECC) - Palazzo Bembo y ICI- Istituto Culturale Internazionale, con tiempo libre para seguir descubriendo Venecia entre visita y visita.",
+          "points_of_interest": [
+            "European Cultural Centre (ECC) - Palazzo Bembo"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "European Cultural Centre (ECC) - Palazzo Bembo",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": 45.4370389,
+              "lng": 12.335066699999999
+            },
+            {
+              "time": "13:00",
+              "name": "Almuerzo en un restaurante local de la zona",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            },
+            {
+              "time": "16:00",
+              "name": "ICI- Istituto Culturale Internazionale",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": 45.440714,
+              "lng": 12.324299
+            },
+            {
+              "time": "20:00",
+              "name": "Paseo nocturno y cena cerca del hotel",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            }
+          ],
+          "lat": 45.440714,
+          "lng": 12.324299,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 4,
+          "date": "2026-08-18",
+          "title": "Día libre para caminar y conocer Venecia",
+          "summary": "Día libre para explorar Venecia a tu ritmo, pasear por sus calles y descubrir rincones locales.",
+          "points_of_interest": [
+            "Plaza de San Marcos"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Paseo matutino por el centro histórico",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            },
+            {
+              "time": "13:00",
+              "name": "Almuerzo en un restaurante local de la zona",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            },
+            {
+              "time": "16:00",
+              "name": "Tarde libre para explorar tiendas y cafés del barrio",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            },
+            {
+              "time": "20:00",
+              "name": "Paseo nocturno y cena cerca del hotel",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            }
+          ],
+          "lat": 45.4408,
+          "lng": 12.3155,
+          "coordinate_source": "city_center"
+        },
+        {
+          "day": 5,
+          "date": "2026-08-19",
+          "title": "Último día en Venecia — Regreso",
+          "summary": "Último día en Venecia: check-out del hotel y vuelo de regreso. Aprovecha la mañana para una última exploración.",
+          "points_of_interest": [],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Última exploración o compras antes del check-out",
+              "duration_hours": 2,
+              "price_usd": 0,
+              "booking_url": "",
+              "lat": null,
+              "lng": null
+            }
+          ],
+          "lat": 45.4408,
+          "lng": 12.3155,
+          "coordinate_source": "city_center"
+        }
+      ]
+    }
+  },
+  "_skip_supabase": false
+}
