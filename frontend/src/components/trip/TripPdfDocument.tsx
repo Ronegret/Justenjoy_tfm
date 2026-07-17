@@ -306,7 +306,7 @@ export const TripPdfDocument: React.FC<TripPdfDocumentProps> = ({ trip }) => {
     ['Vuelos', budget.flights],
     ['Hotel', budget.hotel],
     ['Actividades', budget.activities],
-    ['Transporte', budget.transport],
+    ['Transporte', budget.transport ?? 0],
     ['Comida', budget.food],
     ['Extras', budget.extras],
   ];
