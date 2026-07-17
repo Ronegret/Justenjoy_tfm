@@ -28,6 +28,80 @@ const DEST_OPTIONS = [
   'Quiero el mejor equilibrio'
 ];
 
+// Aviso temprano si escriben un país en vez de una ciudad: el motor busca
+// vuelos a una CIUDAD concreta (aeropuerto), no a un país — un caso real
+// escribiendo "Marruecos" acabó generando un código de aeropuerto inválido
+// que coincidía por casualidad con uno real de otro continente. El backend
+// ya maneja esto de forma segura (ver n8n/05_convertir_iata.js), pero avisar
+// aquí evita gastar una búsqueda completa. Las mismas ciudades sugeridas
+// están en COUNTRY_TO_CITIES de n8n/nodes-code/06_validar_output.js — si
+// añades un país aquí, añádelo también allí.
+// "Túnez" no está aquí a propósito: en español nombra tanto al país como a
+// su capital, y el backend ya lo resuelve directo a la ciudad (Tunis).
+const COUNTRY_TO_CITIES: Record<string, string[]> = {
+  'marruecos': ['Marrakech', 'Casablanca'], 'morocco': ['Marrakech', 'Casablanca'],
+  'francia': ['París', 'Lyon', 'Niza'], 'france': ['París', 'Lyon', 'Niza'],
+  'italia': ['Roma', 'Milán', 'Venecia', 'Florencia'], 'italy': ['Roma', 'Milán', 'Venecia', 'Florencia'],
+  'españa': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'], 'spain': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'],
+  'portugal': ['Lisboa', 'Oporto'],
+  'alemania': ['Berlín', 'Múnich', 'Fráncfort'], 'germany': ['Berlín', 'Múnich', 'Fráncfort'],
+  'reino unido': ['Londres', 'Mánchester', 'Edimburgo'], 'united kingdom': ['Londres', 'Mánchester', 'Edimburgo'], 'inglaterra': ['Londres', 'Mánchester'],
+  'grecia': ['Atenas'], 'greece': ['Atenas'],
+  'turquía': ['Estambul'], 'turkey': ['Estambul'],
+  'egipto': ['El Cairo'], 'egypt': ['El Cairo'],
+  'japón': ['Tokio'], 'japan': ['Tokio'],
+  'china': ['Pekín', 'Shanghái', 'Hong Kong'],
+  'india': ['Bombay', 'Nueva Delhi'],
+  'tailandia': ['Bangkok'], 'thailand': ['Bangkok'],
+  'méxico': ['Ciudad de México', 'Cancún'], 'mexico': ['Ciudad de México', 'Cancún'],
+  'brasil': ['São Paulo', 'Río de Janeiro'], 'brazil': ['São Paulo', 'Río de Janeiro'],
+  'argentina': ['Buenos Aires'],
+  'estados unidos': ['Nueva York', 'Los Ángeles', 'Miami', 'Chicago'], 'usa': ['Nueva York', 'Los Ángeles', 'Miami'], 'united states': ['Nueva York', 'Los Ángeles', 'Miami'],
+  'canadá': ['Toronto', 'Montreal', 'Vancouver'], 'canada': ['Toronto', 'Montreal', 'Vancouver'],
+  'australia': ['Sídney', 'Melbourne'],
+  'holanda': ['Ámsterdam'], 'netherlands': ['Ámsterdam'], 'países bajos': ['Ámsterdam'],
+  'bélgica': ['Bruselas'], 'belgium': ['Bruselas'],
+  'suiza': ['Zúrich', 'Ginebra'], 'switzerland': ['Zúrich', 'Ginebra'],
+  'austria': ['Viena'],
+  'irlanda': ['Dublín'], 'ireland': ['Dublín'],
+  'croacia': ['Zagreb'], 'croatia': ['Zagreb'],
+  'noruega': ['Oslo'], 'norway': ['Oslo'],
+  'suecia': ['Estocolmo'], 'sweden': ['Estocolmo'],
+  'dinamarca': ['Copenhague'], 'denmark': ['Copenhague'],
+  'polonia': ['Varsovia'], 'poland': ['Varsovia'],
+  'sudáfrica': ['Ciudad del Cabo', 'Johannesburgo'], 'south africa': ['Ciudad del Cabo', 'Johannesburgo'],
+  'perú': ['Lima'], 'peru': ['Lima'],
+  'chile': ['Santiago'],
+  'colombia': ['Bogotá'],
+  'cuba': ['La Habana'],
+  'jordania': ['Amán'], 'jordan': ['Amán'],
+  'israel': ['Tel Aviv'],
+  'emiratos árabes': ['Dubái', 'Abu Dabi'], 'uae': ['Dubái', 'Abu Dabi'],
+  'indonesia': ['Bali']
+};
+function suggestedCitiesForCountry(value: string): string[] | null {
+  return COUNTRY_TO_CITIES[value.trim().toLowerCase()] || null;
+}
+
+// Nombres de ciudad que existen (de forma conocida y frecuente) en más de un
+// país — un texto ambiguo tipo "Valencia" o "Santiago" se resuelve siempre
+// a la MISMA ciudad fija en la tabla de n8n, que podría no ser la que el
+// viajero tenía en mente. No bloquea el envío, solo sugiere precisar.
+const AMBIGUOUS_CITIES: Record<string, string> = {
+  'valencia': 'Se asumirá Valencia (España). Si es Valencia (Venezuela), escribe "Valencia, Venezuela".',
+  'córdoba': 'Se asumirá Córdoba (España). Si es Córdoba (Argentina), escribe "Córdoba, Argentina".',
+  'cordoba': 'Se asumirá Córdoba (España). Si es Córdoba (Argentina), escribe "Córdoba, Argentina".',
+  'guadalajara': 'Se asumirá Guadalajara (España). Si es Guadalajara (México), escribe "Guadalajara, México".',
+  'santiago': 'Se asumirá Santiago (Chile). Si es Santiago de Compostela (España), escríbelo completo.',
+  'san josé': 'Hay varias ciudades con este nombre — precisa el país, por ejemplo "San José, Costa Rica".',
+  'cambridge': 'Hay una Cambridge en Reino Unido y otra en EE.UU. — precisa el país si no es la del Reino Unido.',
+  'birmingham': 'Hay una Birmingham en Reino Unido y otra en EE.UU. — precisa el país si no es la del Reino Unido.',
+  'toledo': 'Se asumirá Toledo (España). Si es Toledo (EE.UU.), escribe "Toledo, Ohio".'
+};
+function ambiguousCityHint(value: string): string | null {
+  return AMBIGUOUS_CITIES[value.trim().toLowerCase()] || null;
+}
+
 const DATE_OPTIONS = [
   'Fechas fijas',
   'Fechas flexibles',
@@ -356,18 +430,51 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                   />
                 ))}
               </div>
-              {(destType === 'Ya tengo destino' || destType === 'Tengo varios en mente') && (
-                <input
-                  type="text"
-                  placeholder="Ej. Lisboa, Roma, París..."
-                  value={inputDestination}
-                  onChange={(e) => {
-                    setInputDestination(e.target.value);
-                    updatePrefs({ destination: e.target.value });
-                  }}
-                  className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
-                />
-              )}
+              {(destType === 'Ya tengo destino' || destType === 'Tengo varios en mente') && (() => {
+                const countryCities = suggestedCitiesForCountry(inputDestination);
+                const ambiguousHint = !countryCities ? ambiguousCityHint(inputDestination) : null;
+                return (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Ej. Lisboa, Roma, París..."
+                      value={inputDestination}
+                      onChange={(e) => {
+                        setInputDestination(e.target.value);
+                        updatePrefs({ destination: e.target.value });
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
+                    />
+                    {countryCities && (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold flex items-start gap-1.5">
+                          <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <span>&quot;{inputDestination}&quot; es un país, no una ciudad — necesitamos un aeropuerto concreto. Elige una ciudad:</span>
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 pl-5">
+                          {countryCities.map((city) => (
+                            <SmartChip
+                              key={city}
+                              label={city}
+                              isSelected={false}
+                              onClick={() => {
+                                setInputDestination(city);
+                                updatePrefs({ destination: city });
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {ambiguousHint && (
+                      <p className="text-[10px] text-text-muted font-medium flex items-start gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5 text-brand-blue" />
+                        <span>{ambiguousHint}</span>
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 

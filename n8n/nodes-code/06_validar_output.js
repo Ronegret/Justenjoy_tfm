@@ -27,6 +27,83 @@ try {
 // ── SIEMPRE sobrescribir generated_at — no confiar en el agente ──
 result.generated_at = new Date().toISOString();
 
+// ── Seguridad: ciudad de origen/destino no reconocida (bug real detectado:
+// "Marruecos" —un país, no una ciudad— se convertía en el código IATA "MAR",
+// que por coincidencia es un aeropuerto real pero de Maracaibo, Venezuela;
+// SerpAPI encontró vuelos "válidos" a un continente equivocado sin dar
+// ningún error). "Convertir Ciudades a IATA" ahora usa 'XXX' cuando no
+// reconoce la ciudad, en vez de inventar un código que podría coincidir con
+// un aeropuerto real de otro sitio. Si sigue en 'XXX' aquí, se fuerza el
+// aviso sin importar lo que haya hecho el agente con esos datos — y, si el
+// texto escrito coincide con un país conocido, se sugieren ciudades reales
+// de ESE país en vez de un ejemplo fijo (antes siempre decía "Marrakech o
+// Casablanca" aunque el país escrito fuera otro). Debe reflejar las mismas
+// ciudades que ChatPlanner.tsx sugiere en el formulario (COUNTRY_TO_CITIES).
+const COUNTRY_TO_CITIES = {
+  'marruecos': ['Marrakech', 'Casablanca'], 'morocco': ['Marrakech', 'Casablanca'],
+  'francia': ['París', 'Lyon', 'Niza'], 'france': ['París', 'Lyon', 'Niza'],
+  'italia': ['Roma', 'Milán', 'Venecia', 'Florencia'], 'italy': ['Roma', 'Milán', 'Venecia', 'Florencia'],
+  'españa': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'], 'spain': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'],
+  'portugal': ['Lisboa', 'Oporto'],
+  'alemania': ['Berlín', 'Múnich', 'Fráncfort'], 'germany': ['Berlín', 'Múnich', 'Fráncfort'],
+  'reino unido': ['Londres', 'Mánchester', 'Edimburgo'], 'united kingdom': ['Londres', 'Mánchester', 'Edimburgo'], 'inglaterra': ['Londres', 'Mánchester'],
+  'grecia': ['Atenas'], 'greece': ['Atenas'],
+  'turquía': ['Estambul'], 'turkey': ['Estambul'],
+  'egipto': ['El Cairo'], 'egypt': ['El Cairo'],
+  'japón': ['Tokio'], 'japan': ['Tokio'],
+  'china': ['Pekín', 'Shanghái', 'Hong Kong'],
+  'india': ['Bombay', 'Nueva Delhi'],
+  'tailandia': ['Bangkok'], 'thailand': ['Bangkok'],
+  'méxico': ['Ciudad de México', 'Cancún'], 'mexico': ['Ciudad de México', 'Cancún'],
+  'brasil': ['São Paulo', 'Río de Janeiro'], 'brazil': ['São Paulo', 'Río de Janeiro'],
+  'argentina': ['Buenos Aires'],
+  'estados unidos': ['Nueva York', 'Los Ángeles', 'Miami', 'Chicago'], 'usa': ['Nueva York', 'Los Ángeles', 'Miami'], 'united states': ['Nueva York', 'Los Ángeles', 'Miami'],
+  'canadá': ['Toronto', 'Montreal', 'Vancouver'], 'canada': ['Toronto', 'Montreal', 'Vancouver'],
+  'australia': ['Sídney', 'Melbourne'],
+  'holanda': ['Ámsterdam'], 'netherlands': ['Ámsterdam'], 'países bajos': ['Ámsterdam'],
+  'bélgica': ['Bruselas'], 'belgium': ['Bruselas'],
+  'suiza': ['Zúrich', 'Ginebra'], 'switzerland': ['Zúrich', 'Ginebra'],
+  'austria': ['Viena'],
+  'irlanda': ['Dublín'], 'ireland': ['Dublín'],
+  'croacia': ['Zagreb'], 'croatia': ['Zagreb'],
+  'noruega': ['Oslo'], 'norway': ['Oslo'],
+  'suecia': ['Estocolmo'], 'sweden': ['Estocolmo'],
+  'dinamarca': ['Copenhague'], 'denmark': ['Copenhague'],
+  'polonia': ['Varsovia'], 'poland': ['Varsovia'],
+  'sudáfrica': ['Ciudad del Cabo', 'Johannesburgo'], 'south africa': ['Ciudad del Cabo', 'Johannesburgo'],
+  'perú': ['Lima'], 'peru': ['Lima'],
+  'chile': ['Santiago'],
+  'colombia': ['Bogotá'],
+  'cuba': ['La Habana'],
+  'jordania': ['Amán'], 'jordan': ['Amán'],
+  'israel': ['Tel Aviv'],
+  'emiratos árabes': ['Dubái', 'Abu Dabi'], 'uae': ['Dubái', 'Abu Dabi'],
+  'indonesia': ['Bali']
+};
+try {
+  const iataData = $('Convertir Ciudades a IATA').first().json;
+  const brief = iataData.session_state?.travel_brief;
+  const unresolved = [];
+  if (brief?.destination_city_iata === 'XXX') unresolved.push(brief.destination_city_original?.[0] || 'destino');
+  if (brief?.origin_city_iata === 'XXX') unresolved.push(brief.origin_city_original || 'origen');
+  if (unresolved.length > 0) {
+    result.status = 'needs_user_input';
+    result.warnings = result.warnings || [];
+    const suggestions = unresolved
+      .map((name) => COUNTRY_TO_CITIES[String(name).trim().toLowerCase()])
+      .find((cities) => cities && cities.length > 0);
+    const proposedChange = suggestions
+      ? `Escribe una ciudad concreta, por ejemplo "${suggestions.join('" o "')}" en vez de "${unresolved.join(', ')}".`
+      : 'Escribe una ciudad concreta (no un país ni una región).';
+    result.warnings.push({
+      type: 'no_valid_flight',
+      detail: `No reconocemos "${unresolved.join(' / ')}" como una ciudad concreta (¿es un país o una región?). Necesitamos el nombre de una ciudad específica para buscar vuelos reales.`,
+      proposed_change: proposedChange,
+      requires_user_approval: true
+    });
+  }
+} catch (e) {}
+
 // ── Safety net c): stars debe ser null si hotel_class no es válido ──
 if (result.plan && result.plan.segments) {
   result.plan.segments.forEach(seg => {
