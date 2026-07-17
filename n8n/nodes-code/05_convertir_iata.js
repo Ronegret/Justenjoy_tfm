@@ -252,13 +252,23 @@ const iataToAirportName = {
   'RAK': 'Marrakesh Menara Airport',
 };
 
+// Bug real detectado en producción: "Marruecos" (un país, no una ciudad) no
+// está en cityToIata, y el fallback anterior devolvía las 3 primeras letras
+// en mayúsculas ("MAR") — que por pura coincidencia ES un código IATA real,
+// pero de Maracaibo (Venezuela), NO de Marruecos. SerpAPI buscó vuelos
+// reales a Maracaibo (Barcelona→Miami→Maracaibo, +2000 USD/persona) sin
+// ningún error, porque el código "parecía" válido. Ahora, si la ciudad no
+// está en la tabla, se usa 'XXX' — el código que la industria usa para
+// "aeropuerto desconocido/no válido" — para que la búsqueda de vuelos NO
+// encuentre ningún resultado real y dispare el flujo ya existente de
+// no_valid_flight/needs_user_input, en vez de inventar un destino.
 function toIata(cityName) {
   if (!cityName) return cityName;
   if (/^[A-Z]{3}$/.test(cityName.trim())) return cityName.trim();
   if (cityName.trim().startsWith('/m/') || cityName.trim().startsWith('/g/')) return cityName.trim();
   const key = cityName.trim().toLowerCase();
   if (cityToIata[key]) return cityToIata[key];
-  return cityName.trim().toUpperCase().substring(0, 3);
+  return 'XXX';
 }
 
 function toGps(cityName) {
@@ -270,7 +280,9 @@ function toGps(cityName) {
 const originIata = toIata(tb.origin_city);
 const destinationIata = toIata(tb.destination_city?.[0]);
 const destinationGps = toGps(tb.destination_city?.[0]);
-const destinationAirportName = iataToAirportName[destinationIata] || `${destinationIata} Airport`;
+const destinationAirportName = destinationIata === 'XXX'
+  ? `Ciudad no reconocida: ${tb.destination_city?.[0] || ''}`
+  : (iataToAirportName[destinationIata] || `${destinationIata} Airport`);
 
 const enrichedSessionState = {
   ...input.session_state,

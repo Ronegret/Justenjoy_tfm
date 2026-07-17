@@ -28,6 +28,28 @@ const DEST_OPTIONS = [
   'Quiero el mejor equilibrio'
 ];
 
+// Aviso temprano si escriben un país en vez de una ciudad: el motor busca
+// vuelos a una CIUDAD concreta (aeropuerto), no a un país — un caso real
+// escribiendo "Marruecos" acabó generando un código de aeropuerto inválido
+// que coincidía por casualidad con uno real de otro continente. El backend
+// ya maneja esto de forma segura (ver n8n/05_convertir_iata.js), esto es
+// solo para avisar antes de gastar una búsqueda completa.
+const COMMON_COUNTRY_NAMES = [
+  'marruecos', 'morocco', 'francia', 'france', 'italia', 'italy', 'españa', 'spain',
+  'portugal', 'alemania', 'germany', 'reino unido', 'united kingdom', 'inglaterra',
+  'grecia', 'greece', 'turquía', 'turkey', 'egipto', 'egypt', 'japón', 'japan',
+  'china', 'india', 'tailandia', 'thailand', 'méxico', 'mexico', 'brasil', 'brazil',
+  'argentina', 'estados unidos', 'usa', 'united states', 'canadá', 'canada',
+  'australia', 'holanda', 'netherlands', 'países bajos', 'bélgica', 'belgium',
+  'suiza', 'switzerland', 'austria', 'irlanda', 'ireland', 'croacia', 'croatia',
+  'noruega', 'norway', 'suecia', 'sweden', 'dinamarca', 'denmark', 'polonia', 'poland',
+  'túnez', 'tunisia', 'sudáfrica', 'south africa', 'perú', 'peru', 'chile', 'colombia',
+  'cuba', 'jordania', 'jordan', 'israel', 'emiratos árabes', 'uae', 'indonesia'
+];
+function isLikelyCountryName(value: string): boolean {
+  return COMMON_COUNTRY_NAMES.includes(value.trim().toLowerCase());
+}
+
 const DATE_OPTIONS = [
   'Fechas fijas',
   'Fechas flexibles',
@@ -357,16 +379,24 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                 ))}
               </div>
               {(destType === 'Ya tengo destino' || destType === 'Tengo varios en mente') && (
-                <input
-                  type="text"
-                  placeholder="Ej. Lisboa, Roma, París..."
-                  value={inputDestination}
-                  onChange={(e) => {
-                    setInputDestination(e.target.value);
-                    updatePrefs({ destination: e.target.value });
-                  }}
-                  className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
-                />
+                <>
+                  <input
+                    type="text"
+                    placeholder="Ej. Lisboa, Roma, París..."
+                    value={inputDestination}
+                    onChange={(e) => {
+                      setInputDestination(e.target.value);
+                      updatePrefs({ destination: e.target.value });
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
+                  />
+                  {isLikelyCountryName(inputDestination) && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold flex items-start gap-1.5">
+                      <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>&quot;{inputDestination}&quot; es un país, no una ciudad — necesitamos buscar vuelos a un aeropuerto concreto. Prueba con una ciudad, por ejemplo su capital.</span>
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
