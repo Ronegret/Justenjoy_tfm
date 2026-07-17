@@ -9,6 +9,7 @@ interface HotelCardProps {
 }
 
 export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
+  const nights = hotel.price_per_night > 0 ? Math.round(hotel.total_price / hotel.price_per_night) : 0;
   return (
     <div className="w-full bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
       {/* Header */}
@@ -27,10 +28,12 @@ export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 px-2.5 py-1 rounded-full text-xs font-bold">
-          <Star className="w-3.5 h-3.5 fill-current" />
-          <span>{hotel.rating} / 5</span>
-        </div>
+        {hotel.rating > 0 && (
+          <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-500 px-2.5 py-1 rounded-full text-xs font-bold">
+            <Star className="w-3.5 h-3.5 fill-current" />
+            <span>{hotel.rating} / 5</span>
+          </div>
+        )}
       </div>
 
       {/* Hotel Name & Area */}
@@ -39,7 +42,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
           {hotel.name}
         </h3>
         <p className="text-xs text-text-muted mt-1">
-          Zona: <span className="font-semibold text-brand-dark dark:text-brand-white">{hotel.area}</span> (Muy buena ubicación)
+          Zona: <span className="font-semibold text-brand-dark dark:text-brand-white">{hotel.area}</span>
         </p>
       </div>
 
@@ -81,7 +84,9 @@ export const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
             </span>
           </div>
           <div className="flex flex-col border-l border-brand-dark/10 dark:border-brand-white/10 pl-4">
-            <span className="text-[9px] font-semibold text-text-muted uppercase">TOTAL ESTANCIA (3 noches)</span>
+            <span className="text-[9px] font-semibold text-text-muted uppercase">
+              TOTAL ESTANCIA{nights > 0 ? ` (${nights} ${nights === 1 ? 'noche' : 'noches'})` : ''}
+            </span>
             <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">{hotel.total_price}€</span>
           </div>
         </div>

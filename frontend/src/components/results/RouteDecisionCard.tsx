@@ -84,7 +84,7 @@ export const RouteDecisionCard: React.FC<RouteDecisionCardProps> = ({ bestOption
       {/* Footer explanation tag */}
       <div className="mt-2 text-center text-[10px] text-text-muted flex items-center justify-center gap-1 border-t border-brand-dark/5 dark:border-brand-white/5 pt-4">
         <Compass className="w-3.5 h-3.5 text-brand-blue" />
-        <span>Ruta optimizada descartando otras 14 combinaciones con mayor tiempo de espera o coste.</span>
+        <span>Vuelo y hotel elegidos por mejor puntuación y precio dentro de tu presupuesto.</span>
       </div>
     </div>
   );

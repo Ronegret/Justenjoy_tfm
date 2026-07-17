@@ -9,6 +9,35 @@
 > **Modelo Agente Refinamiento:** GPT-4o-mini (maxTokens 1024, temperature 0.1)
 > **Persistencia:** Supabase (tabla `travel_plans`)
 
+## Actualizaciones sobre este documento (itinerario determinista + fixes de coordenadas)
+
+- **`destination_city_ll` sin sufijo de zoom en ~25 ciudades**: la tabla de coordenadas de
+  `05_convertir_iata.js` (lote "capitales y grandes ciudades del mundo v27": Venecia, Oporto,
+  Ginebra, Dublín, Manchester, Lyon, Niza, Nápoles, Florencia, San Francisco, Washington, Boston,
+  Cancún, La Habana, Panamá, Doha, Abu Dabi, Tel Aviv, Kuala Lumpur, Bali, Manila, Marrakech...)
+  no llevaba el sufijo `,15z` que SerpAPI exige en el parámetro `ll` de Google Maps. Confirmado con
+  una ejecución real (Barcelona → Venecia): la llamada a `Tool: Google Maps (Actividades)` fallaba
+  con `400 Invalid format of the ll parameter` y el plan salía con `activities: []`. Corregido
+  añadiendo `,15z` a las ~25 entradas afectadas.
+- **`daily_itinerary[]` ya NO lo escribe el LLM — se construye siempre en código**: antes el
+  Agente tenía que redactar el itinerario día a día completo (título, resumen narrativo y 4 bloques
+  de relleno mañana/mediodía/tarde/noche para cada día sin actividad real) — mucho texto de salida.
+  Ahora el Agente solo devuelve `segments[].activities[]` (como ya hacía) y un `plan.landmarks[]`
+  nuevo y ligero (4-8 lugares reales del destino, ver §7 Parte 2). `06_validar_output.js` construye
+  `daily_itinerary[]` siempre —no solo como fallback si venía vacío— combinando las actividades
+  reales con los landmarks para los días sin actividad asignada. Medido en ejecuciones reales
+  contra el mismo destino: **60s → 32s → 15.5s** (fix de Maps, luego itinerario determinista, luego
+  el fix de coordenadas de abajo), con el mismo nivel de detalle en el itinerario final.
+- **Fallback de centro de ciudad en `10_enriquecer_coordenadas.js` no se activaba (bug anterior)**:
+  el nodo leía `destination_city_ll` desde `Preparar Motor Planificador`, pero ese campo lo añade
+  `Convertir Ciudades a IATA`, que corre DESPUÉS — así que `cityCenter` siempre era `null` y los días
+  sin actividad ni landmark (normalmente llegada/regreso) se quedaban con `lat:null,
+  coordinate_source:"none"`. Corregido para leer del nodo correcto; verificado en ejecución real que
+  los días de llegada/regreso ahora sí obtienen `coordinate_source:"city_center"`.
+- **Mapa del frontend**: además de puntos por actividad/día, ahora dibuja la ruta real a pie
+  (Google Directions API, del lado del navegador) entre las paradas de un día cuando hay 2+ con
+  coordenada propia y distinta, y añade el aeropuerto de llegada/salida como punto propio.
+
 ## Actualizaciones sobre este documento (reconciliación con feature/mapas-e-imagenes-destino)
 
 Esta rama portó las siguientes mejoras al v31 original de `master`, manteniendo intacto
@@ -257,13 +286,18 @@ gps_coordinates.longitude → activity.lng
 ```
 Sin coste adicional de tool calls — el dato ya llegaba en la respuesta de SerpAPI.
 
-### Parte 2 — `points_of_interest` por día
+### Parte 2 — `points_of_interest` por día (ahora vía `plan.landmarks[]`)
 
-Cada entrada de `daily_itinerary[]` incluye un campo nuevo:
+Cada entrada de `daily_itinerary[]` sigue incluyendo:
 ```json
 "points_of_interest": ["nombre de un lugar real y geolocalizable"]
 ```
-El agente recibe la instrucción de mencionar, para cada día, un lugar real (museo, plaza, barrio, monumento, o la actividad principal) que pueda buscarse en un mapa. Para los días de llegada/regreso, se usa el aeropuerto o la zona del hotel.
+pero ya no lo redacta el LLM día a día. El agente devuelve `plan.landmarks[]` — una lista corta
+(4-8) de lugares reales y conocidos del destino — y `06_validar_output.js` asigna uno por
+round-robin a cada día que no tenga una actividad real asignada. Días con actividad real usan el
+nombre de esa actividad como `points_of_interest[0]`. Días de llegada/regreso se dejan sin
+landmark propio (el mapa del frontend ya marca el aeropuerto por separado); su coordenada de
+día cae al fallback de centro de ciudad (Parte 3).
 
 ### Parte 3 — Nodo `Enriquecer Coordenadas (OpenStreetMap)`
 
@@ -309,7 +343,8 @@ Safety nets aplicados en orden:
    Formato verificado que carga correctamente Google Flights con la ruta y fecha precargadas. Se sobreescribe incondicionalmente porque el agente puede generar formatos antiguos (`#flt=...`) que Google ya no interpreta.
 4. **`plan_notes[]`** — mínimo 1 nota genérica si el agente la omite
 5. **`trip_summary`** — versión mínima si se omite
-6. **`daily_itinerary[]`** — reconstruido desde `activities[]` si viene vacío
+6. **`daily_itinerary[]`** — construido SIEMPRE desde `segments[].activities[]` + `plan.landmarks[]`
+   (el LLM ya no lo escribe, ver §7 Parte 2)
 7. **Status seguro** — fuerza `needs_user_input` si hay warnings críticos con `plan_ready`
 8. **Persistencia** — guarda el plan en memoria (`$getWorkflowStaticData('global')`) indexado por `session_id`, para el refinamiento posterior
 
@@ -375,6 +410,10 @@ El usuario recibe su respuesta independientemente de lo que ocurra con Supabase.
 
 ## 11. Output JSON — Estructura (fragmento relevante a v31)
 
+El LLM devuelve `segments[].activities[]` y `plan.landmarks[]`; **NO** devuelve `daily_itinerary[]`
+— lo construye siempre `06_validar_output.js` (ver §7 Parte 2, §8 punto 6). El fragmento de abajo
+es el output FINAL, ya después de ese paso.
+
 ```json
 {
   "session_id": "session_...",
@@ -390,13 +429,19 @@ El usuario recibe su respuesta independientemente de lo que ocurra con Supabase.
         {"name": "Loulou", "date": "2026-09-16", "lat": 48.8512011, "lng": 2.3448571, "...": "..."}
       ]
     }],
+    "landmarks": ["Le Marais", "Museo del Louvre", "Torre Eiffel", "Montmartre"],
     "daily_itinerary": [
       {
         "day": 2, "date": "2026-09-16",
-        "title": "Descubre la cocina australiana en Loulou",
+        "title": "Loulou",
         "summary": "...",
         "points_of_interest": ["Loulou"],
-        "activities": [{"...": "..."}],
+        "activities": [
+          {"time": "10:00", "name": "Loulou", "lat": 48.8512011, "lng": 2.3448571, "...": "..."},
+          {"time": "13:00", "name": "Almuerzo en un restaurante local de la zona", "lat": null, "lng": null, "...": "..."},
+          {"time": "16:00", "name": "Tarde libre para explorar tiendas y cafés del barrio", "lat": null, "lng": null, "...": "..."},
+          {"time": "20:00", "name": "Paseo nocturno y cena cerca del hotel", "lat": null, "lng": null, "...": "..."}
+        ],
         "lat": 48.8512011,
         "lng": 2.3448571,
         "coordinate_source": "activity"
@@ -406,7 +451,12 @@ El usuario recibe su respuesta independientemente de lo que ocurra con Supabase.
         "title": "Día libre para caminar y conocer Paris",
         "summary": "...",
         "points_of_interest": ["Le Marais"],
-        "activities": [],
+        "activities": [
+          {"time": "10:00", "name": "Paseo matutino por el centro histórico", "lat": null, "lng": null, "...": "..."},
+          {"time": "13:00", "name": "Almuerzo en un restaurante local de la zona", "lat": null, "lng": null, "...": "..."},
+          {"time": "16:00", "name": "Tarde libre para explorar tiendas y cafés del barrio", "lat": null, "lng": null, "...": "..."},
+          {"time": "20:00", "name": "Paseo nocturno y cena cerca del hotel", "lat": null, "lng": null, "...": "..."}
+        ],
         "lat": 48.8603823,
         "lng": 2.360742,
         "coordinate_source": "geocoded"

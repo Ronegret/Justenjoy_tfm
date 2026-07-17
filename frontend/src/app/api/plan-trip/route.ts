@@ -315,6 +315,63 @@ async function fetchPlacePhotos(queries: string[], apiKey: string): Promise<Map<
   return map;
 }
 
+function weatherCodeToLabel(code: number): string {
+  if (code === 0) return 'Despejado';
+  if (code === 1 || code === 2) return 'Parcialmente nublado';
+  if (code === 3) return 'Nublado';
+  if (code === 45 || code === 48) return 'Niebla';
+  if ([51, 53, 55, 56, 57].includes(code)) return 'Llovizna';
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 'Lluvioso';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Nieve';
+  if ([95, 96, 99].includes(code)) return 'Tormenta';
+  return 'Variable';
+}
+
+/**
+ * Clima real vía Open-Meteo (gratis, sin API key): antes el hero mostraba
+ * "25°C - Soleado" fijo para prácticamente cualquier destino, sin importar el
+ * mes del viaje. Open-Meteo no pronostica con meses de antelación, así que se
+ * usa el histórico real del mismo rango de fechas del año pasado como
+ * referencia de clima típico — no se inventa ningún valor: si la petición
+ * falla, se devuelve null y el frontend no muestra el dato en vez de fingirlo.
+ */
+async function fetchClimateAverage(
+  lat: number,
+  lng: number,
+  tripStartDate: string,
+  tripEndDate: string
+): Promise<{ avgTempC: number; description: string } | null> {
+  try {
+    const refYear = new Date().getFullYear() - 1;
+    const startMD = tripStartDate.slice(5);
+    let endMD = tripEndDate.slice(5);
+    if (endMD < startMD) endMD = startMD;
+    const start = `${refYear}-${startMD}`;
+    const end = `${refYear}-${endMD}`;
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}&start_date=${start}&end_date=${end}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const maxTemps: number[] = data?.daily?.temperature_2m_max || [];
+    const minTemps: number[] = data?.daily?.temperature_2m_min || [];
+    const codes: number[] = data?.daily?.weathercode || [];
+    if (maxTemps.length === 0 || minTemps.length === 0) return null;
+    const avgMax = maxTemps.reduce((a: number, b: number) => a + b, 0) / maxTemps.length;
+    const avgMin = minTemps.reduce((a: number, b: number) => a + b, 0) / minTemps.length;
+    const avgTempC = Math.round((avgMax + avgMin) / 2);
+    const codeCounts = new Map<number, number>();
+    codes.forEach((c) => codeCounts.set(c, (codeCounts.get(c) || 0) + 1));
+    let mostCommonCode = codes[0] ?? 0;
+    let maxCount = 0;
+    codeCounts.forEach((count, code) => {
+      if (count > maxCount) { maxCount = count; mostCommonCode = code; }
+    });
+    return { avgTempC, description: weatherCodeToLabel(mostCommonCode) };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Duración del viaje en días, derivada de las fechas reales (misma convención
  * que mapPreferencesToN8n: ceil de la diferencia). Fallback a las fechas de
@@ -356,6 +413,7 @@ interface N8nHotel {
   address?: string;
   lat?: number | null;
   lng?: number | null;
+  stars?: number | null;
   rating?: number;
   price_per_night_usd?: number;
   total_usd?: number;
@@ -400,6 +458,7 @@ interface N8nCostSummary {
   inter_city_transport_usd?: number;
   estimated_local_transport_usd?: number;
   total_usd?: number;
+  budget_total_usd?: number;
 }
 
 interface N8nSegment {
@@ -502,17 +561,21 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   const mappedHotels: Hotel[] = [];
   if (hotel.name) {
     const hotelGps = hotel.address ? parseGpsCoordinates(hotel.address) : null;
+    const hasRealAddress = !!hotel.address && !isGpsCoordinates(hotel.address);
+    // Ventajas construidas SOLO con datos reales del hotel — nada de frases
+    // genéricas tipo "excelente ubicación" que no verificamos.
+    const realPros: string[] = [];
+    if (hotel.rating) realPros.push(`Puntuación real de huéspedes: ${hotel.rating}/5`);
+    if (hotel.stars) realPros.push(`Hotel de ${hotel.stars} estrellas`);
+    if (hasRealAddress) realPros.push(`Dirección verificada: ${hotel.address}`);
     mappedHotels.push({
       provider: 'Booking.com',
       name: hotel.name,
-      area: hotel.address && !isGpsCoordinates(hotel.address) ? hotel.address : `Centro de ${destination}`,
+      area: hasRealAddress ? hotel.address! : `Centro de ${destination}`,
       rating: hotel.rating || 4.5,
       price_per_night: hotel.price_per_night_usd || 100,
       total_price: hotel.total_usd || 300,
-      pros: [
-        'Excelente ubicación en la zona',
-        'Puntuación de usuarios de ' + (hotel.rating || '4.5') + '/5'
-      ],
+      pros: realPros,
       cons: [
         'Sujeto a disponibilidad de tarifas'
       ],
@@ -524,16 +587,20 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
       lng: hotel.lng ?? hotelGps?.lng
     });
   } else {
+    // No encontramos ningún hotel real para este plan. Antes se mostraba un
+    // hotel completamente inventado ("Hotel Recomendado en X", 4.2★, 95€/
+    // noche) indistinguible de un resultado real. Ahora se deja explícito que
+    // no hay datos confirmados, sin fingir una valoración ni un precio.
     mappedHotels.push({
       provider: 'Booking.com',
-      name: `Hotel Recomendado en ${destination}`,
-      area: 'Centro Histórico',
-      rating: 4.2,
-      price_per_night: 95,
-      total_price: 285,
-      pros: ['Cerca de transporte público', 'Desayuno opcional disponible'],
-      cons: ['Habitaciones estándar'],
-      booking_url: 'https://www.booking.com'
+      name: `Alojamiento pendiente de confirmar en ${destination}`,
+      area: `Centro de ${destination}`,
+      rating: 0,
+      price_per_night: 0,
+      total_price: 0,
+      pros: [],
+      cons: ['No pudimos confirmar disponibilidad real — búscalo directamente antes de reservar el resto del viaje.'],
+      booking_url: buildBookingSearchUrl(`hotel en ${destination}`, destination, originalPrefs.dates.start, originalPrefs.dates.end)
     });
   }
 
@@ -546,12 +613,20 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
     price: act.price_usd || 0,
     duration: act.duration_hours ? `${act.duration_hours}h` : '3h',
     requires_booking: !!act.booking_url,
-    opening_hours: '09:00 - 18:00',
+    // No tenemos el horario real (requeriría el nivel "Atmosphere" de Google
+    // Places, con coste adicional por llamada) — antes se mostraba "09:00 -
+    // 18:00" fijo para cualquier actividad, como si fuera un dato verificado.
+    opening_hours: 'Consultar horario actualizado',
     best_time: act.start_time || '10:00',
     // Si no hay link.website real, buscar el lugar en Google Maps en vez de
     // abrir la home genérica de Maps sin ninguna búsqueda aplicada.
     booking_url: act.booking_url || buildGoogleMapsSearchUrl(act.name || 'actividad', destination),
-    why: `Seleccionada especialmente por encajar en tu perfil de viaje.`
+    // Antes: frase idéntica para cualquier actividad ("encaja en tu perfil").
+    // Ahora referencia el dato real que sí tenemos (categoría real de Google
+    // Maps, o si es gratuita).
+    why: act.price_usd === 0 || !act.price_usd
+      ? `Actividad gratuita de tipo "${act.category || 'punto de interés'}" encontrada cerca de tu ruta.`
+      : `Actividad de tipo "${act.category || 'punto de interés'}" con precio real detectado.`
   }));
 
   // 4. Mapear itinerario diario
@@ -777,15 +852,22 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
   const flightsCost = costSummary.flights_usd || (mappedFlights.reduce((acc, f) => acc + f.price, 0) * travelersCount);
   const hotelCost = costSummary.hotel_usd || (hotel.total_usd || 0);
   const activitiesCost = costSummary.activities_usd || (mappedActivities.reduce((acc, a) => acc + a.price, 0) * travelersCount);
-  // Cadena de fallback: transporte entre ciudades → transporte local → default.
-  // Se mantiene || (no ??) porque aquí un 0 significa "no aplica, prueba el siguiente".
-  const transportCost = costSummary.inter_city_transport_usd || costSummary.estimated_local_transport_usd || 50;
+  // Transporte: cadena de fallback entre ciudades → local, pero SIN el "50 USD"
+  // fijo de antes cuando no hay ningún dato real — eso presentaba un precio
+  // inventado como si fuera detectado. Si no hay cifra real, queda `null` y la
+  // UI muestra "No disponible" en vez de un número falso.
+  const transportCost = costSummary.inter_city_transport_usd || costSummary.estimated_local_transport_usd || null;
+  // Comida y extras: nunca vienen de ninguna búsqueda real (no hay API que las
+  // consulte) — son una estimación de guía de viaje genérica. Se mantienen
+  // porque omitirlas haría ver el total sospechosamente bajo, pero se marcan
+  // en `estimatedFields` para que la UI las distinga de precios reales.
   const foodCost = 30 * travelersCount * tripDays;
   const extrasCost = 20 * travelersCount;
+  const estimatedFields: BudgetBreakdown['estimatedFields'] = ['food', 'extras'];
   // El total se calcula SIEMPRE como la suma de los componentes mostrados para
   // que el desglose cuadre con el total. Antes se tomaba costSummary.total_usd,
   // que no incluía comida/extras/transporte y dejaba el desglose descuadrado.
-  const totalCost = flightsCost + hotelCost + activitiesCost + transportCost + foodCost + extrasCost;
+  const totalCost = flightsCost + hotelCost + activitiesCost + (transportCost || 0) + foodCost + extrasCost;
 
   const budget: BudgetBreakdown = {
     flights: flightsCost,
@@ -794,37 +876,80 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
     transport: transportCost,
     food: foodCost,
     extras: extrasCost,
-    total: totalCost
+    total: totalCost,
+    estimatedFields
   };
 
-  // 6. Mapear puntuación Just Enjoy
+  // 6. JustGo Score — antes 5 de sus 7 métricas eran constantes fijas (90,
+  // 92, 90, 15/"Baja") para CUALQUIER viaje. Ahora cada una sale de una señal
+  // real del propio plan; ninguna se inventa.
+  function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // Precio: qué tan ajustado quedó el coste real frente al presupuesto real pedido.
+  const budgetTotalUsd = costSummary.budget_total_usd || 0;
+  const priceScore = budgetTotalUsd > 0
+    ? Math.round(Math.max(0, Math.min(100, 100 - Math.max(0, ((totalCost - budgetTotalUsd) / budgetTotalUsd) * 100))))
+    : 70;
+
+  // Confort: valoración real del hotel encontrado (SerpAPI), no la categoría pedida.
+  const hotelRatingForScore = mappedHotels[0]?.rating || 0;
+  const comfortScore = hotelRatingForScore > 0 ? Math.round((hotelRatingForScore / 5) * 100) : 70;
+
+  // Ubicación: distancia real (Haversine) entre el hotel y las actividades reales del plan.
+  const hotelCoordForScore = mappedHotels[0] && typeof mappedHotels[0].lat === 'number' && typeof mappedHotels[0].lng === 'number'
+    ? { lat: mappedHotels[0].lat, lng: mappedHotels[0].lng }
+    : null;
+  const activityCoordsForScore = rawActivities.filter((a) => typeof a.lat === 'number' && typeof a.lng === 'number');
+  let locationScore = 70;
+  if (hotelCoordForScore && activityCoordsForScore.length > 0) {
+    const avgDistKm = activityCoordsForScore.reduce(
+      (sum, a) => sum + haversineKm(hotelCoordForScore.lat, hotelCoordForScore.lng, a.lat as number, a.lng as number),
+      0
+    ) / activityCoordsForScore.length;
+    locationScore = Math.round(Math.max(30, Math.min(100, 100 - avgDistKm * 12)));
+  }
+
+  // Actividades: cobertura real encontrada vs el objetivo del propio plan (2/día útil).
+  const idealActivitiesCount = Math.max(1, (tripDays - 2) * 2);
+  const activitiesScore = Math.round(Math.min(100, (mappedActivities.length / idealActivitiesCount) * 100));
+
+  // Fricción: escalas reales de los vuelos encontrados + hotel mal valorado.
+  const totalStops = mappedFlights.reduce((acc, f) => acc + (f.stops || 0), 0);
+  const frictionScore = Math.min(100, totalStops * 25 + (hotelRatingForScore > 0 && hotelRatingForScore < 3.5 ? 20 : 0));
+  const frictionLabel: 'Baja' | 'Media' | 'Alta' = frictionScore <= 20 ? 'Baja' : frictionScore <= 50 ? 'Media' : 'Alta';
+
+  const overallMatch = Math.round((priceScore + comfortScore + locationScore + activitiesScore + (100 - frictionScore)) / 5);
+
   const score = {
-    overall_match: 90,
-    price_score: originalPrefs.budget === 'low' ? 95 : 88,
-    comfort_score: originalPrefs.budget === 'premium' || originalPrefs.budget === 'luxury' ? 95 : 85,
-    location_score: 92,
-    activities_score: 90,
-    friction_score: 15,
-    friction_label: 'Baja' as const
+    overall_match: overallMatch,
+    price_score: priceScore,
+    comfort_score: comfortScore,
+    location_score: locationScore,
+    activities_score: activitiesScore,
+    friction_score: frictionScore,
+    friction_label: frictionLabel
   };
 
-  // 7. Generar alternativas de viaje visuales
-  const alternatives = [
-    {
-      type: 'cheapest' as const,
-      destination: originalPrefs.budget === 'low' ? 'Oporto' : 'Lisboa',
-      match: 86,
-      estimated_total: Math.round(totalCost * 0.75),
-      reason: 'Alternativa más económica optimizando vuelos y estancia básica.'
-    },
-    {
-      type: 'premium' as const,
-      destination: originalPrefs.budget === 'premium' ? 'París' : 'Roma',
-      match: 89,
-      estimated_total: Math.round(totalCost * 1.4),
-      reason: 'Alternativa de confort superior con mejores alojamientos históricos.'
-    }
-  ];
+  // 7. Alternativas: antes se inventaba un destino distinto (Oporto/Roma) con
+  // precio y match ficticios (total × 0.75 / × 1.4). No hay ninguna búsqueda
+  // real detrás de esos números. El frontend ahora ofrece "más económico" /
+  // "premium" como una búsqueda real (mismo destino, presupuesto ajustado) vía
+  // el mismo mecanismo del botón "Reconstruir viaje" — no necesita datos aquí.
+  const alternatives: TripData['alternatives'] = [];
+
+  // 8. Clima real (Open-Meteo) anclado a la coordenada real del hotel. Si no
+  // hay coordenada o la API falla, queda undefined — el hero no muestra nada
+  // en vez de un "25°C Soleado" inventado.
+  const climateAnchor = mappedHotels[0];
+  const climate = climateAnchor && typeof climateAnchor.lat === 'number' && typeof climateAnchor.lng === 'number'
+    ? await fetchClimateAverage(climateAnchor.lat, climateAnchor.lng, originalPrefs.dates.start, originalPrefs.dates.end)
+    : null;
 
   return {
     trip_id: generatedId,
@@ -845,7 +970,8 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
       tradeoffs: [
         'Los horarios de vuelos están sujetos a disponibilidad de tarifa',
         'No incluye el transporte de equipaje facturado grande'
-      ]
+      ],
+      ...(climate ? { climate } : {})
     },
     alternatives,
     flights: mappedFlights,

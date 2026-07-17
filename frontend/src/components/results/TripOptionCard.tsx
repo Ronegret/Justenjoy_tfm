@@ -3,16 +3,18 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, ShieldCheck, Tag, HelpCircle } from 'lucide-react';
-import { AlternativeOption, TripOption } from '@/types/trip';
-
 interface TripOptionCardProps {
   type: 'recommended' | 'cheapest' | 'premium';
   destination: string;
-  matchScore: number;
-  price: number;
+  // "cheapest"/"premium" no tienen precio ni match reales hasta que se
+  // busquen de verdad (ver handleRegenerateAction) — antes se mostraba un
+  // número inventado como si fuera un resultado ya encontrado.
+  matchScore?: number;
+  price?: number;
   reason: string;
   isSelected?: boolean;
   onSelect?: () => void;
+  isLoading?: boolean;
 }
 
 export const TripOptionCard: React.FC<TripOptionCardProps> = ({
@@ -22,7 +24,8 @@ export const TripOptionCard: React.FC<TripOptionCardProps> = ({
   price,
   reason,
   isSelected = false,
-  onSelect
+  onSelect,
+  isLoading = false
 }) => {
   const badgeLabels = {
     recommended: { label: 'Mejor Equilibrio', color: 'bg-brand-blue text-brand-white' },
@@ -53,10 +56,12 @@ export const TripOptionCard: React.FC<TripOptionCardProps> = ({
           {badge.label}
         </span>
 
-        <div className="flex items-center gap-1">
-          <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">{matchScore}%</span>
-          <span className="text-[9px] font-bold text-text-muted">MATCH</span>
-        </div>
+        {typeof matchScore === 'number' && (
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">{matchScore}%</span>
+            <span className="text-[9px] font-bold text-text-muted">MATCH</span>
+          </div>
+        )}
       </div>
 
       {/* Main Details */}
@@ -72,10 +77,18 @@ export const TripOptionCard: React.FC<TripOptionCardProps> = ({
       {/* Price row */}
       <div className="border-t border-brand-dark/5 dark:border-brand-white/5 pt-4 flex items-center justify-between mt-auto">
         <div className="flex flex-col">
-          <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">PRESUPUESTO ESTIMADO</span>
-          <span className="text-xl font-extrabold text-brand-dark dark:text-brand-white">
-            {price}€ <span className="text-xs font-semibold text-text-muted">total</span>
-          </span>
+          {typeof price === 'number' ? (
+            <>
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">PRESUPUESTO ESTIMADO</span>
+              <span className="text-xl font-extrabold text-brand-dark dark:text-brand-white">
+                {price}€ <span className="text-xs font-semibold text-text-muted">total</span>
+              </span>
+            </>
+          ) : (
+            <span className="text-xs font-extrabold text-brand-blue">
+              {isLoading ? 'Buscando...' : 'Buscar esta opción'}
+            </span>
+          )}
         </div>
 
         <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${

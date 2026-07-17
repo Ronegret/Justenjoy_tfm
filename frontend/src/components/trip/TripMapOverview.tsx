@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
-import { Map as MapIcon, Navigation, MapPin, ExternalLink } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { APIProvider, Map, Marker, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
+import { Map as MapIcon, Navigation, MapPin, ExternalLink, Footprints } from 'lucide-react';
 import { DayPlan } from '@/types/trip';
 
 function directionsUrl(lat: number, lng: number): string {
@@ -20,18 +20,93 @@ interface MapPoint {
   title: string;
   day: number;
   type: string;
+  time: string;
+}
+
+/**
+ * Dibuja la ruta real a pie entre las paradas de un día (Directions API), no
+ * una línea recta. Solo se activa con 2+ paradas con coordenada propia y
+ * distinta entre sí — los bloques de relleno sin actividad real comparten la
+ * única coordenada geocodificada del día, así que quedan fuera (no hay nada
+ * real que conectar entre ellos).
+ */
+interface RouteInfo {
+  distanceMeters: number;
+  durationText: string;
+  day: number | 'all';
+}
+
+function DayRoute({ waypoints, day, onRouteInfo }: { waypoints: { lat: number; lng: number }[]; day: number | 'all'; onRouteInfo: (info: RouteInfo | null) => void }) {
+  const map = useMap();
+  const routesLibrary = useMapsLibrary('routes');
+  const rendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+
+  useEffect(() => {
+    if (!routesLibrary || !map) return;
+    const r = new routesLibrary.DirectionsRenderer({
+      map,
+      suppressMarkers: true,
+      polylineOptions: { strokeColor: '#2563eb', strokeWeight: 4, strokeOpacity: 0.75 }
+    });
+    rendererRef.current = r;
+    return () => {
+      r.setMap(null);
+      rendererRef.current = null;
+    };
+  }, [routesLibrary, map]);
+
+  useEffect(() => {
+    if (!rendererRef.current || !routesLibrary || waypoints.length < 2) {
+      onRouteInfo(null);
+      return;
+    }
+    const renderer = rendererRef.current;
+    const service = new routesLibrary.DirectionsService();
+    const middle = waypoints.slice(1, -1).map((p) => ({ location: p, stopover: true }));
+    service.route(
+      {
+        origin: waypoints[0],
+        destination: waypoints[waypoints.length - 1],
+        waypoints: middle,
+        travelMode: routesLibrary.TravelMode.WALKING
+      },
+      (result, status) => {
+        // Si Google no encuentra ruta a pie (paradas muy lejos entre sí, cruzan
+        // agua, etc.) simplemente no dibujamos línea — los marcadores se
+        // quedan como están, nunca fingimos un trayecto ni una distancia.
+        if (status === 'OK' && result) {
+          renderer.setDirections(result);
+          const legs = result.routes[0]?.legs || [];
+          const distanceMeters = legs.reduce((acc, leg) => acc + (leg.distance?.value || 0), 0);
+          const durationSeconds = legs.reduce((acc, leg) => acc + (leg.duration?.value || 0), 0);
+          const durationMin = Math.round(durationSeconds / 60);
+          onRouteInfo({
+            distanceMeters,
+            durationText: durationMin < 60 ? `${durationMin} min` : `${Math.floor(durationMin / 60)}h ${durationMin % 60}min`,
+            day
+          });
+        } else {
+          onRouteInfo(null);
+        }
+      }
+    );
+  }, [routesLibrary, waypoints, onRouteInfo, day]);
+
+  return null;
 }
 
 export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) => {
   const [activeDayFilter, setActiveDayFilter] = useState<number | 'all'>('all');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const handleRouteInfo = useCallback((info: RouteInfo | null) => setRouteInfo(info), []);
 
   const points: MapPoint[] = useMemo(() => {
     const pts: MapPoint[] = [];
     itinerary.forEach((day) => {
       day.blocks.forEach((block, idx) => {
         if (typeof block.lat === 'number' && typeof block.lng === 'number') {
-          pts.push({ key: `${day.day}-${idx}`, lat: block.lat, lng: block.lng, title: block.title, day: day.day, type: block.type });
+          pts.push({ key: `${day.day}-${idx}`, lat: block.lat, lng: block.lng, title: block.title, day: day.day, type: block.type, time: block.time || '' });
         }
       });
     });
@@ -44,6 +119,23 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
   );
 
   const filteredPoints = activeDayFilter === 'all' ? points : points.filter((p) => p.day === activeDayFilter);
+
+  // Paradas únicas del día en orden cronológico, para trazar la ruta a pie.
+  // Se descartan puntos consecutivos que caen prácticamente en la misma
+  // coordenada (~50m) — normalmente varios bloques de relleno del mismo día
+  // sin actividad real, que comparten la única coordenada geocodificada de
+  // ese día y no representan paradas distintas de verdad.
+  const routeWaypoints = useMemo(() => {
+    if (activeDayFilter === 'all') return [];
+    const ordered = [...filteredPoints].sort((a, b) => a.time.localeCompare(b.time));
+    const deduped: MapPoint[] = [];
+    for (const p of ordered) {
+      const last = deduped[deduped.length - 1];
+      const isSameSpot = last && Math.abs(last.lat - p.lat) < 0.0005 && Math.abs(last.lng - p.lng) < 0.0005;
+      if (!isSameSpot) deduped.push(p);
+    }
+    return deduped;
+  }, [filteredPoints, activeDayFilter]);
 
   const center = useMemo(() => {
     if (filteredPoints.length === 0) return null;
@@ -125,6 +217,9 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
           <APIProvider apiKey={apiKey}>
             {/* key fuerza remount al cambiar de día para recentrar el mapa (defaultCenter es no-controlado) */}
             <Map key={activeDayFilter} defaultCenter={center} defaultZoom={13} gestureHandling="greedy" disableDefaultUI={false}>
+              {routeWaypoints.length >= 2 && (
+                <DayRoute waypoints={routeWaypoints.map((p) => ({ lat: p.lat, lng: p.lng }))} day={activeDayFilter} onRouteInfo={handleRouteInfo} />
+              )}
               {filteredPoints.map((p) => (
                 <Marker
                   key={p.key}
@@ -159,11 +254,20 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-[10px] text-text-muted font-bold pt-1">
+      <div className="flex items-center justify-between text-[10px] text-text-muted font-bold pt-1 flex-wrap gap-2">
         <span className="flex items-center gap-1">
           <Navigation className="w-3.5 h-3.5 text-brand-coral" />
           {filteredPoints.length} {filteredPoints.length === 1 ? 'parada marcada' : 'paradas marcadas'}
         </span>
+        {/* Se filtra por día en el propio render (en vez de resetear routeInfo
+            en un efecto aparte) para no mostrar la distancia del día anterior
+            mientras se calcula la ruta nueva. */}
+        {routeInfo && routeInfo.day === activeDayFilter && (
+          <span className="flex items-center gap-1 text-brand-blue">
+            <Footprints className="w-3.5 h-3.5" />
+            {(routeInfo.distanceMeters / 1000).toFixed(1)} km a pie · {routeInfo.durationText} entre {routeWaypoints.length} paradas reales
+          </span>
+        )}
       </div>
     </div>
   );
