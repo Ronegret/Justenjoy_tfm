@@ -73,6 +73,17 @@ const cityToIata = {
   'bali': 'DPS', 'denpasar': 'DPS',
   'manila': 'MNL',
   'marrakech': 'RAK', 'marrakesh': 'RAK',
+  // Capitales anadidas en v32 para paises listados en COUNTRY_TO_CITIES
+  'zagreb': 'ZAG', 'amman': 'AMM', 'ammán': 'AMM', 'amán': 'AMM',
+  // "Tunez" en espanol nombra tanto al pais como a su capital (Tunis): se
+  // resuelve directamente a la capital, porque buscar vuelos "a un pais" no
+  // tiene sentido y en este contexto casi siempre significa la ciudad.
+  'tunis': 'TUN', 'túnez': 'TUN',
+  // Nombres en espanol que difieren del ingles en algo mas que un acento
+  // (normalizeAccents mas abajo no los resuelve por si solo): grafia
+  // distinta ('estambul' vs 'istanbul'), letra distinta ('sidney' vs
+  // 'sydney'), o consonante distinta ('francfort' vs 'frankfurt').
+  'estambul': 'IST', 'sídney': 'SYD', 'sidney': 'SYD', 'fráncfort': 'FRA', 'francfort': 'FRA',
 };
 
 // ── Tabla GPS → coordenadas para Google Maps (formato @lat,lng,15z) ──
@@ -161,6 +172,11 @@ const cityToGps = {
   'bali': '@-8.6705,115.2126,15z', 'denpasar': '@-8.6705,115.2126,15z',
   'manila': '@14.5995,120.9842,15z',
   'marrakech': '@31.6295,-7.9811,15z', 'marrakesh': '@31.6295,-7.9811,15z',
+  'zagreb': '@45.8150,15.9819,15z',
+  'amman': '@31.9454,35.9284,15z', 'ammán': '@31.9454,35.9284,15z', 'amán': '@31.9454,35.9284,15z',
+  'tunis': '@36.8065,10.1815,15z', 'túnez': '@36.8065,10.1815,15z',
+  'estambul': '@41.0082,28.9784,15z', 'sídney': '@-33.8688,151.2093,15z', 'sidney': '@-33.8688,151.2093,15z',
+  'fráncfort': '@50.1109,8.6821,15z', 'francfort': '@50.1109,8.6821,15z',
 };
 
 // ── Tabla IATA → nombre del aeropuerto (para Google Maps Directions) ──
@@ -250,7 +266,36 @@ const iataToAirportName = {
   'DPS': 'Ngurah Rai International Airport',
   'MNL': 'Ninoy Aquino International Airport',
   'RAK': 'Marrakesh Menara Airport',
+  'ZAG': 'Zagreb Airport',
+  'AMM': 'Queen Alia International Airport',
+  'TUN': 'Tunis-Carthage International Airport',
 };
+
+// FALLBACK 'XXX' (v32): el fallback anterior devolvia las 3 primeras letras en
+// mayusculas. Bug real detectado en produccion: "Marruecos" (un pais, no una
+// ciudad) -> "MAR", que ES un codigo IATA valido, pero de Maracaibo (Venezuela).
+// SerpAPI encontro vuelos reales Barcelona->Miami->Maracaibo (+2000 USD/persona)
+// sin dar ningun error, porque el codigo "parecia" valido. Ahora se usa 'XXX'
+// (codigo de la industria para "aeropuerto desconocido/no valido") para que la
+// busqueda no encuentre nada y dispare el flujo ya existente de
+// no_valid_flight / needs_user_input, en vez de inventar un destino.
+// Quita tildes/diacríticos para una segunda pasada de búsqueda (ej. "Milán"
+// -> "milan" ya coincide con la clave sin acento de la tabla). No sustituye
+// tener la grafía correcta en la tabla: hay nombres que difieren en algo mas
+// que un acento (ver comentario sobre 'estambul'/'sidney'/'francfort' arriba).
+function normalizeAccents(s) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function buildNormalizedIndex(table) {
+  const out = {};
+  for (const key of Object.keys(table)) {
+    const nk = normalizeAccents(key);
+    if (!(nk in out)) out[nk] = table[key];
+  }
+  return out;
+}
+const cityToIataNormalized = buildNormalizedIndex(cityToIata);
+const cityToGpsNormalized = buildNormalizedIndex(cityToGps);
 
 function toIata(cityName) {
   if (!cityName) return cityName;
@@ -258,19 +303,25 @@ function toIata(cityName) {
   if (cityName.trim().startsWith('/m/') || cityName.trim().startsWith('/g/')) return cityName.trim();
   const key = cityName.trim().toLowerCase();
   if (cityToIata[key]) return cityToIata[key];
-  return cityName.trim().toUpperCase().substring(0, 3);
+  const normalizedKey = normalizeAccents(key);
+  if (cityToIataNormalized[normalizedKey]) return cityToIataNormalized[normalizedKey];
+  return 'XXX';
 }
 
 function toGps(cityName) {
   if (!cityName) return null;
   const key = cityName.trim().toLowerCase();
-  return cityToGps[key] || null;
+  if (cityToGps[key]) return cityToGps[key];
+  const normalizedKey = normalizeAccents(key);
+  return cityToGpsNormalized[normalizedKey] || null;
 }
 
 const originIata = toIata(tb.origin_city);
 const destinationIata = toIata(tb.destination_city?.[0]);
 const destinationGps = toGps(tb.destination_city?.[0]);
-const destinationAirportName = iataToAirportName[destinationIata] || `${destinationIata} Airport`;
+const destinationAirportName = destinationIata === 'XXX'
+  ? `Ciudad no reconocida: ${tb.destination_city?.[0] || ''}`
+  : (iataToAirportName[destinationIata] || `${destinationIata} Airport`);
 
 const enrichedSessionState = {
   ...input.session_state,

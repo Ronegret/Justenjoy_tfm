@@ -1,7 +1,7 @@
-# Planificador de Viajes — v31
+# Planificador de Viajes — v32
 ## Documentación de Arquitectura
 
-> **Versión:** v31
+> **Versión:** v32
 > **Plataforma:** n8n 2.23.2 (Self Hosted)
 > **Estado:** Estable — versión activa del proyecto (TFM)
 > **Workflow:** 1 main workflow (28 nodos)
@@ -67,6 +67,50 @@ El sistema permite además **refinamiento iterativo**: el usuario puede enviar u
 
 **Objetivo de v31:** habilitar un mapa interactivo en el frontend mostrando un punto geográfico por cada día del viaje, sin añadir tool calls al agente (y por tanto sin impactar el consumo de tokens del LLM).
 
+### 2.1 Novedades de v32 respecto a v31
+
+v32 no cambia el flujo ni el inventario de nodos (siguen siendo los mismos 27 nodos,
+ver §4) — son fixes puntuales en 3 nodos Code, detectados con datos reales de producción:
+
+- **`Convertir Ciudades a IATA` — fallback seguro ante ciudad no reconocida.** El
+  fallback anterior devolvía las 3 primeras letras en mayúsculas de lo que fuera que
+  escribiera el usuario. Bug real: "Marruecos" (un país, no una ciudad) se convertía en
+  `MAR`, que por coincidencia **es** un código IATA válido — pero de Maracaibo,
+  Venezuela. SerpAPI encontraba vuelos "reales" a un continente equivocado sin dar
+  ningún error. Ahora el fallback es `'XXX'` (código de industria para "aeropuerto no
+  válido"), lo que fuerza que no se encuentren vuelos y dispara el flujo ya existente de
+  `needs_user_input` en vez de inventar un destino.
+- **`Validar Output del Planificador` — aviso legible cuando la ciudad no se reconoce.**
+  Si `Convertir Ciudades a IATA` devolvió `'XXX'`, ahora se fuerza `needs_user_input` con
+  un warning `no_valid_flight` que, cuando el texto escrito coincide con un país conocido
+  (tabla `COUNTRY_TO_CITIES`, la misma que sugiere `ChatPlanner.tsx` en el formulario),
+  sugiere ciudades reales de ESE país en vez de un ejemplo fijo.
+- **`Validar Output del Planificador` — coste de vuelos/actividades multiplicado por
+  viajeros.** Ni la búsqueda de vuelos ni la de actividades reciben el número de
+  pasajeros (solo Hoteles sí), así que `price_usd` es siempre un precio por persona — pero
+  el agente no lo multiplicaba de forma fiable al construir `cost_summary`. Viajes de 2+
+  personas mostraban el precio de 1 sola persona como si fuera el total. Ahora se
+  recalcula en código por el número real de adultos + niños.
+- **`Validar Output del Planificador` — eliminada la extracción de coste de transporte
+  local por regex desde `plan_notes`.** El regex capturaba el primer número con símbolo
+  de moneda que apareciera en el texto (p. ej. "un billete de metro cuesta 2,50€"), no el
+  gasto total de transporte del viaje, infravalorando mucho el presupuesto. Sin un total
+  real y fiable, el campo queda `null` y el frontend muestra "No disponible".
+- **`Validar Output del Planificador` — un solo `booking_url` round-trip por segmento**
+  (`...on {fecha_ida} through {fecha_vuelta}`) en vez de dos enlaces de búsqueda
+  independientes para ida y vuelta.
+- **`Enriquecer Coordenadas (OpenStreetMap)` — fix de orden de ejecución.** El fallback de
+  centro de ciudad leía `destination_city_ll` del nodo `Preparar Motor Planificador`, que
+  corre **antes** de que ese campo exista (lo calcula `Convertir Ciudades a IATA`, más
+  adelante en el flujo) — el fallback nunca se activaba. Ahora lee del nodo correcto.
+- **Tabla ciudad→IATA/GPS ampliada:** Zagreb, Amán y Túnez (capitales de países ya
+  presentes en `COUNTRY_TO_CITIES` que aún no tenían entrada en la tabla de conversión).
+
+> **Nota de documentación:** las secciones §8 (Nodo Validar Output) y §16 (Limitaciones
+> Conocidas) más abajo describen el comportamiento **anterior** de `booking_url` (dos
+> enlaces independientes) y no reflejan aún el cambio a un único enlace round-trip de
+> v32 — pendiente de una pasada de actualización más profunda de este documento.
+
 ---
 
 ## 3. Arquitectura del Workflow
@@ -121,7 +165,7 @@ Máximo 5 tool calls por ejecución completa. El geocoding de coordenadas por d�
 
 ---
 
-## 4. Inventario de Nodos — v31 (27 nodos)
+## 4. Inventario de Nodos — v32 (27 nodos)
 
 ### Flujo principal (Ruta A)
 
@@ -450,7 +494,7 @@ El usuario recibe su respuesta independientemente de lo que ocurra con Supabase.
 ## 14. Setup — Paso a Paso
 
 ### 14.1 Importar y configurar
-1. **Workflows → Import from File** → `Planificador_de_Viajes_v31.json`
+1. **Workflows → Import from File** → `Planificador de Viajes — v32.json`
 2. Asignar credenciales de OpenAI, SerpAPI, Tavily y Supabase en los nodos correspondientes
 3. Verificar en `Tool: Google Maps (Actividades)` que los campos `query` y `ll` tengan el ícono ✨ activo (modo `$fromAI`)
 4. Verificar que la tabla `travel_plans` existe en Supabase con RLS desactivado
@@ -519,7 +563,8 @@ POST https://[ngrok-url]/webhook/travel-planner
 | v27 (equipo) | Fix de raíz: dos búsquedas one-way para vuelos; tabla IATA ampliada a ~110 ciudades |
 | v27.4 | System prompt comprimido 57%; fixes de timeout/maxRetries del nodo LLM |
 | v27.2 / v29 | Integración de Supabase (persistencia) |
-| **v31** | **Coordenadas GPS por día del itinerario vía OpenStreetMap/Nominatim, para mapa en frontend** |
+| v31 | Coordenadas GPS por día del itinerario vía OpenStreetMap/Nominatim, para mapa en frontend |
+| **v32** | **Fixes de producción: fallback `'XXX'` ante ciudad no reconocida (bug "Marruecos"→Maracaibo), coste de vuelos/actividades multiplicado por viajeros, `booking_url` round-trip único, fix de orden de ejecución en geocoding (ver §2.1)** |
 
 ---
 

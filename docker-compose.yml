@@ -73,7 +73,7 @@ services:
   # Corre ANTES que n8n (depends_on). Deja el stack REPRODUCIBLE en un equipo
   # nuevo: importa la estructura de credenciales (sin secretos; las claves salen
   # de las variables de entorno del .env de cada dev), importa el workflow
-  # activo (v31) y lo marca como activo para que n8n registre el webhook al
+  # activo (v32) y lo marca como activo para que n8n registre el webhook al
   # arrancar. Termina; n8n solo arranca si este servicio finaliza con exito.
   n8n-import:
     image: n8nio/n8n:latest
@@ -81,9 +81,9 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       # publish:workflow activa el workflow (registra el webhook). El id es el del
-      # JSON de v31 (import preserva el id). --all/update:workflow --active están
+      # JSON de v32 (import preserva el id). --all/update:workflow --active están
       # deprecados en n8n 2.x.
-      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador_de_Viajes_v31.json' && n8n publish:workflow --id=1Yg0c5jJRlLjKfvm"
+      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador de Viajes — v32.json' && n8n publish:workflow --id=8Kym9GIgNKp7Nrdh"
     volumes:
       # Mismo volumen que n8n: escribe en la misma BD cifrada
       - n8n_n8n_data:/home/node/.n8n

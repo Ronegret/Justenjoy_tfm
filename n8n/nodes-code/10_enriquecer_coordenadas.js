@@ -10,7 +10,10 @@ if (!plan || !Array.isArray(plan.daily_itinerary)) {
 // Centro de ciudad como fallback (ya lo tenemos en el travel_brief)
 let cityCenter = null;
 try {
-  const prep = $('Preparar Motor Planificador').first().json;
+  // (v32) FIX: se leia de 'Preparar Motor Planificador', que corre ANTES del
+  // nodo que calcula destination_city_ll -> el campo nunca existia ahi y el
+  // fallback de centro de ciudad no se activaba nunca.
+  const prep = $('Convertir Ciudades a IATA').first().json;
   const ll = prep.session_state?.travel_brief?.destination_city_ll; // formato @lat,lng,15z
   if (ll) {
     const parts = ll.replace('@', '').split(',');

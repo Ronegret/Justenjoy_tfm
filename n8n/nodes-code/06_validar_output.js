@@ -27,6 +27,83 @@ try {
 // ── SIEMPRE sobrescribir generated_at — no confiar en el agente ──
 result.generated_at = new Date().toISOString();
 
+// ── Seguridad: ciudad de origen/destino no reconocida (bug real detectado:
+// "Marruecos" —un país, no una ciudad— se convertía en el código IATA "MAR",
+// que por coincidencia es un aeropuerto real pero de Maracaibo, Venezuela;
+// SerpAPI encontró vuelos "válidos" a un continente equivocado sin dar
+// ningún error). "Convertir Ciudades a IATA" ahora usa 'XXX' cuando no
+// reconoce la ciudad, en vez de inventar un código que podría coincidir con
+// un aeropuerto real de otro sitio. Si sigue en 'XXX' aquí, se fuerza el
+// aviso sin importar lo que haya hecho el agente con esos datos — y, si el
+// texto escrito coincide con un país conocido, se sugieren ciudades reales
+// de ESE país en vez de un ejemplo fijo (antes siempre decía "Marrakech o
+// Casablanca" aunque el país escrito fuera otro). Debe reflejar las mismas
+// ciudades que ChatPlanner.tsx sugiere en el formulario (COUNTRY_TO_CITIES).
+const COUNTRY_TO_CITIES = {
+  'marruecos': ['Marrakech', 'Casablanca'], 'morocco': ['Marrakech', 'Casablanca'],
+  'francia': ['París', 'Lyon', 'Niza'], 'france': ['París', 'Lyon', 'Niza'],
+  'italia': ['Roma', 'Milán', 'Venecia', 'Florencia'], 'italy': ['Roma', 'Milán', 'Venecia', 'Florencia'],
+  'españa': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'], 'spain': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'],
+  'portugal': ['Lisboa', 'Oporto'],
+  'alemania': ['Berlín', 'Múnich', 'Fráncfort'], 'germany': ['Berlín', 'Múnich', 'Fráncfort'],
+  'reino unido': ['Londres', 'Mánchester', 'Edimburgo'], 'united kingdom': ['Londres', 'Mánchester', 'Edimburgo'], 'inglaterra': ['Londres', 'Mánchester'],
+  'grecia': ['Atenas'], 'greece': ['Atenas'],
+  'turquía': ['Estambul'], 'turkey': ['Estambul'],
+  'egipto': ['El Cairo'], 'egypt': ['El Cairo'],
+  'japón': ['Tokio'], 'japan': ['Tokio'],
+  'china': ['Pekín', 'Shanghái', 'Hong Kong'],
+  'india': ['Bombay', 'Nueva Delhi'],
+  'tailandia': ['Bangkok'], 'thailand': ['Bangkok'],
+  'méxico': ['Ciudad de México', 'Cancún'], 'mexico': ['Ciudad de México', 'Cancún'],
+  'brasil': ['São Paulo', 'Río de Janeiro'], 'brazil': ['São Paulo', 'Río de Janeiro'],
+  'argentina': ['Buenos Aires'],
+  'estados unidos': ['Nueva York', 'Los Ángeles', 'Miami', 'Chicago'], 'usa': ['Nueva York', 'Los Ángeles', 'Miami'], 'united states': ['Nueva York', 'Los Ángeles', 'Miami'],
+  'canadá': ['Toronto', 'Montreal', 'Vancouver'], 'canada': ['Toronto', 'Montreal', 'Vancouver'],
+  'australia': ['Sídney', 'Melbourne'],
+  'holanda': ['Ámsterdam'], 'netherlands': ['Ámsterdam'], 'países bajos': ['Ámsterdam'],
+  'bélgica': ['Bruselas'], 'belgium': ['Bruselas'],
+  'suiza': ['Zúrich', 'Ginebra'], 'switzerland': ['Zúrich', 'Ginebra'],
+  'austria': ['Viena'],
+  'irlanda': ['Dublín'], 'ireland': ['Dublín'],
+  'croacia': ['Zagreb'], 'croatia': ['Zagreb'],
+  'noruega': ['Oslo'], 'norway': ['Oslo'],
+  'suecia': ['Estocolmo'], 'sweden': ['Estocolmo'],
+  'dinamarca': ['Copenhague'], 'denmark': ['Copenhague'],
+  'polonia': ['Varsovia'], 'poland': ['Varsovia'],
+  'sudáfrica': ['Ciudad del Cabo', 'Johannesburgo'], 'south africa': ['Ciudad del Cabo', 'Johannesburgo'],
+  'perú': ['Lima'], 'peru': ['Lima'],
+  'chile': ['Santiago'],
+  'colombia': ['Bogotá'],
+  'cuba': ['La Habana'],
+  'jordania': ['Amán'], 'jordan': ['Amán'],
+  'israel': ['Tel Aviv'],
+  'emiratos árabes': ['Dubái', 'Abu Dabi'], 'uae': ['Dubái', 'Abu Dabi'],
+  'indonesia': ['Bali']
+};
+try {
+  const iataData = $('Convertir Ciudades a IATA').first().json;
+  const brief = iataData.session_state?.travel_brief;
+  const unresolved = [];
+  if (brief?.destination_city_iata === 'XXX') unresolved.push(brief.destination_city_original?.[0] || 'destino');
+  if (brief?.origin_city_iata === 'XXX') unresolved.push(brief.origin_city_original || 'origen');
+  if (unresolved.length > 0) {
+    result.status = 'needs_user_input';
+    result.warnings = result.warnings || [];
+    const suggestions = unresolved
+      .map((name) => COUNTRY_TO_CITIES[String(name).trim().toLowerCase()])
+      .find((cities) => cities && cities.length > 0);
+    const proposedChange = suggestions
+      ? `Escribe una ciudad concreta, por ejemplo "${suggestions.join('" o "')}" en vez de "${unresolved.join(', ')}".`
+      : 'Escribe una ciudad concreta (no un país ni una región).';
+    result.warnings.push({
+      type: 'no_valid_flight',
+      detail: `No reconocemos "${unresolved.join(' / ')}" como una ciudad concreta (¿es un país o una región?). Necesitamos el nombre de una ciudad específica para buscar vuelos reales.`,
+      proposed_change: proposedChange,
+      requires_user_approval: true
+    });
+  }
+} catch (e) {}
+
 // ── Safety net c): stars debe ser null si hotel_class no es válido ──
 if (result.plan && result.plan.segments) {
   result.plan.segments.forEach(seg => {
@@ -36,24 +113,20 @@ if (result.plan && result.plan.segments) {
   });
 }
 
-// ── Safety net g): booking_url de vuelos — SIEMPRE reconstruir con formato
-// travel/flights?q= (verificado con una petición real: HTTP 200, precarga la
-// ruta y fecha correctas). Se probó un flujo de booking_token + booking_options
-// de SerpAPI para dar la URL de reserva real del proveedor, pero SerpAPI
-// devuelve la MISMA url generica "travel/clk/f" para todos los proveedores —
-// sin datos adicionales que no expone la API, esa url da 404. Se descartó ese
-// flujo por no funcionar; este enlace de búsqueda es el que sí funciona. ──
+// ── Safety net g): booking_url de vuelos — un solo link round-trip con 'through' ──
+// Formato: ?q=Flights to CDG from AMS on 2026-09-15 through 2026-09-30
+// Se asigna el mismo link a outbound y return: ambos abren la búsqueda completa del viaje.
 if (result.plan && result.plan.segments) {
   result.plan.segments.forEach(seg => {
     const ob = seg.flights?.outbound;
     const rt = seg.flights?.return;
     if (ob && ob.origin && ob.destination && ob.departure_datetime) {
-      const date = ob.departure_datetime.substring(0, 10);
-      ob.booking_url = `https://www.google.com/travel/flights?q=Flights%20to%20${ob.destination}%20from%20${ob.origin}%20on%20${date}`;
-    }
-    if (rt && rt.origin && rt.destination && rt.departure_datetime) {
-      const date2 = rt.departure_datetime.substring(0, 10);
-      rt.booking_url = `https://www.google.com/travel/flights?q=Flights%20to%20${rt.destination}%20from%20${rt.origin}%20on%20${date2}`;
+      const dateOut = ob.departure_datetime.substring(0, 10);
+      const dateRet = rt?.departure_datetime ? rt.departure_datetime.substring(0, 10) : '';
+      const throughPart = dateRet ? `%20through%20${dateRet}` : '';
+      const roundTripUrl = `https://www.google.com/travel/flights?q=Flights%20to%20${ob.destination}%20from%20${ob.origin}%20on%20${dateOut}${throughPart}`;
+      ob.booking_url = roundTripUrl;
+      if (rt) rt.booking_url = roundTripUrl;
     }
   });
 }
@@ -84,65 +157,65 @@ if (result.plan && (!result.plan.trip_summary || result.plan.trip_summary.trim()
   }
 }
 
-// ── Extracción de coste de transporte desde plan_notes (safety net) ──
-if (result.plan && result.plan.cost_summary &&
-    (result.plan.cost_summary.estimated_local_transport_usd === null ||
-     result.plan.cost_summary.estimated_local_transport_usd === 0)) {
-  const notes = (result.plan.plan_notes || []).join(' ');
-  const patterns = [
-    /(\d+[,.]?\d*)\s*[€$£](?:[^.]{0,20})?(?:metro|taxi|bus|tren|aeropuerto|transfer|tarjeta|pase)/i,
-    /(?:metro|taxi|bus|tren|aeropuerto|transfer|tarjeta|pase)[^.]{0,30}?(\d+[,.]?\d*)\s*[€$£]/i,
-    /(?:metro|taxi|transport)[^.]{0,30}?(\d+(?:[.,]\d+)?)\s*(?:euros?|usd|dollars?)/i
-  ];
-  for (const pattern of patterns) {
-    const match = notes.match(pattern);
-    if (match) {
-      const val = parseFloat((match[1] || match[2] || '0').replace(',', '.'));
-      if (val > 0 && val < 300) {
-        result.plan.cost_summary.estimated_local_transport_usd = val;
-        result.plan.cost_summary.local_transport_data_source = 'tavily';
-        const cs = result.plan.cost_summary;
-        cs.total_usd = (cs.flights_usd||0)+(cs.hotel_usd||0)+(cs.activities_usd||0)+val+(cs.inter_city_transport_usd||0);
-        cs.budget_remaining_usd = (cs.budget_total_usd||0) - cs.total_usd;
-        break;
-      }
-    }
-  }
-}
-
-// ── Seguridad: verificar presupuesto de forma determinista. El agente a veces
-// no se autovalida bien la aritmética y devuelve plan_ready aunque el total
-// supere el presupuesto — aquí se recalcula con código, no con el LLM. ──
-if (result.plan && result.plan.cost_summary) {
-  const cs = result.plan.cost_summary;
-  const total = (cs.flights_usd || 0) + (cs.hotel_usd || 0) + (cs.activities_usd || 0) +
-                (cs.inter_city_transport_usd || 0) + (cs.estimated_local_transport_usd || 0);
-  const budget = cs.budget_total_usd || 0;
-  if (budget > 0 && total > budget) {
-    const amountOver = Math.round((total - budget) * 100) / 100;
-    result.warnings = result.warnings || [];
-    // Redondeamos el coste real hacia arriba para que, si el usuario acepta
-    // "usar este presupuesto", el reintento no vuelva a fallar por céntimos.
-    const suggestedBudget = Math.ceil(total);
-    const already = result.warnings.find(w => w.type === 'budget_exceeded');
-    if (already) {
-      already.requires_user_approval = true;
-      already.amount_over = amountOver;
-      already.suggested_budget_usd = suggestedBudget;
-    } else {
-      result.warnings.push({
-        type: 'budget_exceeded',
-        detail: `El coste total (${total.toFixed(2)} USD) supera el presupuesto solicitado (${budget.toFixed(2)} USD) en ${amountOver.toFixed(2)} USD.`,
-        proposed_change: 'Sube el presupuesto, reduce noches, pide alojamiento mas economico o cambia de destino.',
-        requires_user_approval: true,
-        amount_over: amountOver,
-        suggested_budget_usd: suggestedBudget
-      });
-    }
-  }
-}
+// ── (v32) ELIMINADO: extracción de coste de transporte desde plan_notes ──
+// Antes se leía por regex el primer número con símbolo de moneda que
+// apareciera en plan_notes. Ese texto suele mencionar el precio de UN billete
+// suelto ("un billete de metro cuesta 2,50€"), no el gasto total de transporte
+// local del viaje — usarlo como total infravaloraba muchísimo el presupuesto
+// (viajes de 15 días salían con "Transporte Local: 2.5€"). Si no hay un total
+// real y fiable, el campo queda null y el frontend muestra "No disponible" en
+// vez de fingir un coste.
 
 // ── Seguridad: no puede ser plan_ready si hay warnings críticas ──
+
+// ── (v32) Recalcular vuelos y actividades multiplicando por el número real de
+// viajeros. Ni la búsqueda de vuelos ni la de actividades reciben el número de
+// pasajeros (solo Hoteles sí, ver prompt), así que price_usd es SIEMPRE un
+// precio por persona — pero el agente no lo multiplicaba de forma fiable al
+// construir cost_summary, lo que hacía que viajes de 2+ personas salieran
+// mostrando el precio de 1 sola persona como si fuera el total. ──
+if (result.plan && result.plan.cost_summary) {
+  const segCost = result.plan.segments?.[0];
+  const cs = result.plan.cost_summary;
+  const travelersBrief = prepInput.session_state?.travel_brief?.travelers;
+  const childrenCount = Array.isArray(travelersBrief?.children) ? travelersBrief.children.length : (travelersBrief?.children || 0);
+  const totalTravelers = Math.max(1, (travelersBrief?.adults || 1) + childrenCount);
+
+  const perPersonFlights = (segCost?.flights?.outbound?.price_usd || 0) + (segCost?.flights?.return?.price_usd || 0);
+  if (perPersonFlights > 0) {
+    cs.flights_usd = Math.round(perPersonFlights * totalTravelers * 100) / 100;
+  }
+
+  const perPersonActivities = (segCost?.activities || []).reduce((sum, a) => sum + (a.price_usd || 0), 0);
+  if (perPersonActivities > 0) {
+    cs.activities_usd = Math.round(perPersonActivities * totalTravelers * 100) / 100;
+  }
+
+  cs.total_usd = (cs.flights_usd || 0) + (cs.hotel_usd || 0) + (cs.activities_usd || 0) +
+                 (cs.inter_city_transport_usd || 0) + (cs.estimated_local_transport_usd || 0);
+  cs.budget_remaining_usd = (cs.budget_total_usd || 0) - cs.total_usd;
+
+  // Si tras recalcular se pasa del presupuesto, el plan NO puede ir como listo
+  if (cs.total_usd > (cs.budget_total_usd || 0)) {
+    result.warnings = result.warnings || [];
+    if (!result.warnings.some(w => w.type === 'budget_exceeded')) {
+      // suggested_budget_usd: redondeado hacia arriba para que, si el usuario
+      // acepta "usar este presupuesto", el reintento no vuelva a fallar por
+      // céntimos. Lo consume frontend/planner/page.tsx para el botón de
+      // reintento de un clic "Usar $X y continuar" (ver planResult.ts).
+      result.warnings.push({
+        type: 'budget_exceeded',
+        detail: `El coste total (${cs.total_usd.toFixed(2)} USD) supera el presupuesto (${(cs.budget_total_usd || 0).toFixed(2)} USD).`,
+        proposed_change: 'Amplía el presupuesto o reduce categoría de hotel/actividades.',
+        requires_user_approval: true,
+        amount_over: Math.round((cs.total_usd - (cs.budget_total_usd || 0)) * 100) / 100,
+        suggested_budget_usd: Math.ceil(cs.total_usd)
+      });
+    }
+    result.status = 'needs_user_input';
+  }
+}
+
 const hasCritical = (result.warnings || []).some(w => w.requires_user_approval === true);
 if (result.status === 'plan_ready' && hasCritical) result.status = 'needs_user_input';
 
