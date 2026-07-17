@@ -73,6 +73,14 @@ const cityToIata = {
   'bali': 'DPS', 'denpasar': 'DPS',
   'manila': 'MNL',
   'marrakech': 'RAK', 'marrakesh': 'RAK',
+  // --- Capitales que faltaban para países ya mencionados en el aviso de
+  // "escribiste un país" del frontend/validador (ver COUNTRY_TO_CITIES) ---
+  'zagreb': 'ZAG', 'amman': 'AMM', 'ammán': 'AMM',
+  // "Túnez" en español nombra tanto al país como a su capital (Tunis) — se
+  // resuelve directamente a la capital en vez de tratarlo como país
+  // irresoluble, porque una búsqueda de vuelos a un país no tiene sentido de
+  // todos modos y "Túnez" casi siempre significa la ciudad en este contexto.
+  'tunis': 'TUN', 'túnez': 'TUN',
 };
 
 // ── Tabla GPS → coordenadas para Google Maps (formato @lat,lng,15z) ──
@@ -161,6 +169,9 @@ const cityToGps = {
   'bali': '@-8.6705,115.2126,15z', 'denpasar': '@-8.6705,115.2126,15z',
   'manila': '@14.5995,120.9842,15z',
   'marrakech': '@31.6295,-7.9811,15z', 'marrakesh': '@31.6295,-7.9811,15z',
+  'zagreb': '@45.8150,15.9819,15z',
+  'amman': '@31.9454,35.9284,15z', 'ammán': '@31.9454,35.9284,15z',
+  'tunis': '@36.8065,10.1815,15z', 'túnez': '@36.8065,10.1815,15z',
 };
 
 // ── Tabla IATA → nombre del aeropuerto (para Google Maps Directions) ──
@@ -250,6 +261,9 @@ const iataToAirportName = {
   'DPS': 'Ngurah Rai International Airport',
   'MNL': 'Ninoy Aquino International Airport',
   'RAK': 'Marrakesh Menara Airport',
+  'ZAG': 'Zagreb Airport',
+  'AMM': 'Queen Alia International Airport',
+  'TUN': 'Tunis-Carthage International Airport',
 };
 
 // Bug real detectado en producción: "Marruecos" (un país, no una ciudad) no
