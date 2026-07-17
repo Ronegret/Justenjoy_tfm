@@ -3,20 +3,20 @@
 import json, os, sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-WF = os.path.normpath(os.path.join(BASE, "..", "workflows", "Planificador_de_Viajes_v31.json"))
+WF = os.path.normpath(os.path.join(BASE, "..", "workflows", "Planificador_de_Viajes_v34.json"))
 
-# node id -> fichero de codigo (v31: 10 nodos Code)
+# node id -> fichero de codigo (v34: 10 nodos Code)
 MAPPING = {
-    "94c95d64-a5fb-46b0-bea8-c3e6aff1270e": "01_validar_formulario.js",         # Validar Formulario
-    "235a7f02-02ae-4810-9f57-e5e45f6d6a5e": "02_cargar_sesion.js",              # Cargar Sesion
-    "ca6616e1-c7df-475b-adb9-d9b2b6fc239f": "03_parsear_refinamiento.js",       # Parsear Refinamiento
-    "79243b99-4ac0-4361-ac54-41de13a58592": "04_preparar_motor.js",            # Preparar Motor Planificador
-    "f2a55acc-8110-45df-a556-16e877c9cf6a": "05_convertir_iata.js",            # Convertir Ciudades a IATA
-    "b3090e29-796b-4fce-8efa-df5c679f2027": "06_validar_output.js",            # Validar Output del Planificador
-    "c4006e0e-bb5b-4ec9-ae38-0e561f6fbd21": "07_logger_metricas.js",           # Logger - Tokens y Metricas
-    "preparar-payload-supabase": "08_preparar_payload_supabase.js",            # Preparar Payload Supabase
-    "extraer-record-supabase": "09_extraer_record.js",                        # Extraer Record
-    "enriquecer-coordenadas": "10_enriquecer_coordenadas.js",                 # Enriquecer Coordenadas (OpenStreetMap)
+    "f3246815-6929-420b-b8d2-517beb73f7b0": "01_validar_formulario.js",         # Validar Formulario
+    "e969f06a-89e5-462c-a26c-72e14420db67": "02_cargar_sesion.js",              # Cargar Sesion
+    "840155c0-6bf5-45bd-a878-b5f44892e79e": "03_parsear_refinamiento.js",       # Parsear Refinamiento
+    "f7616af5-ff36-4427-8668-3ebc61f814a2": "04_preparar_motor.js",            # Preparar Motor Planificador
+    "290bb48e-0ed1-4ad1-a7ca-3c075fae11f1": "05_convertir_iata.js",            # Convertir Ciudades a IATA
+    "c04d4861-df7c-4fe1-917d-e7139b1c5265": "06_validar_output.js",            # Validar Output del Planificador
+    "78da760c-dfe3-43cd-b265-84fa2f49cb6a": "07_logger_metricas.js",           # Logger - Metricas
+    "30860731-1907-48c8-b66e-dcee5ddd7786": "08_preparar_payload_supabase.js", # Preparar Payload Supabase
+    "1a188734-fdd0-419d-aefc-af2f34601888": "09_extraer_record.js",            # Extraer Record
+    "fc303a17-cf1b-4e57-8c1b-d7b712415a0d": "10_enriquecer_coordenadas.js",    # Enriquecer Coordenadas (OpenStreetMap)
 }
 
 def load_code(fname):

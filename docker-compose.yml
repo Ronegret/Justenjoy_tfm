@@ -50,7 +50,7 @@ services:
       - SERPAPI_KEY=${SERPAPI_KEY:-}
       - TAVILY_API_KEY=${TAVILY_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      # Supabase — persistencia del plan (workflow v31). La credencial
+      # Supabase — persistencia del plan (workflow v34). La credencial
       # supabaseApi las lee como {{ $env.SUPABASE_* }} (ver n8n/credentials/).
       - SUPABASE_HOST=${SUPABASE_HOST:-}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
@@ -73,7 +73,7 @@ services:
   # Corre ANTES que n8n (depends_on). Deja el stack REPRODUCIBLE en un equipo
   # nuevo: importa la estructura de credenciales (sin secretos; las claves salen
   # de las variables de entorno del .env de cada dev), importa el workflow
-  # activo (v31) y lo marca como activo para que n8n registre el webhook al
+  # activo (v34) y lo marca como activo para que n8n registre el webhook al
   # arrancar. Termina; n8n solo arranca si este servicio finaliza con exito.
   n8n-import:
     image: n8nio/n8n:latest
@@ -81,22 +81,22 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       # publish:workflow activa el workflow (registra el webhook). El id es el del
-      # JSON de v31 (import preserva el id). --all/update:workflow --active están
+      # JSON de v34 (import preserva el id). --all/update:workflow --active están
       # deprecados en n8n 2.x.
-      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador_de_Viajes_v31.json' && n8n publish:workflow --id=1Yg0c5jJRlLjKfvm"
+      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador_de_Viajes_v34.json' && n8n publish:workflow --id=8Kym9GIgNKp7Nrdh"
     volumes:
       # Mismo volumen que n8n: escribe en la misma BD cifrada
       - n8n_n8n_data:/home/node/.n8n
       # Monta el JSON de credenciales versionado (solo lectura)
       - ./n8n/credentials:/import:ro
-      # Monta los workflows versionados (solo lectura) para importar el v31
+      # Monta los workflows versionados (solo lectura) para importar el v34
       - ./n8n/workflows:/import-workflows:ro
     networks:
       - just_enjoy_net
 
 volumes:
   # Volumen gestionado por compose: se crea vacío en cada equipo nuevo y el
-  # servicio n8n-import lo rellena (credenciales + workflow v31). Reproducible.
+  # servicio n8n-import lo rellena (credenciales + workflow v34). Reproducible.
   # (Antes era external: reutilizaba el volumen de un equipo concreto.)
   n8n_n8n_data:
 

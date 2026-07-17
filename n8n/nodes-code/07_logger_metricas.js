@@ -1,17 +1,13 @@
 const result = $input.first().json;
 
-// Capturar token usage del Motor Planificador
-// n8n expone el tokenUsage en el contexto del nodo agente
-let tokenUsage = null;
-try {
-  const agentNode = $('Motor Planificador — Agent 2').first();
-  tokenUsage = agentNode.json?.tokenUsage
-    || agentNode.json?.usage
-    || agentNode.json?.llmOutput?.tokenUsage
-    || null;
-} catch(e) {
-  tokenUsage = null;
-}
+// (v34) ELIMINADA la captura de token usage. Nunca funcionó y no podía funcionar:
+// el item de salida del nodo Agent es {output: "..."} — no contiene tokenUsage,
+// usage ni llmOutput, así que los tres fallbacks caían siempre en null. El
+// consumo real vive en el sub-nodo del modelo (OpenAI GPT-4.1), y los sub-nodos
+// de LangChain no están en el flujo principal: un Code node no los alcanza con $().
+// Ese dato solo existe en la runData de la ejecución (rama ai_languageModel),
+// visible en el panel de Logs de la UI. Ver PENDIENTES: leerlo vía la API de n8n
+// (/api/v1/executions/{id}?includeData=true) está por validar en un workflow aparte.
 
 // Calcular tiempo de ejecución aproximado
 const generatedAt = new Date(result.generated_at || Date.now());
@@ -26,7 +22,6 @@ const planNotesCount = result.plan?.plan_notes?.length || 0;
 const warningsCount = result.warnings?.length || 0;
 
 result._debug = {
-  token_usage: tokenUsage,
   execution_time_ms: executionMs > 0 && executionMs < 300000 ? executionMs : null,
   plan_metrics: {
     activities_found: activitiesCount,
