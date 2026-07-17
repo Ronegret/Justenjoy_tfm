@@ -84,30 +84,41 @@ if (result.plan && (!result.plan.trip_summary || result.plan.trip_summary.trim()
   }
 }
 
-// ── Extracción de coste de transporte desde plan_notes (safety net) ──
-if (result.plan && result.plan.cost_summary &&
-    (result.plan.cost_summary.estimated_local_transport_usd === null ||
-     result.plan.cost_summary.estimated_local_transport_usd === 0)) {
-  const notes = (result.plan.plan_notes || []).join(' ');
-  const patterns = [
-    /(\d+[,.]?\d*)\s*[€$£](?:[^.]{0,20})?(?:metro|taxi|bus|tren|aeropuerto|transfer|tarjeta|pase)/i,
-    /(?:metro|taxi|bus|tren|aeropuerto|transfer|tarjeta|pase)[^.]{0,30}?(\d+[,.]?\d*)\s*[€$£]/i,
-    /(?:metro|taxi|transport)[^.]{0,30}?(\d+(?:[.,]\d+)?)\s*(?:euros?|usd|dollars?)/i
-  ];
-  for (const pattern of patterns) {
-    const match = notes.match(pattern);
-    if (match) {
-      const val = parseFloat((match[1] || match[2] || '0').replace(',', '.'));
-      if (val > 0 && val < 300) {
-        result.plan.cost_summary.estimated_local_transport_usd = val;
-        result.plan.cost_summary.local_transport_data_source = 'tavily';
-        const cs = result.plan.cost_summary;
-        cs.total_usd = (cs.flights_usd||0)+(cs.hotel_usd||0)+(cs.activities_usd||0)+val+(cs.inter_city_transport_usd||0);
-        cs.budget_remaining_usd = (cs.budget_total_usd||0) - cs.total_usd;
-        break;
-      }
-    }
+// ── Ya NO se extrae un precio de transporte desde el texto libre de
+// plan_notes. Ese texto suele mencionar el precio de UN billete suelto
+// ("un billete de metro cuesta 2,50€"), no el gasto total de transporte
+// local del viaje — usar ese número como si fuera el total del viaje
+// entero infravaloraba muchísimo el presupuesto (viajes de varios días
+// aparecían con "Transporte Local: 2.5€"). Si no hay un total real y
+// fiable, el campo queda null y el frontend muestra "No disponible" en vez
+// de fingir un coste.
+
+// ── Recalcular vuelos y actividades multiplicando por el número real de
+// viajeros. Ni la búsqueda de vuelos ni la de actividades reciben el número
+// de pasajeros (solo Hoteles sí, ver prompt), así que price_usd es SIEMPRE
+// un precio por persona — pero el agente no lo multiplicaba de forma
+// fiable al construir cost_summary, lo que hacía que viajes de 2+ personas
+// salieran mostrando el precio de 1 sola persona como si fuera el total. ──
+if (result.plan && result.plan.cost_summary) {
+  const seg = result.plan.segments?.[0];
+  const cs = result.plan.cost_summary;
+  const travelersBrief = prepInput.session_state?.travel_brief?.travelers;
+  const childrenCount = Array.isArray(travelersBrief?.children) ? travelersBrief.children.length : (travelersBrief?.children || 0);
+  const totalTravelers = Math.max(1, (travelersBrief?.adults || 1) + childrenCount);
+
+  const perPersonFlights = (seg?.flights?.outbound?.price_usd || 0) + (seg?.flights?.return?.price_usd || 0);
+  if (perPersonFlights > 0) {
+    cs.flights_usd = Math.round(perPersonFlights * totalTravelers * 100) / 100;
   }
+
+  const perPersonActivities = (seg?.activities || []).reduce((sum, a) => sum + (a.price_usd || 0), 0);
+  if (perPersonActivities > 0) {
+    cs.activities_usd = Math.round(perPersonActivities * totalTravelers * 100) / 100;
+  }
+
+  cs.total_usd = (cs.flights_usd || 0) + (cs.hotel_usd || 0) + (cs.activities_usd || 0) +
+                 (cs.inter_city_transport_usd || 0) + (cs.estimated_local_transport_usd || 0);
+  cs.budget_remaining_usd = (cs.budget_total_usd || 0) - cs.total_usd;
 }
 
 // ── Seguridad: verificar presupuesto de forma determinista. El agente a veces

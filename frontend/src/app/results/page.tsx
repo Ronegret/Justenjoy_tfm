@@ -12,12 +12,14 @@ import { JustGoScoreCard } from '@/components/results/JustGoScoreCard';
 import { RouteDecisionCard } from '@/components/results/RouteDecisionCard';
 import { TripOptionCard } from '@/components/results/TripOptionCard';
 import { RegenerateActionBar } from '@/components/trip/RegenerateActionBar';
+import { downloadTripPdf } from '@/lib/tripPdf';
 
 function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentTrip, setCurrentTripById, generateTrip, isLoading } = useTrips();
   const [activeAlternativeType, setActiveAlternativeType] = useState<'recommended' | 'cheapest' | 'premium'>('recommended');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [regeneratingType, setRegeneratingType] = useState<'cheapest' | 'premium' | null>(null);
 
   const tripId = searchParams.get('id');
@@ -114,13 +116,37 @@ function ResultsContent() {
             </div>
           </div>
 
-          <button
-            onClick={() => router.push(`/trip/${trip.trip_id}`)}
-            className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
-          >
-            <span>Ver Itinerario Completo</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            {/* Antes el botón de PDF solo existía escondido en el panel lateral
+                de /trip/[id] — aquí, en la primera pantalla que ve el
+                cliente, no había ninguno visible. */}
+            <button
+              onClick={async () => {
+                if (isGeneratingPdf) return;
+                setIsGeneratingPdf(true);
+                try {
+                  await downloadTripPdf(trip);
+                } catch (err) {
+                  console.error('Error generando el PDF del viaje:', err);
+                  alert('No se pudo generar el PDF del viaje. Inténtalo de nuevo en unos segundos.');
+                } finally {
+                  setIsGeneratingPdf(false);
+                }
+              }}
+              disabled={isGeneratingPdf}
+              className="px-6 py-3.5 rounded-2xl border-2 border-brand-blue text-brand-blue dark:text-brand-white font-extrabold text-sm hover:bg-brand-blue/5 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF'}</span>
+            </button>
+            <button
+              onClick={() => router.push(`/trip/${trip.trip_id}`)}
+              className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
+            >
+              <span>Ver Itinerario Completo</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Avisos no bloqueantes de n8n (p. ej. fecha de vuelo ajustada ±1 día
