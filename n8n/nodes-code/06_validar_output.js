@@ -113,24 +113,25 @@ if (result.plan && result.plan.segments) {
   });
 }
 
-// ── Safety net g): booking_url de vuelos — SIEMPRE reconstruir con formato
-// travel/flights?q= (verificado con una petición real: HTTP 200, precarga la
-// ruta y fecha correctas). Se probó un flujo de booking_token + booking_options
-// de SerpAPI para dar la URL de reserva real del proveedor, pero SerpAPI
-// devuelve la MISMA url generica "travel/clk/f" para todos los proveedores —
-// sin datos adicionales que no expone la API, esa url da 404. Se descartó ese
-// flujo por no funcionar; este enlace de búsqueda es el que sí funciona. ──
+// ── Safety net g): booking_url de vuelos — un solo link round-trip con 'through' ──
+// Formato: ?q=Flights to CDG from AMS on 2026-09-15 through 2026-09-30
+// Se asigna el mismo link a outbound y return: ambos abren la búsqueda completa del viaje.
+// Verificado con una petición real: HTTP 200, precarga ruta y fechas correctas.
+// NO reintentar el flujo booking_token + booking_options de SerpAPI para obtener la
+// URL de reserva real del proveedor: ya se probó y SerpAPI devuelve la MISMA url
+// genérica 'travel/clk/f' para todos los proveedores — sin datos adicionales que la
+// API no expone, esa url da 404. Este enlace de búsqueda es el que sí funciona.
 if (result.plan && result.plan.segments) {
   result.plan.segments.forEach(seg => {
     const ob = seg.flights?.outbound;
     const rt = seg.flights?.return;
     if (ob && ob.origin && ob.destination && ob.departure_datetime) {
-      const date = ob.departure_datetime.substring(0, 10);
-      ob.booking_url = `https://www.google.com/travel/flights?q=Flights%20to%20${ob.destination}%20from%20${ob.origin}%20on%20${date}`;
-    }
-    if (rt && rt.origin && rt.destination && rt.departure_datetime) {
-      const date2 = rt.departure_datetime.substring(0, 10);
-      rt.booking_url = `https://www.google.com/travel/flights?q=Flights%20to%20${rt.destination}%20from%20${rt.origin}%20on%20${date2}`;
+      const dateOut = ob.departure_datetime.substring(0, 10);
+      const dateRet = rt?.departure_datetime ? rt.departure_datetime.substring(0, 10) : '';
+      const throughPart = dateRet ? `%20through%20${dateRet}` : '';
+      const roundTripUrl = `https://www.google.com/travel/flights?q=Flights%20to%20${ob.destination}%20from%20${ob.origin}%20on%20${dateOut}${throughPart}`;
+      ob.booking_url = roundTripUrl;
+      if (rt) rt.booking_url = roundTripUrl;
     }
   });
 }
@@ -161,34 +162,36 @@ if (result.plan && (!result.plan.trip_summary || result.plan.trip_summary.trim()
   }
 }
 
-// ── Ya NO se extrae un precio de transporte desde el texto libre de
-// plan_notes. Ese texto suele mencionar el precio de UN billete suelto
-// ("un billete de metro cuesta 2,50€"), no el gasto total de transporte
-// local del viaje — usar ese número como si fuera el total del viaje
-// entero infravaloraba muchísimo el presupuesto (viajes de varios días
-// aparecían con "Transporte Local: 2.5€"). Si no hay un total real y
-// fiable, el campo queda null y el frontend muestra "No disponible" en vez
-// de fingir un coste.
+// ── (v32) ELIMINADO: extracción de coste de transporte desde plan_notes ──
+// Antes se leía por regex el primer número con símbolo de moneda que
+// apareciera en plan_notes. Ese texto suele mencionar el precio de UN billete
+// suelto ("un billete de metro cuesta 2,50€"), no el gasto total de transporte
+// local del viaje — usarlo como total infravaloraba muchísimo el presupuesto
+// (viajes de 15 días salían con "Transporte Local: 2.5€"). Si no hay un total
+// real y fiable, el campo queda null y el frontend muestra "No disponible" en
+// vez de fingir un coste.
 
-// ── Recalcular vuelos y actividades multiplicando por el número real de
-// viajeros. Ni la búsqueda de vuelos ni la de actividades reciben el número
-// de pasajeros (solo Hoteles sí, ver prompt), así que price_usd es SIEMPRE
-// un precio por persona — pero el agente no lo multiplicaba de forma
-// fiable al construir cost_summary, lo que hacía que viajes de 2+ personas
-// salieran mostrando el precio de 1 sola persona como si fuera el total. ──
+// ── Seguridad: no puede ser plan_ready si hay warnings críticas ──
+
+// ── (v32) Recalcular vuelos y actividades multiplicando por el número real de
+// viajeros. Ni la búsqueda de vuelos ni la de actividades reciben el número de
+// pasajeros (solo Hoteles sí, ver prompt), así que price_usd es SIEMPRE un
+// precio por persona — pero el agente no lo multiplicaba de forma fiable al
+// construir cost_summary, lo que hacía que viajes de 2+ personas salieran
+// mostrando el precio de 1 sola persona como si fuera el total. ──
 if (result.plan && result.plan.cost_summary) {
-  const seg = result.plan.segments?.[0];
+  const segCost = result.plan.segments?.[0];
   const cs = result.plan.cost_summary;
   const travelersBrief = prepInput.session_state?.travel_brief?.travelers;
   const childrenCount = Array.isArray(travelersBrief?.children) ? travelersBrief.children.length : (travelersBrief?.children || 0);
   const totalTravelers = Math.max(1, (travelersBrief?.adults || 1) + childrenCount);
 
-  const perPersonFlights = (seg?.flights?.outbound?.price_usd || 0) + (seg?.flights?.return?.price_usd || 0);
+  const perPersonFlights = (segCost?.flights?.outbound?.price_usd || 0) + (segCost?.flights?.return?.price_usd || 0);
   if (perPersonFlights > 0) {
     cs.flights_usd = Math.round(perPersonFlights * totalTravelers * 100) / 100;
   }
 
-  const perPersonActivities = (seg?.activities || []).reduce((sum, a) => sum + (a.price_usd || 0), 0);
+  const perPersonActivities = (segCost?.activities || []).reduce((sum, a) => sum + (a.price_usd || 0), 0);
   if (perPersonActivities > 0) {
     cs.activities_usd = Math.round(perPersonActivities * totalTravelers * 100) / 100;
   }
@@ -196,149 +199,89 @@ if (result.plan && result.plan.cost_summary) {
   cs.total_usd = (cs.flights_usd || 0) + (cs.hotel_usd || 0) + (cs.activities_usd || 0) +
                  (cs.inter_city_transport_usd || 0) + (cs.estimated_local_transport_usd || 0);
   cs.budget_remaining_usd = (cs.budget_total_usd || 0) - cs.total_usd;
-}
 
-// ── Seguridad: verificar presupuesto de forma determinista. El agente a veces
-// no se autovalida bien la aritmética y devuelve plan_ready aunque el total
-// supere el presupuesto — aquí se recalcula con código, no con el LLM. ──
-if (result.plan && result.plan.cost_summary) {
-  const cs = result.plan.cost_summary;
-  const total = (cs.flights_usd || 0) + (cs.hotel_usd || 0) + (cs.activities_usd || 0) +
-                (cs.inter_city_transport_usd || 0) + (cs.estimated_local_transport_usd || 0);
+  // ── Si tras recalcular se pasa del presupuesto, el plan NO puede ir como listo ──
+  // (v33) Verificación determinista: el agente a veces no se autovalida bien la
+  // aritmética. Tres detalles que importan:
+  //  a) budget > 0 — sin presupuesto declarado no hay nada que exceder (antes,
+  //     budget ausente => 0 => cualquier plan con coste disparaba el warning).
+  //  b) suggested_budget_usd = Math.ceil(total) — se redondea el coste real hacia
+  //     arriba para que, si el usuario acepta "usar este presupuesto", el reintento
+  //     no vuelva a fallar por céntimos.
+  //  c) Si el agente ya emitió su propio budget_exceeded, se PISAN sus números con
+  //     los deterministas en vez de respetar su cuenta.
   const budget = cs.budget_total_usd || 0;
-  if (budget > 0 && total > budget) {
-    const amountOver = Math.round((total - budget) * 100) / 100;
+  if (budget > 0 && cs.total_usd > budget) {
+    const amountOver = Math.round((cs.total_usd - budget) * 100) / 100;
+    const suggestedBudget = Math.ceil(cs.total_usd);
+    const detail = `El coste total (${cs.total_usd.toFixed(2)} USD) supera el presupuesto solicitado (${budget.toFixed(2)} USD) en ${amountOver.toFixed(2)} USD.`;
+    const proposedChange = 'Sube el presupuesto, reduce noches, pide alojamiento mas economico o cambia de destino.';
     result.warnings = result.warnings || [];
-    // Redondeamos el coste real hacia arriba para que, si el usuario acepta
-    // "usar este presupuesto", el reintento no vuelva a fallar por céntimos.
-    const suggestedBudget = Math.ceil(total);
     const already = result.warnings.find(w => w.type === 'budget_exceeded');
     if (already) {
+      already.detail = detail;
+      already.proposed_change = already.proposed_change || proposedChange;
       already.requires_user_approval = true;
       already.amount_over = amountOver;
       already.suggested_budget_usd = suggestedBudget;
     } else {
       result.warnings.push({
         type: 'budget_exceeded',
-        detail: `El coste total (${total.toFixed(2)} USD) supera el presupuesto solicitado (${budget.toFixed(2)} USD) en ${amountOver.toFixed(2)} USD.`,
-        proposed_change: 'Sube el presupuesto, reduce noches, pide alojamiento mas economico o cambia de destino.',
+        detail,
+        proposed_change: proposedChange,
         requires_user_approval: true,
         amount_over: amountOver,
         suggested_budget_usd: suggestedBudget
       });
     }
+    result.status = 'needs_user_input';
   }
 }
 
-// ── Seguridad: no puede ser plan_ready si hay warnings críticas ──
 const hasCritical = (result.warnings || []).some(w => w.requires_user_approval === true);
 if (result.status === 'plan_ready' && hasCritical) result.status = 'needs_user_input';
 
-// ── daily_itinerary: SIEMPRE construido aquí, no por el LLM ──
-// Antes el agente tenía que redactar todo daily_itinerary[] (título, resumen
-// narrativo, y 4 bloques de relleno mañana/mediodía/tarde/noche para cada
-// día sin actividad real) — mucho texto de salida, más lento y con riesgo de
-// romper la regla de "día completo". Ahora el agente solo devuelve
-// segments[].activities[] (ya lo hacía) y plan.landmarks[] (lista corta de
-// sitios reales del destino, ver prompt); el itinerario día a día se arma
-// aquí de forma determinista y siempre con la misma estructura.
-if (result.plan) {
+// ── Safety net: daily_itinerary vacío → generar estructura mínima desde activities ──
+if (result.plan && (!result.plan.daily_itinerary || result.plan.daily_itinerary.length === 0)) {
   const seg = result.plan.segments?.[0];
   if (seg) {
     const arrivalDate = (seg.flights?.outbound?.arrival_datetime || '').substring(0, 10);
     const returnDate  = (seg.flights?.return?.departure_datetime || '').substring(0, 10);
     const dest = seg.destination || '';
-    const landmarks = Array.isArray(result.plan.landmarks) ? result.plan.landmarks.filter(Boolean) : [];
-
     if (arrivalDate && returnDate) {
       const start = new Date(arrivalDate);
       const end   = new Date(returnDate);
+      const days  = [];
       const activities = seg.activities || [];
+      // Indexar actividades por fecha
       const actByDate = {};
       activities.forEach(a => { if (a.date) { if (!actByDate[a.date]) actByDate[a.date] = []; actByDate[a.date].push(a); } });
-
-      const toBlock = (time, name, act) => ({
-        time,
-        name,
-        duration_hours: (act && act.duration_hours) || 2,
-        price_usd: (act && act.price_usd) || 0,
-        booking_url: (act && act.booking_url) || '',
-        lat: (act && typeof act.lat === 'number') ? act.lat : null,
-        lng: (act && typeof act.lng === 'number') ? act.lng : null
-      });
-      const isFood = (act) => /restaur|food|comida|café|cafe|bar\b/i.test(act.category || '');
-
-      const days = [];
       let d = new Date(start);
       let dayNum = 1;
-      let landmarkIdx = 0;
-
       while (d <= end) {
         const dateStr = d.toISOString().substring(0, 10);
-        const dayActs = (actByDate[dateStr] || []).slice(0, 2); // máx 2 actividades reales/día
-        const isArrival = dateStr === arrivalDate;
-        const isReturn = !isArrival && dateStr === returnDate;
-        const activityBlocks = [];
-
-        if (isArrival) {
-          activityBlocks.push(toBlock('20:00', 'Cena cerca del hotel y paseo nocturno', null));
-        } else if (isReturn) {
-          const morningAct = dayActs[0];
-          activityBlocks.push(morningAct
-            ? toBlock(morningAct.start_time || '10:00', morningAct.name, morningAct)
-            : toBlock('10:00', 'Última exploración o compras antes del check-out', null));
-        } else {
-          const foodAct = dayActs.find(isFood) || null;
-          const nonFoodActs = dayActs.filter((a) => a !== foodAct);
-          const morningAct = nonFoodActs[0] || null;
-          const afternoonAct = nonFoodActs[1] || null;
-
-          activityBlocks.push(morningAct
-            ? toBlock(morningAct.start_time || '10:00', morningAct.name, morningAct)
-            : toBlock('10:00', 'Paseo matutino por el centro histórico', null));
-          activityBlocks.push(foodAct
-            ? toBlock(foodAct.start_time || '13:00', foodAct.name, foodAct)
-            : toBlock('13:00', 'Almuerzo en un restaurante local de la zona', null));
-          activityBlocks.push(afternoonAct
-            ? toBlock(afternoonAct.start_time || '16:00', afternoonAct.name, afternoonAct)
-            : toBlock('16:00', 'Tarde libre para explorar tiendas y cafés del barrio', null));
-          activityBlocks.push(toBlock('20:00', 'Paseo nocturno y cena cerca del hotel', null));
-        }
-
-        const realNames = dayActs.map((a) => a.name).filter(Boolean);
+        const dayActs = (actByDate[dateStr] || []).map(a => ({
+          time: a.start_time || '10:00',
+          name: a.name,
+          duration_hours: a.duration_hours || 3,
+          price_usd: a.price_usd || 0,
+          booking_url: a.booking_url || ''
+        }));
         let title, summary;
-        if (isArrival) {
+        if (dateStr === arrivalDate) {
           title = `Día de llegada a ${dest}`;
-          summary = `Llegada a ${dest}. Traslado y check-in en el hotel. Por la noche, cena cerca del hotel para empezar a disfrutar del destino.`;
-        } else if (isReturn) {
+          summary = `Llegada a ${dest}. Check-in en el hotel. Tarde libre para explorar el barrio.`;
+        } else if (dateStr === returnDate) {
           title = `Último día en ${dest} — Regreso`;
-          summary = `Último día en ${dest}: check-out del hotel y vuelo de regreso. Aprovecha la mañana para una última exploración.`;
-        } else if (realNames.length > 0) {
-          title = realNames.join(' · ');
-          summary = `Día dedicado a ${realNames.join(' y ')}, con tiempo libre para seguir descubriendo ${dest} entre visita y visita.`;
+          summary = `Check-out del hotel. Vuelo de regreso. Mañana libre para últimas compras o paseo.`;
+        } else if (dayActs.length > 0) {
+          title = dayActs.map(a => a.name).join(' · ');
+          summary = `Día dedicado a: ${dayActs.map(a => a.name).join(', ')}.`;
         } else {
           title = `Día libre para caminar y conocer ${dest}`;
-          summary = `Día libre para explorar ${dest} a tu ritmo, pasear por sus calles y descubrir rincones locales.`;
+          summary = `Día libre para explorar ${dest} a tu ritmo, descubrir mercados locales, cafés y calles del barrio.`;
         }
-
-        let pointsOfInterest;
-        if (realNames.length > 0) {
-          pointsOfInterest = [realNames[0]];
-        } else if (!isArrival && !isReturn && landmarks.length > 0) {
-          pointsOfInterest = [landmarks[landmarkIdx % landmarks.length]];
-          landmarkIdx++;
-        } else {
-          pointsOfInterest = [];
-        }
-
-        days.push({
-          day: dayNum,
-          date: dateStr,
-          title,
-          summary,
-          points_of_interest: pointsOfInterest,
-          activities: activityBlocks
-        });
+        days.push({ day: dayNum, date: dateStr, title, summary, activities: dayActs });
         d.setDate(d.getDate() + 1);
         dayNum++;
       }
