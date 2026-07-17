@@ -27,6 +27,32 @@ try {
 // ── SIEMPRE sobrescribir generated_at — no confiar en el agente ──
 result.generated_at = new Date().toISOString();
 
+// ── Seguridad: ciudad de origen/destino no reconocida (bug real detectado:
+// "Marruecos" —un país, no una ciudad— se convertía en el código IATA "MAR",
+// que por coincidencia es un aeropuerto real pero de Maracaibo, Venezuela;
+// SerpAPI encontró vuelos "válidos" a un continente equivocado sin dar
+// ningún error). "Convertir Ciudades a IATA" ahora usa 'XXX' cuando no
+// reconoce la ciudad, en vez de inventar un código que podría coincidir con
+// un aeropuerto real de otro sitio. Si sigue en 'XXX' aquí, se fuerza el
+// aviso sin importar lo que haya hecho el agente con esos datos. ──
+try {
+  const iataData = $('Convertir Ciudades a IATA').first().json;
+  const brief = iataData.session_state?.travel_brief;
+  const unresolved = [];
+  if (brief?.destination_city_iata === 'XXX') unresolved.push(brief.destination_city_original?.[0] || 'destino');
+  if (brief?.origin_city_iata === 'XXX') unresolved.push(brief.origin_city_original || 'origen');
+  if (unresolved.length > 0) {
+    result.status = 'needs_user_input';
+    result.warnings = result.warnings || [];
+    result.warnings.push({
+      type: 'no_valid_flight',
+      detail: `No reconocemos "${unresolved.join(' / ')}" como una ciudad concreta (¿es un país o una región?). Necesitamos el nombre de una ciudad específica para buscar vuelos reales.`,
+      proposed_change: 'Escribe una ciudad concreta, por ejemplo "Marrakech" o "Casablanca" en vez de "Marruecos".',
+      requires_user_approval: true
+    });
+  }
+} catch (e) {}
+
 // ── Safety net c): stars debe ser null si hotel_class no es válido ──
 if (result.plan && result.plan.segments) {
   result.plan.segments.forEach(seg => {
