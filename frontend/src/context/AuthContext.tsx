@@ -59,21 +59,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // página) lo arreglaba solo. Ahora login()/signup()/loginWithGoogle()
   // esperan explícitamente a que esto termine antes de resolver.
   const establishServerSession = async (firebaseUser: FirebaseUser): Promise<boolean> => {
-    try {
-      const idToken = await firebaseUser.getIdToken(true);
-      const res = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
-      });
-      if (!res.ok) {
+    const idToken = await firebaseUser.getIdToken(true);
+    // Un intento con un reintento: eliminar la carrera con la navegación (arriba)
+    // quita la causa más común del fallo, pero el propio fetch puede fallar por
+    // una razón genuinamente transitoria (red inestable, o en desarrollo el
+    // primer compilado bajo demanda de la ruta con Turbopack) — un solo
+    // reintento corto evita mandar al usuario a reconectarse a mano por eso.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+        if (res.ok) return true;
         console.error('[Auth] el servidor no pudo crear la sesión:', res.status);
+      } catch (e) {
+        console.error(`[Auth] Error al establecer cookie de sesión (intento ${attempt + 1}/2):`, e);
       }
-      return res.ok;
-    } catch (e) {
-      console.error('[Auth] Error al establecer cookie de sesión:', e);
-      return false;
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 600));
     }
+    return false;
   };
 
   const mapFirebaseError = (code: string): string => {

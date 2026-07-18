@@ -359,6 +359,15 @@ export default function LoginPage() {
                     <span>{mode === 'login' ? 'Entrar a mi cabina' : 'Crear mi cuenta'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
+
+                  {mode === 'signup' && (
+                    <p className="text-[10px] text-text-muted text-center leading-relaxed -mt-1">
+                      Al crear tu cuenta aceptas los{' '}
+                      <Link href="/terms" className="font-bold text-brand-blue hover:underline">Términos</Link>
+                      {' '}y la{' '}
+                      <Link href="/privacy" className="font-bold text-brand-blue hover:underline">Política de Privacidad</Link>.
+                    </p>
+                  )}
                 </form>
                 )}
 

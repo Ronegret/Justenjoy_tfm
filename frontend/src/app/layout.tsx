@@ -5,6 +5,7 @@ import { TripProvider } from "@/context/TripContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
+import { CookieNotice } from "@/components/shared/CookieNotice";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
             <Navbar />
             <main className="flex-grow flex flex-col">{children}</main>
             <Footer />
+            <CookieNotice />
           </TripProvider>
         </AuthProvider>
         {/* Service Worker PWA Registration Script — solo en producción (en dev provoca bucles con Fast Refresh) */}
