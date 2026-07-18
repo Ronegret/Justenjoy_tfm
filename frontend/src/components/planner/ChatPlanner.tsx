@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { TripPreferences } from '@/types/trip';
 import { SmartChip } from '../shared/SmartChip';
+import { CityAutocompleteInput } from './CityAutocompleteInput';
 import { todayISO } from '@/lib/dates';
 import { budgetBounds, budgetTierFromAmount, BUDGET_TIER_LABELS, BudgetTier } from '@/lib/budget';
 
@@ -164,6 +165,11 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [inputDestination, setInputDestination] = useState('');
   const [inputOrigin, setInputOrigin] = useState('Barcelona');
+  // País confirmado por Google Places al elegir una sugerencia real del
+  // autocompletado — se limpia en cuanto el usuario vuelve a escribir a mano,
+  // para no mostrar una confirmación que ya no corresponde a lo escrito.
+  const [destinationCountry, setDestinationCountry] = useState<string | null>(null);
+  const [originCountry, setOriginCountry] = useState<string | null>(null);
   const [destType, setDestType] = useState('Ya tengo destino');
   const [dateType, setDateType] = useState('Fechas flexibles');
 
@@ -435,16 +441,27 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                 const ambiguousHint = !countryCities ? ambiguousCityHint(inputDestination) : null;
                 return (
                   <>
-                    <input
-                      type="text"
+                    <CityAutocompleteInput
                       placeholder="Ej. Lisboa, Roma, París..."
                       value={inputDestination}
-                      onChange={(e) => {
-                        setInputDestination(e.target.value);
-                        updatePrefs({ destination: e.target.value });
+                      onChange={(v) => {
+                        setInputDestination(v);
+                        updatePrefs({ destination: v });
+                        setDestinationCountry(null);
+                      }}
+                      onCitySelected={({ city, country }) => {
+                        setInputDestination(city);
+                        updatePrefs({ destination: city });
+                        setDestinationCountry(country);
                       }}
                       className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
                     />
+                    {destinationCountry && (
+                      <p className="text-[10px] text-brand-teal font-semibold flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 shrink-0" />
+                        <span>Ciudad confirmada: {inputDestination}, {destinationCountry}</span>
+                      </p>
+                    )}
                     {countryCities && (
                       <div className="flex flex-col gap-1.5">
                         <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold flex items-start gap-1.5">
@@ -479,21 +496,63 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
           )}
 
           {/* STEP 2: ORIGEN */}
-          {currentStep === 2 && (
-            <div className="flex flex-col gap-3">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">¿Desde dónde vuelas?</span>
-              <input
-                type="text"
-                placeholder="Ej. Barcelona, Madrid, Valencia..."
-                value={inputOrigin}
-                onChange={(e) => {
-                  setInputOrigin(e.target.value);
-                  updatePrefs({ origin: e.target.value });
-                }}
-                className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
-              />
-            </div>
-          )}
+          {currentStep === 2 && (() => {
+            const originCountryCities = suggestedCitiesForCountry(inputOrigin);
+            const originAmbiguousHint = !originCountryCities ? ambiguousCityHint(inputOrigin) : null;
+            return (
+              <div className="flex flex-col gap-3">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">¿Desde dónde vuelas?</span>
+                <CityAutocompleteInput
+                  placeholder="Ej. Barcelona, Madrid, Valencia..."
+                  value={inputOrigin}
+                  onChange={(v) => {
+                    setInputOrigin(v);
+                    updatePrefs({ origin: v });
+                    setOriginCountry(null);
+                  }}
+                  onCitySelected={({ city, country }) => {
+                    setInputOrigin(city);
+                    updatePrefs({ origin: city });
+                    setOriginCountry(country);
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
+                />
+                {originCountry && (
+                  <p className="text-[10px] text-brand-teal font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Ciudad confirmada: {inputOrigin}, {originCountry}</span>
+                  </p>
+                )}
+                {originCountryCities && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold flex items-start gap-1.5">
+                      <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>&quot;{inputOrigin}&quot; es un país, no una ciudad — necesitamos un aeropuerto concreto. Elige una ciudad:</span>
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 pl-5">
+                      {originCountryCities.map((city) => (
+                        <SmartChip
+                          key={city}
+                          label={city}
+                          isSelected={false}
+                          onClick={() => {
+                            setInputOrigin(city);
+                            updatePrefs({ origin: city });
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {originAmbiguousHint && (
+                  <p className="text-[10px] text-text-muted font-medium flex items-start gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5 text-brand-blue" />
+                    <span>{originAmbiguousHint}</span>
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* STEP 3: FECHAS */}
           {currentStep === 3 && (
