@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { ArrowRight, CheckCircle2, Compass, GraduationCap, Heart, MapPin, ShieldCheck, Sparkles, Users } from 'lucide-react';
 
 const team = [
-  { name: 'Roberto Berríos', initials: 'RB', color: 'bg-brand-blue/10 text-brand-blue border-brand-blue/20' },
+  { name: 'Roberto Barrios', initials: 'RB', color: 'bg-brand-blue/10 text-brand-blue border-brand-blue/20' },
   { name: 'Enrique Izquierdo', initials: 'EI', color: 'bg-brand-coral/10 text-brand-coral border-brand-coral/20' },
   { name: 'Rodrigo Negrete', initials: 'RN', color: 'bg-brand-teal/10 text-brand-teal border-brand-teal/20' }
 ];
