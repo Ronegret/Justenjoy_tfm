@@ -12,6 +12,9 @@ import MapViewer from './MapViewer';
 
 interface DayPlanCardProps {
   block: ItineraryBlock;
+  // Foto real del destino del viaje — se usa si esta parada no trajo su
+  // propia foto, en vez de caer directo al placeholder genérico de stock.
+  fallbackImageUrl?: string;
 }
 
 const getIcon = (type: string) => {
@@ -36,7 +39,7 @@ const getColorClass = (type: string) => {
   }
 };
 
-export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block }) => {
+export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block, fallbackImageUrl }) => {
 
   const colorClass = getColorClass(block.type);
 
@@ -66,6 +69,7 @@ export const DayPlanCard: React.FC<DayPlanCardProps> = ({ block }) => {
           <DestinationImage
             destination={block.location}
             imageUrl={block.imageUrl}
+            fallbackImageUrl={fallbackImageUrl}
             className="w-full h-40 object-cover rounded-xl"
           />
         )}

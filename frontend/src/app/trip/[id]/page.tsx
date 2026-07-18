@@ -18,6 +18,7 @@ import { HotelCard } from '@/components/trip/HotelCard';
 import { BudgetBreakdown } from '@/components/trip/BudgetBreakdown';
 import { ShareTripPanel } from '@/components/trip/ShareTripPanel';
 import { PracticalInfoCard } from '@/components/trip/PracticalInfoCard';
+import { getFallbackDestinationImage } from '@/lib/destinationImages';
 
 interface TripPageProps {
   params: Promise<{ id: string }>;
@@ -122,7 +123,10 @@ export default function DynamicTripPage({ params }: TripPageProps) {
                   Optimización horaria calculada para evitar aglomeraciones y maximizar comodidad.
                 </p>
               </div>
-              <ItineraryTimeline itinerary={trip.itinerary} />
+              <ItineraryTimeline
+                itinerary={trip.itinerary}
+                fallbackImageUrl={trip.best_option.imageUrl || getFallbackDestinationImage(trip.best_option.destination)}
+              />
             </div>
 
             {/* Transport & Lodging recommended */}

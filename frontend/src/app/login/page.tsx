@@ -10,9 +10,9 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
-  const { user, login, signup, loginWithGoogle, error, isLoading } = useAuth();
+  const { user, login, signup, loginWithGoogle, resetPassword, error, isLoading } = useAuth();
 
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +21,10 @@ export default function LoginPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [authMethod, setAuthMethod] = useState<'none' | 'email' | 'google'>('none');
   const [loadingStep, setLoadingStep] = useState(0);
+  // Confirmación tras enviar el correo de recuperación — el link
+  // "¿Olvidaste tu contraseña?" antes no hacía nada (href="#").
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const loadingSteps = [
     'Preparando tu pasaporte digital...',
@@ -68,6 +72,21 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setIsSubmitting(false);
       setLocalError(err instanceof Error && err.message ? err.message : 'Ocurrió un error al iniciar sesión.');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setIsSendingReset(true);
+    setLocalError(null);
+    try {
+      await resetPassword(email);
+      setResetSent(true);
+    } catch (err: unknown) {
+      setLocalError(err instanceof Error && err.message ? err.message : 'No se pudo enviar el correo de recuperación.');
+    } finally {
+      setIsSendingReset(false);
     }
   };
 
@@ -154,13 +173,16 @@ export default function LoginPage() {
                   </motion.div>
 
                   <h2 className="text-2xl font-black text-brand-dark dark:text-brand-white uppercase tracking-tight">
-                    {mode === 'login' ? '¡Hola, viajero! 👋' : 'Crear tu Cuenta ✈️'}
+                    {mode === 'login' && '¡Hola, viajero! 👋'}
+                    {mode === 'signup' && 'Crear tu Cuenta ✈️'}
+                    {mode === 'reset' && 'Recuperar acceso 🔑'}
                   </h2>
                   <p className="text-xs text-text-muted max-w-xs font-bold leading-relaxed">
-                    {mode === 'login'
-                      ? 'Inicia sesión en JUST ENJOY para gestionar tus itinerarios inteligentes y orquestar nuevas rutas.'
-                      : 'Regístrate gratis para empezar a guardar tus viajes inteligentes y editarlos cuando quieras.'
-                    }
+                    {mode === 'login' && 'Inicia sesión en JUST ENJOY para gestionar tus itinerarios inteligentes y orquestar nuevas rutas.'}
+                    {mode === 'signup' && 'Regístrate gratis para empezar a guardar tus viajes inteligentes y editarlos cuando quieras.'}
+                    {mode === 'reset' && (resetSent
+                      ? 'Revisa tu correo: si esa dirección tiene una cuenta, te hemos enviado un enlace para elegir una nueva contraseña.'
+                      : 'Escribe tu correo y te enviamos un enlace para elegir una nueva contraseña.')}
                   </p>
                 </div>
 
@@ -176,6 +198,8 @@ export default function LoginPage() {
                   </motion.div>
                 )}
 
+                {mode !== 'reset' && (
+                <>
                 {/* Google SSO Button */}
                 <button
                   type="button"
@@ -209,8 +233,58 @@ export default function LoginPage() {
                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">o con tus datos</span>
                   <div className="h-[1px] bg-brand-dark/10 dark:bg-brand-white/10 flex-grow" />
                 </div>
+                </>
+                )}
+
+                {/* Reset Password Form */}
+                {mode === 'reset' && (
+                  resetSent ? (
+                    <div className="flex flex-col items-center text-center gap-3 py-2">
+                      <CheckCircle2 className="w-10 h-10 text-brand-teal" />
+                      <button
+                        type="button"
+                        onClick={() => { setMode('login'); setResetSent(false); setLocalError(null); }}
+                        className="w-full py-3.5 mt-1 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/95 hover:to-brand-coral/95 text-brand-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-[0.99]"
+                      >
+                        Volver a iniciar sesión
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-text-muted uppercase tracking-wider">Correo Electrónico</label>
+                        <div className="relative flex items-center">
+                          <Mail className="w-4 h-4 text-text-muted absolute left-3.5 pointer-events-none" />
+                          <input
+                            type="email"
+                            required
+                            placeholder="viajero@justenjoy.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-cream/30 dark:bg-brand-dark/40 text-xs text-brand-dark dark:text-brand-white focus:outline-hidden focus:ring-1 focus:ring-brand-blue"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isSendingReset}
+                        className="w-full py-3.5 mt-2 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/95 hover:to-brand-coral/95 text-brand-white font-extrabold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isSendingReset ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <span>Enviar enlace de recuperación</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )
+                )}
 
                 {/* Email Form */}
+                {mode !== 'reset' && (
                 <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
                   {/* Name Input (Only on Sign Up) */}
                   {mode === 'signup' && (
@@ -255,7 +329,13 @@ export default function LoginPage() {
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-black text-text-muted uppercase tracking-wider">Contraseña</label>
                       {mode === 'login' && (
-                        <a href="#" className="text-[9px] font-black text-brand-blue uppercase hover:underline">¿La olvidaste?</a>
+                        <button
+                          type="button"
+                          onClick={() => { setMode('reset'); setResetSent(false); setLocalError(null); }}
+                          className="text-[9px] font-black text-brand-blue uppercase hover:underline bg-transparent border-0 cursor-pointer"
+                        >
+                          ¿La olvidaste?
+                        </button>
                       )}
                     </div>
                     <div className="relative flex items-center">
@@ -279,11 +359,21 @@ export default function LoginPage() {
                     <span>{mode === 'login' ? 'Entrar a mi cabina' : 'Crear mi cuenta'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
+
+                  {mode === 'signup' && (
+                    <p className="text-[10px] text-text-muted text-center leading-relaxed -mt-1">
+                      Al crear tu cuenta aceptas los{' '}
+                      <Link href="/terms" className="font-bold text-brand-blue hover:underline">Términos</Link>
+                      {' '}y la{' '}
+                      <Link href="/privacy" className="font-bold text-brand-blue hover:underline">Política de Privacidad</Link>.
+                    </p>
+                  )}
                 </form>
+                )}
 
                 {/* Footer toggle text */}
                 <div className="text-center text-xs text-text-muted mt-2 border-t border-brand-dark/5 dark:border-brand-white/5 pt-4">
-                  {mode === 'login' ? (
+                  {mode === 'login' && (
                     <>
                       <span>¿Aún no tienes cuenta? </span>
                       <button
@@ -293,7 +383,8 @@ export default function LoginPage() {
                         Regístrate gratis
                       </button>
                     </>
-                  ) : (
+                  )}
+                  {mode === 'signup' && (
                     <>
                       <span>¿Ya tienes cuenta? </span>
                       <button
@@ -303,6 +394,14 @@ export default function LoginPage() {
                         Inicia sesión
                       </button>
                     </>
+                  )}
+                  {mode === 'reset' && !resetSent && (
+                    <button
+                      onClick={() => { setMode('login'); setLocalError(null); }}
+                      className="font-extrabold text-brand-blue hover:underline bg-transparent border-0 cursor-pointer"
+                    >
+                      Volver a iniciar sesión
+                    </button>
                   )}
                 </div>
               </motion.div>
