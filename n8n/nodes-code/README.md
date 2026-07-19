@@ -1,15 +1,15 @@
-# Código de los nodos Code del workflow Planificador v34
+# Código de los nodos Code del workflow Planificador v38
 
-Los 10 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v34.json`
+Los 10 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v38.json`
 viven aquí como **fuente de verdad versionada**. El JSON del workflow lleva el código
 embebido en el campo `jsCode` de cada nodo, pero es frágil (n8n puede vaciarlo al
 reimportar, y editar JS dentro de un string JSON es incómodo). Estos `.js` son la copia
 canónica y revisable.
 
 > **Contrato de gobernanza:** estos ficheros deben coincidir exactamente con el
-> `jsCode` embebido en v34. `_inject.py` es reversible: reinyectar los `.js` sin
+> `jsCode` embebido en v38. `_inject.py` es reversible: reinyectar los `.js` sin
 > editarlos deja el JSON byte-idéntico. Si añades, quitas o renombras un nodo Code
-> en v34, actualiza el mapeo de `_inject.py` y esta tabla en el mismo commit.
+> en v38, actualiza el mapeo de `_inject.py` y esta tabla en el mismo commit.
 
 ## Ficheros
 
@@ -20,7 +20,7 @@ canónica y revisable.
 | `03_parsear_refinamiento.js` | Parsear Refinamiento | Parsea el JSON del agente de refinamiento con fallback |
 | `04_preparar_motor.js` | Preparar Motor Planificador | Unifica rutas A/B, construye `segments[]` |
 | `05_convertir_iata.js` | Convertir Ciudades a IATA | Tablas de ciudades: IATA, GPS, nombre de aeropuerto |
-| `06_validar_output.js` | Validar Output del Planificador | Parse seguro + safety nets del plan (itinerario del LLM; safety net de `daily_itinerary` solo si viene vacío) |
+| `06_validar_output.js` | Validar Output del Planificador | Parse seguro + safety nets del plan (itinerario del LLM; safety net de `daily_itinerary` solo si viene vacío; reconstruye `segments[].activities[]` desde `daily_itinerary[].activities[]`, que el LLM ya no duplica) |
 | `07_logger_metricas.js` | Logger — Métricas | Añade `_debug` con métricas de ejecución (sin captura de tokens — nunca funcionó) |
 | `08_preparar_payload_supabase.js` | Preparar Payload Supabase | Construye el `_supabase_record` (solo si `status === plan_ready`); marca `_skip_supabase` |
 | `09_extraer_record.js` | Extraer Record | Aísla el `_supabase_record` para el nodo de inserción en Supabase |
@@ -34,7 +34,7 @@ Tras editar cualquier `.js`, reinyecta en el JSON:
 python _inject.py
 ```
 
-`_inject.py` mapea cada nodo por su `id` en v34 y reescribe solo el campo `jsCode`,
+`_inject.py` mapea cada nodo por su `id` en v38 y reescribe solo el campo `jsCode`,
 preservando el resto del JSON (round-trip byte-idéntico si no editaste nada).
 
 Luego reimporta en n8n. **No uses publish/unpublish en caliente** (corrompe el
@@ -42,7 +42,7 @@ volumen): reaprovisiona vía el servicio `n8n-import` del compose, o manualmente
 upsert de ID (no duplica):
 
 ```bash
-docker compose cp n8n/workflows/Planificador_de_Viajes_v34.json n8n:/tmp/wf.json
+docker compose cp n8n/workflows/Planificador_de_Viajes_v38.json n8n:/tmp/wf.json
 docker compose exec -T n8n n8n import:workflow --input=/tmp/wf.json
 ```
 

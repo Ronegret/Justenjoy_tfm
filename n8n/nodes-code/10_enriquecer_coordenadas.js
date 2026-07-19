@@ -7,15 +7,14 @@ if (!plan || !Array.isArray(plan.daily_itinerary)) {
   return [{ json: result }];
 }
 
-// Centro de ciudad como fallback. OJO: destination_city_ll lo calcula
-// "Convertir Ciudades a IATA", que corre DESPUÉS de "Preparar Motor
-// Planificador" — leerlo del nodo equivocado (bug anterior) hacía que este
-// fallback nunca se activara y los días de llegada/regreso (sin actividad
-// propia) se quedaran sin coordenada alguna.
+// Centro de ciudad como fallback (ya lo tenemos en el travel_brief)
 let cityCenter = null;
 try {
-  const iata = $('Convertir Ciudades a IATA').first().json;
-  const ll = iata.session_state?.travel_brief?.destination_city_ll || iata.destination_ll; // formato @lat,lng,15z
+  // (v32) FIX: se leia de 'Preparar Motor Planificador', que corre ANTES del
+  // nodo que calcula destination_city_ll -> el campo nunca existia ahi y el
+  // fallback de centro de ciudad no se activaba nunca.
+  const prep = $('Convertir Ciudades a IATA').first().json;
+  const ll = prep.session_state?.travel_brief?.destination_city_ll || prep.destination_ll; // formato @lat,lng,15z
   if (ll) {
     const parts = ll.replace('@', '').split(',');
     cityCenter = { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };

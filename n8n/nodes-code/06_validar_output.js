@@ -186,6 +186,33 @@ if (result.plan && result.plan.cost_summary) {
   const childrenCount = Array.isArray(travelersBrief?.children) ? travelersBrief.children.length : (travelersBrief?.children || 0);
   const totalTravelers = Math.max(1, (travelersBrief?.adults || 1) + childrenCount);
 
+  // ── (v37) Reconstruir segments[].activities[] desde daily_itinerary ──
+  // El agente ya NO emite el array maestro (ahorro de tokens: no lo teclea dos veces).
+  // Se reconstruye con la MISMA forma de siempre para no cambiar el contrato de salida
+  // ni el frontend. Las coords y la categoría viajan dentro de cada daily activity.
+  if (result.plan && Array.isArray(result.plan.segments) && Array.isArray(result.plan.daily_itinerary)) {
+    const rebuilt = [];
+    for (const day of result.plan.daily_itinerary) {
+      if (!Array.isArray(day.activities)) continue;
+      for (const a of day.activities) {
+        if (!a || !a.name) continue;
+        rebuilt.push({
+          name: a.name,
+          date: day.date || '',
+          start_time: a.time || '10:00',
+          duration_hours: a.duration_hours || 3,
+          price_usd: a.price_usd || 0,
+          booking_url: a.booking_url || '',
+          category: a.category || '',
+          source: a.source || 'google_maps',
+          lat: (a.lat !== undefined ? a.lat : null),
+          lng: (a.lng !== undefined ? a.lng : null)
+        });
+      }
+    }
+    if (result.plan.segments[0]) result.plan.segments[0].activities = rebuilt;
+  }
+
   const perPersonFlights = (segCost?.flights?.outbound?.price_usd || 0) + (segCost?.flights?.return?.price_usd || 0);
   if (perPersonFlights > 0) {
     cs.flights_usd = Math.round(perPersonFlights * totalTravelers * 100) / 100;
