@@ -261,11 +261,51 @@ siempre es `undefined` en la salida cruda del modelo).
 **Contrato de salida final: idéntico byte a byte al de v34.** El frontend consume
 `segments[].activities[]` con la misma forma de siempre — no necesitó ningún cambio.
 
+### 7.1 Agrupar huecos al final (v38.1 — fix post-lanzamiento)
+
+El prompt le pide al modelo, cuando hay menos actividades utilizables que días disponibles,
+que agrupe los días libres al final ("los huecos van al final, nunca en medio" — ver §6).
+**Verificado con una ejecución real que esta instrucción no se cumplía de forma fiable**: un
+viaje de 19 días (17 disponibles, 11 actividades utilizables) salió con los días libres
+intercalados en vez de agrupados.
+
+En vez de seguir puliendo el texto del prompt para un problema de **orden mecánico** —
+exactamente el tipo de tarea que un LLM resuelve de forma inconsistente y que un bucle en
+código resuelve siempre igual—, se aplicó el mismo criterio que ya rige el resto de este
+nodo: **se corrige en código, después de que el modelo responda.**
+
+```javascript
+// daily_itinerary[] ya validado: días intermedios (sin contar llegada/regreso)
+// se reordenan moviendo el CONTENIDO completo de cada día (title, summary,
+// points_of_interest, activities) — los días con actividad quedan agrupados
+// al principio, los libres al final. day/date de cada slot no se tocan.
+if (result.plan && Array.isArray(result.plan.daily_itinerary) && result.plan.daily_itinerary.length > 2) {
+  const days = result.plan.daily_itinerary;
+  const first = days[0];
+  const last = days[days.length - 1];
+  const middle = days.slice(1, -1);
+  const withActivity = middle.filter((d) => Array.isArray(d.activities) && d.activities.length > 0);
+  const withoutActivity = middle.filter((d) => !Array.isArray(d.activities) || d.activities.length === 0);
+  if (withActivity.length > 0 && withoutActivity.length > 0) {
+    const reordered = middle.map((slot, i) => {
+      const source = i < withActivity.length ? withActivity[i] : withoutActivity[i - withActivity.length];
+      return { ...source, day: slot.day, date: slot.date };
+    });
+    result.plan.daily_itinerary = [first, ...reordered, last];
+  }
+}
+```
+
+Este paso corre **antes** de la reconstrucción de `segments[].activities[]` (§7), así que las
+fechas reconstruidas ya reflejan el orden correcto. Reejecutar el mismo caso de 19 días tras
+el fix: días 2-11 (10 seguidos) con actividad, días 12-18 (7 seguidos) libres — agrupados
+correctamente, sin actividades repetidas.
+
 ---
 
 ## 8. Nodo Validar Output del Planificador
 
-Safety nets aplicados en orden (idénticos a v34, más el nuevo paso 7):
+Safety nets aplicados en orden (idénticos a v34, más los dos nuevos pasos 7 y 8):
 
 1. **`generated_at` incondicional**
 2. **Código IATA `XXX` no resuelto** → `needs_user_input` + sugerencia de ciudades reales por país
@@ -273,12 +313,13 @@ Safety nets aplicados en orden (idénticos a v34, más el nuevo paso 7):
 4. **`booking_url` de vuelos** — un solo enlace round-trip con `through`
 5. **`plan_notes[]`** — mínimo 1 nota genérica si el agente la omite
 6. **`trip_summary`** — versión mínima si se omite
-7. **`segments[].activities[]` reconstruido desde `daily_itinerary[]`** (nuevo en v38, ver §7)
-8. **Recalculo de coste por nº real de viajeros**
-9. **`budget_exceeded` determinista**
-10. **Status seguro** — fuerza `needs_user_input` si hay warnings críticos con `plan_ready`
-11. **`daily_itinerary[]` — safety net condicional**: solo si el LLM lo devolvió vacío
-12. **Persistencia** en memoria indexada por `session_id`
+7. **`daily_itinerary[]` reordenado**: días con actividad agrupados al principio, libres al final (nuevo en v38.1, ver §7.1)
+8. **`segments[].activities[]` reconstruido desde `daily_itinerary[]`** (nuevo en v38, ver §7)
+9. **Recalculo de coste por nº real de viajeros**
+10. **`budget_exceeded` determinista**
+11. **Status seguro** — fuerza `needs_user_input` si hay warnings críticos con `plan_ready`
+12. **`daily_itinerary[]` — safety net condicional**: solo si el LLM lo devolvió vacío
+13. **Persistencia** en memoria indexada por `session_id`
 
 ---
 
@@ -422,7 +463,8 @@ POST https://[ngrok-url]/webhook/travel-planner
 | v33 (post-v31, `develop`) | `budget_exceeded` determinista refinado |
 | v34 | Reversión: `daily_itinerary` vuelve a redactarlo el LLM; query de Maps genérica; nº exacto de actividades por fórmula (primera versión, con intervalo procedimental); `booking_url` consolidado |
 | v36-v37 (internas, no publicadas) | Reparto declarativo (fix del TPM en frío); quedó sin ancla de cantidad |
-| **v38** | **Reintroduce la cantidad exacta de actividades como propiedad declarativa; fin de la duplicación de actividades (reconstrucción en código); salvaguarda de concisión en viajes ≥17 días** |
+| v38 | Reintroduce la cantidad exacta de actividades como propiedad declarativa; fin de la duplicación de actividades (reconstrucción en código); salvaguarda de concisión en viajes ≥17 días |
+| **v38.1** | **Fix post-lanzamiento: agrupa los días con actividad al principio y los libres al final en código (§7.1) — el prompt lo pedía pero no lo cumplía de forma fiable en viajes largos** |
 
 ---
 
@@ -432,3 +474,4 @@ POST https://[ngrok-url]/webhook/travel-planner
 2. **Quitar el "cómo" de una instrucción no debe implicar quitar el "cuánto".** El fix declarativo de v36/v37 resolvió el TPM pero, al eliminar la fórmula de intervalo, se llevó por delante el único número que fijaba la cantidad — el modelo quedó sin ancla y eligió cantidades arbitrarias. La cantidad exacta necesita su propia frase declarativa, independiente de cómo se reparten las fechas.
 3. **Cuando el LLM repite el mismo dato en dos sitios del contrato de salida, casi siempre se puede reconstruir uno desde el otro en código**, gratis en tokens y sin ningún riesgo de inconsistencia entre las dos copias (que era justo lo que pasaba antes: el "maestro" `segments[].activities[]` y `daily_itinerary[].activities[]` podían desincronizarse si el modelo era descuidado en una de las dos).
 4. **Un scope explícito (aquí, "hasta 21 días") obliga a testear el borde, no solo el caso feliz.** El bug de cantidad de v37 solo se detectó al probar viajes de 6/11/16/22 días — los casos de demo de 5/12/15 días, más cortos, nunca lo habrían revelado.
+5. **Un problema de ORDEN mecánico (agrupar unos elementos al principio y otros al final de una lista) es exactamente el tipo de instrucción que conviene resolver en código, no en el prompt.** El texto "los huecos van al final, nunca en medio" era claro y correcto, pero un LLM no ejecuta un reordenamiento de lista con la fiabilidad de un `Array.map` — verificado con una ejecución real que lo incumplía. La lección no es "redactar mejor esa frase", es reconocer cuándo una instrucción describe un algoritmo determinista y moverla a código.
