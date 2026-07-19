@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Plus, Compass, Calendar, Users,
-  MapPin, CheckSquare, Sparkles, Smile
+  MapPin, CheckSquare, Smile
 } from 'lucide-react';
 import { useTrips } from '@/context/TripContext';
 import { DashboardTripCard } from '@/components/dashboard/DashboardTripCard';
@@ -13,6 +13,17 @@ import { DashboardTripCard } from '@/components/dashboard/DashboardTripCard';
 export default function DashboardPage() {
   const router = useRouter();
   const { savedTrips, deleteTrip } = useTrips();
+
+  // Antes esta fila mostraba "18% Ahorro Prom." y "Plan Premium: Plus Activo"
+  // como texto fijo, sin relación con ningún dato real (no hay ningún sistema
+  // de planes de pago: la página de precios dice explícitamente "aún se están
+  // preparando"). Ahora ambos stats son cálculos reales sobre los viajes
+  // guardados, igual que ya se hizo con el JustGo score y el desglose de
+  // presupuesto — si no hay viajes, se muestra 0/— en vez de un número inventado.
+  const avgMatch = savedTrips.length > 0
+    ? Math.round(savedTrips.reduce((acc, t) => acc + (t.justgo_score?.overall_match || 0), 0) / savedTrips.length)
+    : null;
+  const uniqueDestinations = new Set(savedTrips.map((t) => t.best_option.destination)).size;
 
   return (
     <div className="w-full flex-grow py-10 px-4 lg:px-8 bg-brand-cream/30 dark:bg-brand-dark/10">
@@ -97,23 +108,23 @@ export default function DashboardPage() {
 
           {/* Stat 3 */}
           <div className="p-5 rounded-2xl bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-brand-coral/10 text-brand-coral flex items-center justify-center font-black">
-              18%
+            <div className="w-10 h-10 rounded-xl bg-brand-coral/10 text-brand-coral flex items-center justify-center font-black text-xs">
+              {avgMatch !== null ? `${avgMatch}%` : '—'}
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">AHORRO PROM.</span>
-              <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">Tarifas optimizadas</span>
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">MATCH PROMEDIO</span>
+              <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">JustGo Score</span>
             </div>
           </div>
 
           {/* Stat 4 */}
           <div className="p-5 rounded-2xl bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5" />
+              <MapPin className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">PLAN PREMIUM</span>
-              <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">Plus Activo</span>
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">DESTINOS EXPLORADOS</span>
+              <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">{uniqueDestinations} distinto{uniqueDestinations === 1 ? '' : 's'}</span>
             </div>
           </div>
         </div>

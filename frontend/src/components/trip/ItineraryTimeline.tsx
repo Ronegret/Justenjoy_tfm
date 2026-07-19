@@ -8,9 +8,12 @@ import { DayPlanCard } from './DayPlanCard';
 
 interface ItineraryTimelineProps {
   itinerary: DayPlan[];
+  // Foto real del destino del viaje, para las paradas que no trajeron su
+  // propia foto (ver DestinationImage/DayPlanCard).
+  fallbackImageUrl?: string;
 }
 
-export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary }) => {
+export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary, fallbackImageUrl }) => {
   const [activeDayIdx, setActiveDayIdx] = useState(0);
 
   const activeDay = itinerary[activeDayIdx] || itinerary[0];
@@ -97,7 +100,7 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({ itinerary 
             className="flex flex-col gap-6"
           >
             {activeDay.blocks.map((block, idx) => (
-              <DayPlanCard key={idx} block={block} />
+              <DayPlanCard key={idx} block={block} fallbackImageUrl={fallbackImageUrl} />
             ))}
           </motion.div>
         </AnimatePresence>

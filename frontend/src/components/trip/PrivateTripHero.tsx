@@ -5,6 +5,7 @@ import { Calendar, Users, Share2, Download, Compass, CloudSun, Loader2 } from 'l
 import { motion } from 'framer-motion';
 import { TripData } from '@/types/trip';
 import { budgetLabel } from '@/lib/tripLabels';
+import { getFallbackDestinationImage } from '@/lib/destinationImages';
 
 interface PrivateTripHeroProps {
   trip: TripData;
@@ -23,22 +24,8 @@ export const PrivateTripHero: React.FC<PrivateTripHeroProps> = ({ trip, onShare,
   // Antes caía a una lista fija de 10 ciudades (y a la imagen de Barcelona
   // para cualquier destino no listado, ej. Río de Janeiro). Ahora usa la foto
   // real del destino que trae el plan (Google Places); esta lista local queda
-  // solo como último respaldo si esa foto no llegó.
-  const getFallbackDestinationImage = (dest: string) => {
-    const d = dest.toLowerCase();
-    if (d.includes('lisboa')) return '/images/destinations/lisboa.png';
-    if (d.includes('porto') || d.includes('oport')) return '/images/destinations/oporto.png';
-    if (d.includes('roma')) return '/images/destinations/roma.png';
-    if (d.includes('barcelona')) return '/images/destinations/barcelona.png';
-    if (d.includes('madrid')) return '/images/destinations/madrid.png';
-    if (d.includes('valencia')) return '/images/destinations/valencia.png';
-    if (d.includes('granada')) return '/images/destinations/granada.png';
-    if (d.includes('canarias')) return '/images/destinations/islas_canarias.png';
-    if (d.includes('londres') || d.includes('london')) return '/images/destinations/londres.png';
-    if (d.includes('mallorca')) return '/images/destinations/mallorca.png';
-    return '/images/destinations/barcelona.png';
-  };
-
+  // solo como último respaldo si esa foto no llegó. La lista vive en
+  // lib/destinationImages.ts para compartirla con las tarjetas del itinerario.
   const bgImage = trip.best_option.imageUrl || getFallbackDestinationImage(trip.best_option.destination);
 
   return (

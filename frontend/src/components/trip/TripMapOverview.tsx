@@ -145,6 +145,23 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
     };
   }, [filteredPoints]);
 
+  // Caja que contiene todas las paradas visibles, para que "Ver todo" encuadre
+  // el viaje completo en vez de promediar coordenadas. Promediar lat/lng de
+  // paradas en ciudades distintas (viajes multi-destino) puede dar un centro
+  // en medio del océano con el zoom fijo anterior — el mapa quedaba en blanco
+  // y sin marcadores visibles porque todos caían fuera del encuadre.
+  const bounds = useMemo(() => {
+    if (filteredPoints.length < 2) return null;
+    const lats = filteredPoints.map((p) => p.lat);
+    const lngs = filteredPoints.map((p) => p.lng);
+    return {
+      north: Math.max(...lats),
+      south: Math.min(...lats),
+      east: Math.max(...lngs),
+      west: Math.min(...lngs)
+    };
+  }, [filteredPoints]);
+
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
   const hasApiKey = !!apiKey && apiKey !== 'changeme';
 
@@ -215,8 +232,19 @@ export const TripMapOverview: React.FC<TripMapOverviewProps> = ({ itinerary }) =
       ) : (
         <div className="w-full h-[300px] rounded-2xl overflow-hidden border border-brand-dark/5 dark:border-brand-white/5">
           <APIProvider apiKey={apiKey}>
-            {/* key fuerza remount al cambiar de día para recentrar el mapa (defaultCenter es no-controlado) */}
-            <Map key={activeDayFilter} defaultCenter={center} defaultZoom={13} gestureHandling="greedy" disableDefaultUI={false}>
+            {/* key fuerza remount al cambiar de día/filtro para recalcular el encuadre
+                (defaultCenter/defaultBounds son no-controlados). Con 2+ paradas se ajusta
+                por bounds para que TODAS queden visibles (crítico en "Ver todo" con viajes
+                multi-destino); con 1 sola parada, bounds tendría área cero, así que se usa
+                center + zoom fijo. */}
+            <Map
+              key={activeDayFilter}
+              {...(bounds
+                ? { defaultBounds: { ...bounds, padding: 56 } }
+                : { defaultCenter: center, defaultZoom: 14 })}
+              gestureHandling="greedy"
+              disableDefaultUI={false}
+            >
               {routeWaypoints.length >= 2 && (
                 <DayRoute waypoints={routeWaypoints.map((p) => ({ lat: p.lat, lng: p.lng }))} day={activeDayFilter} onRouteInfo={handleRouteInfo} />
               )}

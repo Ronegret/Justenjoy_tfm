@@ -9,7 +9,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail,
+  type User as FirebaseUser
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { auth, googleProvider } from '@/lib/firebase';
@@ -35,6 +37,7 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
+  resetPassword: (email: string) => Promise<void>;
   error: string | null;
 }
 
@@ -44,6 +47,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Establece la cookie de sesión del servidor a partir del usuario de Firebase
+  // ya autenticado en el cliente. Antes esto solo ocurría dentro del listener
+  // onAuthStateChanged, de forma asíncrona y desacoplada de login()/signup() —
+  // la página de login navegaba con window.location.assign() en cuanto el SDK
+  // de Firebase confirmaba el login, sin esperar a esta petición. Si la
+  // navegación empezaba antes de que el fetch terminara, el navegador la
+  // cancelaba (TypeError: Failed to fetch), dejando cliente y servidor
+  // desincronizados hasta que un segundo intento (o la siguiente carga de
+  // página) lo arreglaba solo. Ahora login()/signup()/loginWithGoogle()
+  // esperan explícitamente a que esto termine antes de resolver.
+  const establishServerSession = async (firebaseUser: FirebaseUser): Promise<boolean> => {
+    const idToken = await firebaseUser.getIdToken(true);
+    // Un intento con un reintento: eliminar la carrera con la navegación (arriba)
+    // quita la causa más común del fallo, pero el propio fetch puede fallar por
+    // una razón genuinamente transitoria (red inestable, o en desarrollo el
+    // primer compilado bajo demanda de la ruta con Turbopack) — un solo
+    // reintento corto evita mandar al usuario a reconectarse a mano por eso.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+        if (res.ok) return true;
+        console.error('[Auth] el servidor no pudo crear la sesión:', res.status);
+      } catch (e) {
+        console.error(`[Auth] Error al establecer cookie de sesión (intento ${attempt + 1}/2):`, e);
+      }
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+    return false;
+  };
 
   const mapFirebaseError = (code: string): string => {
     switch (code) {
@@ -98,23 +135,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        let sessionOk = false;
-        try {
-          // Fuerza un ID token fresco: createSessionCookie es estricto con la
-          // antigüedad del token y rechazaría uno cacheado al restaurar sesión.
-          const idToken = await firebaseUser.getIdToken(true);
-          const res = await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken })
-          });
-          sessionOk = res.ok;
-          if (!res.ok) {
-            console.error('[Auth] el servidor no pudo crear la sesión:', res.status);
-          }
-        } catch (e) {
-          console.error('[Auth] Error al establecer cookie de sesión:', e);
-        }
+        // Fuerza un ID token fresco: createSessionCookie es estricto con la
+        // antigüedad del token y rechazaría uno cacheado al restaurar sesión.
+        const sessionOk = await establishServerSession(firebaseUser);
         if (sessionOk) {
           setUser({
             name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Viajero',
@@ -142,10 +165,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  // Mensaje/reconciliación compartidos cuando el login de Firebase (cliente)
+  // funciona pero el servidor no logra establecer la cookie de sesión —
+  // mismo caso que ya manejaba onAuthStateChanged, reutilizado aquí para que
+  // login()/signup()/loginWithGoogle() no resuelvan con una sesión a medias.
+  const failSessionEstablishment = async (): Promise<never> => {
+    const msg = 'No se pudo iniciar sesión en el servidor. Vuelve a intentarlo.';
+    setError(msg);
+    setUser(null);
+    await signOut(auth);
+    throw new Error(msg);
+  };
+
   const login = async (email: string, password: string) => {
     setError(null);
+    let cred;
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      cred = await signInWithEmailAndPassword(auth, email, password);
     } catch (err: unknown) {
       const { code, message } = firebaseErr(err);
       console.error('[Auth] login error:', code, message);
@@ -153,15 +189,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(msg);
       throw new Error(msg);
     }
+    // Esperamos a que la cookie de sesión del servidor quede establecida
+    // ANTES de resolver: la página de login navega en cuanto esta promesa
+    // termina, y si no esperamos aquí esa navegación cancela el fetch en
+    // curso (ver establishServerSession más arriba).
+    if (!(await establishServerSession(cred.user))) {
+      await failSessionEstablishment();
+    }
   };
 
   const signup = async (email: string, password: string, name: string) => {
     setError(null);
+    let cred;
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      cred = await createUserWithEmailAndPassword(auth, email, password);
       if (cred.user) {
         await updateProfile(cred.user, { displayName: name });
-        setUser({ name, email });
       }
     } catch (err: unknown) {
       const { code, message } = firebaseErr(err);
@@ -170,13 +213,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(msg);
       throw new Error(msg);
     }
+    if (!(await establishServerSession(cred.user))) {
+      await failSessionEstablishment();
+      return;
+    }
+    setUser({ name, email });
   };
 
   const loginWithGoogle = async () => {
     setError(null);
+    let cred;
     try {
       // Attempt popup first — faster UX, no cross-origin cookie dependency
-      await signInWithPopup(auth, googleProvider);
+      cred = await signInWithPopup(auth, googleProvider);
     } catch (err: unknown) {
       const { code, message } = firebaseErr(err);
       console.error('[Auth] signInWithPopup error:', code, message);
@@ -206,6 +255,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(msg);
       throw new Error(msg);
     }
+    if (!(await establishServerSession(cred.user))) {
+      await failSessionEstablishment();
+    }
   };
 
   const logout = async () => {
@@ -216,9 +268,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    setError(null);
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (err: unknown) {
+      const { code, message } = firebaseErr(err);
+      console.error('[Auth] resetPassword error:', code, message);
+      // Firebase Auth puede tener "email enumeration protection" activado
+      // (por defecto en proyectos nuevos): en ese caso siempre devuelve éxito
+      // aunque el email no exista, así que auth/user-not-found solo aparece
+      // con proyectos configurados a la antigua. Lo tratamos igual que un
+      // envío correcto para no filtrar qué emails están registrados.
+      if (code === 'auth/user-not-found') return;
+      const msg = mapFirebaseError(code);
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, login, signup, loginWithGoogle, logout, error }}
+      value={{ user, isAuthenticated: !!user, isLoading, login, signup, loginWithGoogle, logout, resetPassword, error }}
     >
       {children}
     </AuthContext.Provider>

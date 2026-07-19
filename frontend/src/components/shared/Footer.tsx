@@ -59,6 +59,11 @@ export const Footer: React.FC = () => {
 
       <div className="max-w-7xl mx-auto mt-10 pt-6 border-t border-brand-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-brand-cream/50">
         <p>© {new Date().getFullYear()} JUST ENJOY. Todos los derechos reservados.</p>
+        <div className="flex items-center gap-4">
+          <Link href="/privacy" className="hover:text-brand-white transition-colors">Privacidad</Link>
+          <Link href="/terms" className="hover:text-brand-white transition-colors">Términos</Link>
+          <Link href="/cookies" className="hover:text-brand-white transition-colors">Cookies</Link>
+        </div>
         <p>Hecho para disfrutar más el viaje desde el primer clic.</p>
       </div>
     </footer>

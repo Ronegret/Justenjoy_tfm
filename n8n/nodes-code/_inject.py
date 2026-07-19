@@ -3,9 +3,9 @@
 import json, os, sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-WF = os.path.normpath(os.path.join(BASE, "..", "workflows", "Planificador_de_Viajes_v34.json"))
+WF = os.path.normpath(os.path.join(BASE, "..", "workflows", "Planificador_de_Viajes_v38.json"))
 
-# node id -> fichero de codigo (v34: 10 nodos Code)
+# node id -> fichero de codigo (v38: 10 nodos Code, mismos IDs que v34)
 MAPPING = {
     "f3246815-6929-420b-b8d2-517beb73f7b0": "01_validar_formulario.js",         # Validar Formulario
     "e969f06a-89e5-462c-a26c-72e14420db67": "02_cargar_sesion.js",              # Cargar Sesion
