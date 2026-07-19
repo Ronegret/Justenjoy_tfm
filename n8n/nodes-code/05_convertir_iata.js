@@ -73,13 +73,11 @@ const cityToIata = {
   'bali': 'DPS', 'denpasar': 'DPS',
   'manila': 'MNL',
   'marrakech': 'RAK', 'marrakesh': 'RAK',
-  // --- Capitales que faltaban para países ya mencionados en el aviso de
-  // "escribiste un país" del frontend/validador (ver COUNTRY_TO_CITIES) ---
+  // Capitales anadidas en v32 para paises listados en COUNTRY_TO_CITIES
   'zagreb': 'ZAG', 'amman': 'AMM', 'ammán': 'AMM',
-  // "Túnez" en español nombra tanto al país como a su capital (Tunis) — se
-  // resuelve directamente a la capital en vez de tratarlo como país
-  // irresoluble, porque una búsqueda de vuelos a un país no tiene sentido de
-  // todos modos y "Túnez" casi siempre significa la ciudad en este contexto.
+  // "Tunez" en espanol nombra tanto al pais como a su capital (Tunis): se
+  // resuelve directamente a la capital, porque buscar vuelos "a un pais" no
+  // tiene sentido y en este contexto casi siempre significa la ciudad.
   'tunis': 'TUN', 'túnez': 'TUN',
 };
 
@@ -266,16 +264,14 @@ const iataToAirportName = {
   'TUN': 'Tunis-Carthage International Airport',
 };
 
-// Bug real detectado en producción: "Marruecos" (un país, no una ciudad) no
-// está en cityToIata, y el fallback anterior devolvía las 3 primeras letras
-// en mayúsculas ("MAR") — que por pura coincidencia ES un código IATA real,
-// pero de Maracaibo (Venezuela), NO de Marruecos. SerpAPI buscó vuelos
-// reales a Maracaibo (Barcelona→Miami→Maracaibo, +2000 USD/persona) sin
-// ningún error, porque el código "parecía" válido. Ahora, si la ciudad no
-// está en la tabla, se usa 'XXX' — el código que la industria usa para
-// "aeropuerto desconocido/no válido" — para que la búsqueda de vuelos NO
-// encuentre ningún resultado real y dispare el flujo ya existente de
-// no_valid_flight/needs_user_input, en vez de inventar un destino.
+// FALLBACK 'XXX' (v32): el fallback anterior devolvia las 3 primeras letras en
+// mayusculas. Bug real detectado en produccion: "Marruecos" (un pais, no una
+// ciudad) -> "MAR", que ES un codigo IATA valido, pero de Maracaibo (Venezuela).
+// SerpAPI encontro vuelos reales Barcelona->Miami->Maracaibo (+2000 USD/persona)
+// sin dar ningun error, porque el codigo "parecia" valido. Ahora se usa 'XXX'
+// (codigo de la industria para "aeropuerto desconocido/no valido") para que la
+// busqueda no encuentre nada y dispare el flujo ya existente de
+// no_valid_flight / needs_user_input, en vez de inventar un destino.
 function toIata(cityName) {
   if (!cityName) return cityName;
   if (/^[A-Z]{3}$/.test(cityName.trim())) return cityName.trim();
