@@ -162,6 +162,35 @@ if (result.plan && (!result.plan.trip_summary || result.plan.trip_summary.trim()
   }
 }
 
+// ── (v38.1) Agrupar los días con actividad al principio, los huecos al final ──
+// El prompt le pide al modelo un orden concreto cuando hay menos actividades
+// utilizables que días disponibles ("los huecos van al final, nunca en
+// medio"), pero no lo cumple de forma fiable: verificado con una ejecución
+// real de 19 días (17 disponibles, 11 actividades) — el modelo intercaló los
+// días libres en vez de agruparlos al final. En vez de seguir puliendo el
+// texto del prompt para un problema de ORDEN mecánico, se resuelve en código
+// (mismo criterio que ya se aplicó a la reconstrucción de segments[].activities[]
+// más abajo): se reordena daily_itinerary[] moviendo el CONTENIDO completo
+// (title, summary, points_of_interest, activities) de cada día — el día de
+// llegada y el de regreso, que nunca llevan actividad propia, se dejan fijos
+// en su sitio; solo se reordenan los días intermedios.
+if (result.plan && Array.isArray(result.plan.daily_itinerary) && result.plan.daily_itinerary.length > 2) {
+  const days = result.plan.daily_itinerary;
+  const first = days[0];
+  const last = days[days.length - 1];
+  const middle = days.slice(1, -1);
+  const withActivity = middle.filter((d) => Array.isArray(d.activities) && d.activities.length > 0);
+  const withoutActivity = middle.filter((d) => !Array.isArray(d.activities) || d.activities.length === 0);
+
+  if (withActivity.length > 0 && withoutActivity.length > 0) {
+    const reordered = middle.map((slot, i) => {
+      const source = i < withActivity.length ? withActivity[i] : withoutActivity[i - withActivity.length];
+      return { ...source, day: slot.day, date: slot.date };
+    });
+    result.plan.daily_itinerary = [first, ...reordered, last];
+  }
+}
+
 // ── (v32) ELIMINADO: extracción de coste de transporte desde plan_notes ──
 // Antes se leía por regex el primer número con símbolo de moneda que
 // apareciera en plan_notes. Ese texto suele mencionar el precio de UN billete
