@@ -35,52 +35,95 @@ const DEST_OPTIONS = [
 // que coincidía por casualidad con uno real de otro continente. El backend
 // ya maneja esto de forma segura (ver n8n/05_convertir_iata.js), pero avisar
 // aquí evita gastar una búsqueda completa. Las mismas ciudades sugeridas
-// están en COUNTRY_TO_CITIES de n8n/nodes-code/06_validar_output.js — si
-// añades un país aquí, añádelo también allí.
+// están en COUNTRY_TO_CITIES de n8n/nodes-code/06_validar_output.js (esa
+// copia solo genera un mensaje de aviso, en español, y no toca matching) —
+// si añades un país aquí, añádelo también allí.
 // "Túnez" no está aquí a propósito: en español nombra tanto al país como a
 // su capital, y el backend ya lo resuelve directo a la ciudad (Tunis).
-const COUNTRY_TO_CITIES: Record<string, string[]> = {
-  'marruecos': ['Marrakech', 'Casablanca'], 'morocco': ['Marrakech', 'Casablanca'],
-  'francia': ['París', 'Lyon', 'Niza'], 'france': ['París', 'Lyon', 'Niza'],
-  'italia': ['Roma', 'Milán', 'Venecia', 'Florencia'], 'italy': ['Roma', 'Milán', 'Venecia', 'Florencia'],
-  'españa': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'], 'spain': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'],
-  'portugal': ['Lisboa', 'Oporto'],
-  'alemania': ['Berlín', 'Múnich', 'Fráncfort'], 'germany': ['Berlín', 'Múnich', 'Fráncfort'],
-  'reino unido': ['Londres', 'Mánchester', 'Edimburgo'], 'united kingdom': ['Londres', 'Mánchester', 'Edimburgo'], 'inglaterra': ['Londres', 'Mánchester'],
-  'grecia': ['Atenas'], 'greece': ['Atenas'],
-  'turquía': ['Estambul'], 'turkey': ['Estambul'],
-  'egipto': ['El Cairo'], 'egypt': ['El Cairo'],
-  'japón': ['Tokio'], 'japan': ['Tokio'],
-  'china': ['Pekín', 'Shanghái', 'Hong Kong'],
-  'india': ['Bombay', 'Nueva Delhi'],
-  'tailandia': ['Bangkok'], 'thailand': ['Bangkok'],
-  'méxico': ['Ciudad de México', 'Cancún'], 'mexico': ['Ciudad de México', 'Cancún'],
-  'brasil': ['São Paulo', 'Río de Janeiro'], 'brazil': ['São Paulo', 'Río de Janeiro'],
-  'argentina': ['Buenos Aires'],
-  'estados unidos': ['Nueva York', 'Los Ángeles', 'Miami', 'Chicago'], 'usa': ['Nueva York', 'Los Ángeles', 'Miami'], 'united states': ['Nueva York', 'Los Ángeles', 'Miami'],
-  'canadá': ['Toronto', 'Montreal', 'Vancouver'], 'canada': ['Toronto', 'Montreal', 'Vancouver'],
-  'australia': ['Sídney', 'Melbourne'],
-  'holanda': ['Ámsterdam'], 'netherlands': ['Ámsterdam'], 'países bajos': ['Ámsterdam'],
-  'bélgica': ['Bruselas'], 'belgium': ['Bruselas'],
-  'suiza': ['Zúrich', 'Ginebra'], 'switzerland': ['Zúrich', 'Ginebra'],
-  'austria': ['Viena'],
-  'irlanda': ['Dublín'], 'ireland': ['Dublín'],
-  'croacia': ['Zagreb'], 'croatia': ['Zagreb'],
-  'noruega': ['Oslo'], 'norway': ['Oslo'],
-  'suecia': ['Estocolmo'], 'sweden': ['Estocolmo'],
-  'dinamarca': ['Copenhague'], 'denmark': ['Copenhague'],
-  'polonia': ['Varsovia'], 'poland': ['Varsovia'],
-  'sudáfrica': ['Ciudad del Cabo', 'Johannesburgo'], 'south africa': ['Ciudad del Cabo', 'Johannesburgo'],
-  'perú': ['Lima'], 'peru': ['Lima'],
-  'chile': ['Santiago'],
-  'colombia': ['Bogotá'],
-  'cuba': ['La Habana'],
-  'jordania': ['Amán'], 'jordan': ['Amán'],
-  'israel': ['Tel Aviv'],
-  'emiratos árabes': ['Dubái', 'Abu Dabi'], 'uae': ['Dubái', 'Abu Dabi'],
-  'indonesia': ['Bali']
+//
+// `value`/`label` igual que STYLE_OPTIONS más abajo: `label` es solo para
+// mostrar el chip en español, `value` es lo que de verdad se envía como
+// destination/origin y debe ser el nombre EN INGLÉS tal cual lo espera la
+// tabla `cityToIata` de n8n/05_convertir_iata.js. Antes este objeto solo
+// tenía el nombre en español con tildes (p.ej. "Múnich", "Sídney", "Río de
+// Janeiro", "Amán") y se enviaba directo como destino: como esa tabla hace
+// match EXACTO en minúsculas y varias de esas ciudades no tienen alias en
+// español (o el alias no coincidía por una tilde o una "m" duplicada, como
+// en "Amán" vs "ammán"), pulsar el propio chip sugerido acababa devolviendo
+// 'XXX' (ciudad no reconocida) — el mismo bug que el aviso intenta evitar.
+const COUNTRY_TO_CITIES: Record<string, { value: string; label: string }[]> = {
+  'marruecos': [{ value: 'Marrakech', label: 'Marrakech' }, { value: 'Casablanca', label: 'Casablanca' }],
+  'morocco': [{ value: 'Marrakech', label: 'Marrakech' }, { value: 'Casablanca', label: 'Casablanca' }],
+  'francia': [{ value: 'Paris', label: 'París' }, { value: 'Lyon', label: 'Lyon' }, { value: 'Nice', label: 'Niza' }],
+  'france': [{ value: 'Paris', label: 'París' }, { value: 'Lyon', label: 'Lyon' }, { value: 'Nice', label: 'Niza' }],
+  'italia': [{ value: 'Rome', label: 'Roma' }, { value: 'Milan', label: 'Milán' }, { value: 'Venice', label: 'Venecia' }, { value: 'Florence', label: 'Florencia' }],
+  'italy': [{ value: 'Rome', label: 'Roma' }, { value: 'Milan', label: 'Milán' }, { value: 'Venice', label: 'Venecia' }, { value: 'Florence', label: 'Florencia' }],
+  'españa': [{ value: 'Madrid', label: 'Madrid' }, { value: 'Barcelona', label: 'Barcelona' }, { value: 'Valencia', label: 'Valencia' }, { value: 'Seville', label: 'Sevilla' }],
+  'spain': [{ value: 'Madrid', label: 'Madrid' }, { value: 'Barcelona', label: 'Barcelona' }, { value: 'Valencia', label: 'Valencia' }, { value: 'Seville', label: 'Sevilla' }],
+  'portugal': [{ value: 'Lisbon', label: 'Lisboa' }, { value: 'Porto', label: 'Oporto' }],
+  'alemania': [{ value: 'Berlin', label: 'Berlín' }, { value: 'Munich', label: 'Múnich' }, { value: 'Frankfurt', label: 'Fráncfort' }],
+  'germany': [{ value: 'Berlin', label: 'Berlín' }, { value: 'Munich', label: 'Múnich' }, { value: 'Frankfurt', label: 'Fráncfort' }],
+  'reino unido': [{ value: 'London', label: 'Londres' }, { value: 'Manchester', label: 'Mánchester' }, { value: 'Edinburgh', label: 'Edimburgo' }],
+  'united kingdom': [{ value: 'London', label: 'Londres' }, { value: 'Manchester', label: 'Mánchester' }, { value: 'Edinburgh', label: 'Edimburgo' }],
+  'inglaterra': [{ value: 'London', label: 'Londres' }, { value: 'Manchester', label: 'Mánchester' }],
+  'grecia': [{ value: 'Athens', label: 'Atenas' }],
+  'greece': [{ value: 'Athens', label: 'Atenas' }],
+  'turquía': [{ value: 'Istanbul', label: 'Estambul' }],
+  'turkey': [{ value: 'Istanbul', label: 'Estambul' }],
+  'egipto': [{ value: 'Cairo', label: 'El Cairo' }],
+  'egypt': [{ value: 'Cairo', label: 'El Cairo' }],
+  'japón': [{ value: 'Tokyo', label: 'Tokio' }],
+  'japan': [{ value: 'Tokyo', label: 'Tokio' }],
+  'china': [{ value: 'Beijing', label: 'Pekín' }, { value: 'Shanghai', label: 'Shanghái' }, { value: 'Hong Kong', label: 'Hong Kong' }],
+  'india': [{ value: 'Mumbai', label: 'Bombay' }, { value: 'New Delhi', label: 'Nueva Delhi' }],
+  'tailandia': [{ value: 'Bangkok', label: 'Bangkok' }],
+  'thailand': [{ value: 'Bangkok', label: 'Bangkok' }],
+  'méxico': [{ value: 'Mexico City', label: 'Ciudad de México' }, { value: 'Cancun', label: 'Cancún' }],
+  'mexico': [{ value: 'Mexico City', label: 'Ciudad de México' }, { value: 'Cancun', label: 'Cancún' }],
+  'brasil': [{ value: 'Sao Paulo', label: 'São Paulo' }, { value: 'Rio de Janeiro', label: 'Río de Janeiro' }],
+  'brazil': [{ value: 'Sao Paulo', label: 'São Paulo' }, { value: 'Rio de Janeiro', label: 'Río de Janeiro' }],
+  'argentina': [{ value: 'Buenos Aires', label: 'Buenos Aires' }],
+  'estados unidos': [{ value: 'New York', label: 'Nueva York' }, { value: 'Los Angeles', label: 'Los Ángeles' }, { value: 'Miami', label: 'Miami' }, { value: 'Chicago', label: 'Chicago' }],
+  'usa': [{ value: 'New York', label: 'Nueva York' }, { value: 'Los Angeles', label: 'Los Ángeles' }, { value: 'Miami', label: 'Miami' }],
+  'united states': [{ value: 'New York', label: 'Nueva York' }, { value: 'Los Angeles', label: 'Los Ángeles' }, { value: 'Miami', label: 'Miami' }],
+  'canadá': [{ value: 'Toronto', label: 'Toronto' }, { value: 'Montreal', label: 'Montreal' }, { value: 'Vancouver', label: 'Vancouver' }],
+  'canada': [{ value: 'Toronto', label: 'Toronto' }, { value: 'Montreal', label: 'Montreal' }, { value: 'Vancouver', label: 'Vancouver' }],
+  'australia': [{ value: 'Sydney', label: 'Sídney' }, { value: 'Melbourne', label: 'Melbourne' }],
+  'holanda': [{ value: 'Amsterdam', label: 'Ámsterdam' }],
+  'netherlands': [{ value: 'Amsterdam', label: 'Ámsterdam' }],
+  'países bajos': [{ value: 'Amsterdam', label: 'Ámsterdam' }],
+  'bélgica': [{ value: 'Brussels', label: 'Bruselas' }],
+  'belgium': [{ value: 'Brussels', label: 'Bruselas' }],
+  'suiza': [{ value: 'Zurich', label: 'Zúrich' }, { value: 'Geneva', label: 'Ginebra' }],
+  'switzerland': [{ value: 'Zurich', label: 'Zúrich' }, { value: 'Geneva', label: 'Ginebra' }],
+  'austria': [{ value: 'Vienna', label: 'Viena' }],
+  'irlanda': [{ value: 'Dublin', label: 'Dublín' }],
+  'ireland': [{ value: 'Dublin', label: 'Dublín' }],
+  'croacia': [{ value: 'Zagreb', label: 'Zagreb' }],
+  'croatia': [{ value: 'Zagreb', label: 'Zagreb' }],
+  'noruega': [{ value: 'Oslo', label: 'Oslo' }],
+  'norway': [{ value: 'Oslo', label: 'Oslo' }],
+  'suecia': [{ value: 'Stockholm', label: 'Estocolmo' }],
+  'sweden': [{ value: 'Stockholm', label: 'Estocolmo' }],
+  'dinamarca': [{ value: 'Copenhagen', label: 'Copenhague' }],
+  'denmark': [{ value: 'Copenhagen', label: 'Copenhague' }],
+  'polonia': [{ value: 'Warsaw', label: 'Varsovia' }],
+  'poland': [{ value: 'Warsaw', label: 'Varsovia' }],
+  'sudáfrica': [{ value: 'Cape Town', label: 'Ciudad del Cabo' }, { value: 'Johannesburg', label: 'Johannesburgo' }],
+  'south africa': [{ value: 'Cape Town', label: 'Ciudad del Cabo' }, { value: 'Johannesburg', label: 'Johannesburgo' }],
+  'perú': [{ value: 'Lima', label: 'Lima' }],
+  'peru': [{ value: 'Lima', label: 'Lima' }],
+  'chile': [{ value: 'Santiago', label: 'Santiago' }],
+  'colombia': [{ value: 'Bogota', label: 'Bogotá' }],
+  'cuba': [{ value: 'Havana', label: 'La Habana' }],
+  'jordania': [{ value: 'Amman', label: 'Amán' }],
+  'jordan': [{ value: 'Amman', label: 'Amán' }],
+  'israel': [{ value: 'Tel Aviv', label: 'Tel Aviv' }],
+  'emiratos árabes': [{ value: 'Dubai', label: 'Dubái' }, { value: 'Abu Dhabi', label: 'Abu Dabi' }],
+  'uae': [{ value: 'Dubai', label: 'Dubái' }, { value: 'Abu Dhabi', label: 'Abu Dabi' }],
+  'indonesia': [{ value: 'Bali', label: 'Bali' }]
 };
-function suggestedCitiesForCountry(value: string): string[] | null {
+function suggestedCitiesForCountry(value: string): { value: string; label: string }[] | null {
   return COUNTRY_TO_CITIES[value.trim().toLowerCase()] || null;
 }
 
@@ -471,12 +514,12 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                         <div className="flex flex-wrap gap-1.5 pl-5">
                           {countryCities.map((city) => (
                             <SmartChip
-                              key={city}
-                              label={city}
+                              key={city.value}
+                              label={city.label}
                               isSelected={false}
                               onClick={() => {
-                                setInputDestination(city);
-                                updatePrefs({ destination: city });
+                                setInputDestination(city.value);
+                                updatePrefs({ destination: city.value });
                               }}
                             />
                           ))}
@@ -532,12 +575,12 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                     <div className="flex flex-wrap gap-1.5 pl-5">
                       {originCountryCities.map((city) => (
                         <SmartChip
-                          key={city}
-                          label={city}
+                          key={city.value}
+                          label={city.label}
                           isSelected={false}
                           onClick={() => {
-                            setInputOrigin(city);
-                            updatePrefs({ origin: city });
+                            setInputOrigin(city.value);
+                            updatePrefs({ origin: city.value });
                           }}
                         />
                       ))}
