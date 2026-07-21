@@ -45,6 +45,11 @@ function AutocompleteField({ value, onChange, onCitySelected, placeholder, class
     // Restringido a ciudades ("(cities)"): un país o región no aparece nunca
     // como sugerencia, así que ya no hace falta que el usuario acierte a
     // escribir una ciudad de memoria — elige de una lista de lugares reales.
+    // El idioma de la respuesta (y por tanto de `long_name`) lo fija el script
+    // de Google Maps a nivel de `APIProvider` (language="en"), no esta opción
+    // — se deja documentado aquí porque es la pieza de la que depende esta
+    // función para que `extractCitySelection` siempre reciba el nombre en
+    // inglés que espera la tabla `cityToIata` de n8n.
     const ac = new placesLib.Autocomplete(inputRef.current, {
       types: ['(cities)'],
       fields: ['address_components', 'name', 'formatted_address']
@@ -114,7 +119,14 @@ export function CityAutocompleteInput(props: CityAutocompleteInputProps) {
   }
 
   return (
-    <APIProvider apiKey={apiKey}>
+    // language="en" fuerza a que Google Places devuelva el nombre de la
+    // ciudad (address_components long_name) siempre en inglés, sin importar
+    // el idioma del navegador del usuario. n8n resuelve el destino por match
+    // EXACTO en una tabla plana en inglés (con solo algunos alias en español)
+    // — sin esto, un usuario con el navegador en español podía recibir
+    // "Múnich" o "Londres" y, si esa variante no estaba en la tabla de n8n,
+    // la búsqueda fallaba en silencio (código IATA 'XXX').
+    <APIProvider apiKey={apiKey} language="en">
       <AutocompleteField {...props} />
     </APIProvider>
   );
