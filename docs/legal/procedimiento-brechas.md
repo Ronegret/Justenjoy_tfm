@@ -56,4 +56,6 @@ personales (confidencialidad, integridad o disponibilidad).
 
 ---
 
+> **Estado: Aprobado v1.0 (2026-07-22, Grupo 7 TFM)** — pendiente asignar los roles `[COMPLETAR]`. La aprobación no sustituye la validación jurídica.
+
 *Documento de trabajo (TFM). No constituye asesoramiento jurídico.*

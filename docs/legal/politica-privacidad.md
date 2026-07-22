@@ -74,4 +74,6 @@ la [ROPA](ROPA.md).
 
 ---
 
+> **Estado: Aprobado v1.0 (2026-07-22, Grupo 7 TFM)** — pendiente portar a `frontend/src/app/privacy/page.tsx`. La aprobación no sustituye la validación jurídica.
+
 *Borrador para portar a la web. No constituye asesoramiento jurídico.*

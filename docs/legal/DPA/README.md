@@ -2,6 +2,8 @@
 
 **Norma:** RGPD art. 28 · **Hallazgo:** #16
 
+> **Estado: Aprobado v1.0 (2026-07-22, Grupo 7 TFM)** — aprobado el índice y la plantilla; **pendiente firmar/aceptar el DPA de cada proveedor**. La aprobación no sustituye esas firmas ni la validación jurídica.
+
 Cada proveedor que trata datos personales por cuenta de Just Enjoy es un **encargado del
 tratamiento** y requiere un contrato del art. 28 (DPA), con **Cláusulas Contractuales Tipo (SCC)**
 anexas para los de EEUU. La mayoría publican un DPA estándar que basta con aceptar/firmar.

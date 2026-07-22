@@ -73,4 +73,6 @@ salvo que el tratamiento del art. 9 se amplíe. **A VERIFICAR** con asesoría ju
 
 ---
 
+> **Estado: Aprobado v1.0 (2026-07-22, Grupo 7 TFM)** — pendiente validación jurídica (consulta previa art. 36 A VERIFICAR). La aprobación no sustituye esa validación.
+
 *Documento de trabajo (TFM). No constituye asesoramiento jurídico.*

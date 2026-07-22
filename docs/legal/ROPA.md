@@ -77,4 +77,6 @@
 
 ---
 
+> **Estado: Aprobado v1.0 (2026-07-22, Grupo 7 TFM)** — pendiente completar los campos `[COMPLETAR]`. La aprobación no sustituye la validación jurídica.
+
 *Documento de trabajo (TFM). No constituye asesoramiento jurídico.*

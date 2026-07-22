@@ -60,4 +60,6 @@ recomendación como infalible** (enlaza con el deber de exactitud, #30).
 
 ---
 
+> **Estado: Aprobado v1.0 (2026-07-22, Grupo 7 TFM)** — pendiente implementar los avisos de IA en la UI (art. 50, aplicable 2-ago-2026). La aprobación no sustituye la validación jurídica.
+
 *Documento de trabajo (TFM). No constituye asesoramiento jurídico.*
