@@ -1,11 +1,11 @@
 # Auditoría de cumplimiento legal y de seguridad — Just Enjoy
 
-> **Alcance:** frontend Next.js 16 (App Router), orquestador n8n `Planificador_de_Viajes_v38` (27 nodos),
+> **Alcance:** frontend Next.js 16 (App Router), orquestador n8n `Planificador_de_Viajes_v39` (27 nodos),
 > LLMs OpenAI (`gpt-4.1`/`gpt-4o-mini`) y Anthropic (`claude-3-5-sonnet`), Firebase Auth/Admin,
 > Supabase Postgres (`travel_plans`), e integraciones SerpAPI, Tavily, Google Places/Maps,
 > Open-Meteo, OpenStreetMap/Nominatim. Botpress y Stripe están **declarados pero NO implementados**.
 >
-> **Fecha de la auditoría:** 2026-07-22
+> **Fecha de la auditoría:** 2026-07-22 · **Revisión 2:** 2026-07-22 (tras remediación — ver §0)
 > **Método:** revisión estática del repositorio con cita `fichero:línea` en cada afirmación sobre el código.
 > **Normas evaluadas:** RGPD (arts. 6, 9, 13/14, 22, 25/32, 28, 30, 33/34, 35, Cap. V), LSSI art. 22.2,
 > Reglamento de IA (RIA) arts. 4 y 50, Ley 3/1991 de Competencia Desleal / TRLGDCU, y Ley 1/2019 de Secretos Comerciales.
@@ -16,7 +16,64 @@
 
 ---
 
-## 1. Tabla de auditoría (obligación → evidencia → estado → acción)
+## 0. Revisión 2 — estado tras remediación (2026-07-22)
+
+> Esta sección se añade **después** de aplicar las primeras correcciones. La §1 (tabla original)
+> se conserva como **Revisión 1** (evaluación de partida, útil como *antes*); **para el estado
+> vigente de los ítems modificados prevalece la tabla delta de abajo.** Revisión 1 quedó
+> registrada en git (PR #63, commit `4a109ff`).
+
+Cambios integrados en `develop` desde la Revisión 1:
+- **PR #63** — esta auditoría · **PR #64** — 7 artefactos en `docs/legal/`
+- **PR #65** — fixes de UX engañosa (#28, #29) · **PR #66** — endurecimiento n8n (#7, #13) + rename v38→v39
+
+### 0.1 Delta de estados
+
+**Resueltos por código (en `develop`):**
+
+| # | Obligación | Rev1 | Rev2 | Evidencia del cambio |
+|---|---|---|---|---|
+| 7 | Pin de imagen n8n | FALTA | ✅ **CUMPLE** | `docker-compose.yml` → `n8nio/n8n:2.25.7` (PR #66) |
+| 13 | Fuga de `_debug`/`_supabase_record` | FALTA | ✅ **CUMPLE** | Responder saneado a `{status, session_id, plan, warnings}` + ejemplo `n8n/examples/output-plan-v39-saneado.json` (PR #66) |
+| 28 | "Enlace copiado" sin manejo de error | PARCIAL | ✅ **CUMPLE** | `ShareTripPanel.tsx` `handleCopyLink` con `try/catch` + fallback (PR #65) |
+| 29 | Botones `alert()` que fingen éxito | FALTA | ✅ **CUMPLE** | Calendar/email deshabilitados "Pronto" + `calendar_enabled=false` en todas las rutas (PR #65) |
+
+**Artefactos redactados como borrador (FALTA → PARCIAL; pendiente completar/firmar/implementar):**
+
+| # | Obligación | Rev1 | Rev2 | Borrador |
+|---|---|---|---|---|
+| 1 | Base jurídica en la política | FALTA | 🟡 PARCIAL | `docs/legal/politica-privacidad.md` (pendiente portar a `/privacy`) |
+| 16 | DPA por proveedor | FALTA | 🟡 PARCIAL | `docs/legal/DPA/` (índice + plantilla; pendiente firmar) |
+| 17 | ROPA/RAT | FALTA | 🟡 PARCIAL | `docs/legal/ROPA.md` (pendiente `[COMPLETAR]`) |
+| 18 | EIPD | FALTA | 🟡 PARCIAL | `docs/legal/EIPD.md` (pendiente validación jurídica) |
+| 19 | Transferencias + TIA | FALTA | 🟡 PARCIAL | `docs/legal/TIA.md` (pendiente formalizar SCC) |
+| 20 | Procedimiento de brechas | FALTA | 🟡 PARCIAL | `docs/legal/procedimiento-brechas.md` (pendiente adoptar) |
+| 23 | Transparencia IA (art. 50) | PARCIAL | 🟡 PARCIAL | `docs/legal/transparencia-ia.md` (pendiente implementar avisos en UI) |
+| 24 | Alfabetización IA (art. 4) | FALTA | 🟡 PARCIAL | Mención mínima en `transparencia-ia.md §5` |
+
+**Sin abordar todavía (siguen igual que en Rev1):**
+- **FALTA:** #2 (LIA 6.1.f), #4 (filtrado del texto libre art. 9 en código), #8 (RLS Supabase), #15 (DDL/migraciones versionadas), #25 (progreso simulado ~4,5 s), #26 (checklist de tareas inventada).
+- **NO APLICA (mejor documentado ahora en EIPD):** #6 (art. 22).
+
+### 0.2 Resumen de estados — Revisión 2
+
+| Estado | Rev1 | **Rev2** |
+|---|---|---|
+| CUMPLE | 1 | **5** (#7, #13, #21, #28, #29) |
+| PARCIAL | 13 | **19** |
+| FALTA | 16 | **6** (#2, #4, #8, #15, #25, #26) |
+| NO APLICA | 1 | **1** (#6) |
+
+> **Prioridad restante:** los 6 en FALTA. Los más críticos para un go-live: **#8** (RLS Supabase) y
+> **#4** (filtrado de categorías especiales antes de LLM/buscadores).
+
+---
+
+## 1. Tabla de auditoría — Revisión 1 (evaluación de partida)
+
+> Estado original previo a la remediación. Para los ítems #1, #7, #13, #16-20, #23, #24, #28, #29
+> consulta la **§0.1** (estado vigente). El resto no ha cambiado.
+
 
 | # | Obligación | Evidencia (`fichero:línea`) | Estado | Hueco y corrección |
 |---|---|---|---|---|
@@ -70,15 +127,23 @@
 
 ## 3. Hallazgos prioritarios (acción inmediata)
 
-1. **#13** — fuga de `_debug`/`_supabase_record`/`session_state` en la respuesta del webhook → sanitizar `n8n/workflows/Planificador_de_Viajes_v38.json:343`.
-2. **#8 / #9** — RLS desactivado + service_role → activar RLS y versionar DDL (#15).
-3. **#29** — botones `alert()` que fingen éxito → desactivar o etiquetar "próximamente".
-4. **#4** — datos de accesibilidad enviados a LLM sin base ni aviso → reencuadrar o consentimiento explícito.
-5. **#7** — pin de imagen `n8nio/n8n:latest` → fijar versión/digest.
+> Estado actualizado en Revisión 2 (ver §0).
+
+1. ✅ **#13 (RESUELTO)** — fuga de `_debug`/`_supabase_record`/`session_state` en la respuesta del webhook → saneada en `n8n/workflows/Planificador_de_Viajes_v39.json:343` (PR #66).
+2. ⏳ **#8 / #9 (PENDIENTE)** — RLS desactivado + service_role → activar RLS y versionar DDL (#15). **Sigue abierto — máxima prioridad.**
+3. ✅ **#29 (RESUELTO)** — botones `alert()` que fingían éxito → deshabilitados y marcados "Pronto" (PR #65).
+4. ⏳ **#4 (PENDIENTE)** — texto libre `feedback_text` / accesibilidad enviados a LLM y buscadores sin base ni filtrado → reencuadrar o consentimiento explícito + filtrar. **Sigue abierto.**
+5. ✅ **#7 (RESUELTO)** — pin de imagen → `n8nio/n8n:2.25.7` (PR #66).
+
+> **Nota operativa:** #7, #13 y el rename v39 están en `develop` pero **requieren re-import** (`docker compose up`) para surtir efecto en la instancia n8n en marcha; falta el **E2E** post-reimport.
 
 ---
 
 ## 4. Artefactos de cumplimiento a producir
+
+> ✅ **Actualización Rev2:** los 7 artefactos ya existen como **borrador** en **`docs/legal/`** (PR #64).
+> El esquema de abajo se conserva como especificación; el estado de cada uno (borrador creado,
+> pendiente de completar/firmar/implementar) está en §0.1. Índice: `docs/legal/README.md`.
 
 > Ubicación propuesta para todos: nueva carpeta **`docs/legal/`** (versionada), salvo las páginas de usuario que ya viven en `frontend/src/app/`.
 
