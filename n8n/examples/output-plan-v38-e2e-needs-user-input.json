@@ -1,0 +1,101 @@
+{
+  "session_id": "session_1784757626176_9goxn9luo",
+  "status": "needs_user_input",
+  "revision_count": 0,
+  "revision_snapshot": 0,
+  "generated_at": "2026-07-22T22:00:32.767Z",
+  "steps_executed": "all",
+  "warnings": [
+    {
+      "type": "no_valid_flight",
+      "detail": "No hay vuelo de Madrid a Francia en las fechas solicitadas. El código IATA de destino no es válido o no corresponde a un aeropuerto específico.",
+      "proposed_change": "Envía nuevas fechas o especifica una ciudad o aeropuerto concreto en Francia como destino. Ejemplo: Cambia el destino a París (CDG) o Lyon (LYS).",
+      "requires_user_approval": true,
+      "amount_over": 0
+    },
+    {
+      "type": "no_valid_flight",
+      "detail": "No reconocemos \"Francia\" como una ciudad concreta (¿es un país o una región?). Necesitamos el nombre de una ciudad específica para buscar vuelos reales.",
+      "proposed_change": "Escribe una ciudad concreta, por ejemplo \"París\" o \"Lyon\" o \"Niza\" en vez de \"Francia\".",
+      "requires_user_approval": true
+    }
+  ],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Madrid",
+        "destination": "Francia",
+        "flights": {
+          "outbound": {
+            "airline": "",
+            "flight_no": "",
+            "origin": "",
+            "destination": "",
+            "departure_datetime": "",
+            "arrival_datetime": "",
+            "layovers": [],
+            "price_usd": 0,
+            "booking_url": ""
+          },
+          "return": {
+            "airline": "",
+            "flight_no": "",
+            "origin": "",
+            "destination": "",
+            "departure_datetime": "",
+            "arrival_datetime": "",
+            "layovers": [],
+            "price_usd": 0,
+            "booking_url": ""
+          }
+        },
+        "hotel": {
+          "name": "",
+          "address": "",
+          "stars": null,
+          "rating": 0,
+          "check_in": "",
+          "check_out": "",
+          "price_per_night_usd": 0,
+          "total_usd": 0,
+          "booking_url": "",
+          "lat": null,
+          "lng": null
+        },
+        "activities": []
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 0,
+      "hotel_usd": 0,
+      "activities_usd": 0,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": 0,
+      "local_transport_data_source": null,
+      "total_usd": 0,
+      "budget_total_usd": 1200,
+      "budget_remaining_usd": 1200
+    },
+    "trip_summary": "No se pudo generar un itinerario porque el destino no corresponde a una ciudad o aeropuerto específico en Francia. Por favor, indica una ciudad concreta.",
+    "daily_itinerary": [],
+    "plan_notes": [
+      "No es posible buscar vuelos ni hoteles porque el destino proporcionado ('Francia') no corresponde a una ciudad o aeropuerto específico. Por favor, indica una ciudad concreta en Francia (por ejemplo, París, Lyon, Marsella) para continuar con la planificación."
+    ],
+    "revision_snapshot": 0
+  },
+  "error_detail": "",
+  "_debug": {
+    "execution_time_ms": 18,
+    "plan_metrics": {
+      "activities_found": 0,
+      "itinerary_days": 0,
+      "plan_notes": 1,
+      "warnings": 2,
+      "has_flights": false,
+      "has_hotel": false,
+      "tools_called": "all"
+    }
+  },
+  "_skip_supabase": true
+}
