@@ -1,15 +1,15 @@
-# Código de los nodos Code del workflow Planificador v39
+# Código de los nodos Code del workflow Planificador v38
 
-Los 10 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v39.json`
+Los 10 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v38.json`
 viven aquí como **fuente de verdad versionada**. El JSON del workflow lleva el código
 embebido en el campo `jsCode` de cada nodo, pero es frágil (n8n puede vaciarlo al
 reimportar, y editar JS dentro de un string JSON es incómodo). Estos `.js` son la copia
 canónica y revisable.
 
 > **Contrato de gobernanza:** estos ficheros deben coincidir exactamente con el
-> `jsCode` embebido en v39. `_inject.py` es reversible: reinyectar los `.js` sin
+> `jsCode` embebido en v38. `_inject.py` es reversible: reinyectar los `.js` sin
 > editarlos deja el JSON byte-idéntico. Si añades, quitas o renombras un nodo Code
-> en v39, actualiza el mapeo de `_inject.py` y esta tabla en el mismo commit.
+> en v38, actualiza el mapeo de `_inject.py` y esta tabla en el mismo commit.
 
 ## Ficheros
 
@@ -34,7 +34,7 @@ Tras editar cualquier `.js`, reinyecta en el JSON:
 python _inject.py
 ```
 
-`_inject.py` mapea cada nodo por su `id` en v39 y reescribe solo el campo `jsCode`,
+`_inject.py` mapea cada nodo por su `id` en v38 y reescribe solo el campo `jsCode`,
 preservando el resto del JSON (round-trip byte-idéntico si no editaste nada).
 
 Luego reimporta en n8n. **No uses publish/unpublish en caliente** (corrompe el
@@ -42,7 +42,7 @@ volumen): reaprovisiona vía el servicio `n8n-import` del compose, o manualmente
 upsert de ID (no duplica):
 
 ```bash
-docker compose cp n8n/workflows/Planificador_de_Viajes_v39.json n8n:/tmp/wf.json
+docker compose cp n8n/workflows/Planificador_de_Viajes_v38.json n8n:/tmp/wf.json
 docker compose exec -T n8n n8n import:workflow --input=/tmp/wf.json
 ```
 

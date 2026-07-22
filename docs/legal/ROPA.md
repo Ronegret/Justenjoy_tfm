@@ -2,7 +2,7 @@
 
 **Norma:** RGPD art. 30 · **Hallazgo de auditoría:** #17
 **Responsable:** `[COMPLETAR: Grupo 7 — TFM EBIS Business Techschool]` · **Contacto:** soporte@justenjoy.app
-**Última actualización:** `[COMPLETAR: fecha]` · **Versión del sistema:** Planificador v39
+**Última actualización:** `[COMPLETAR: fecha]` · **Versión del sistema:** Planificador v38
 
 > **Por qué es obligatorio.** La excepción del art. 30.5 (menos de 250 empleados) **no aplica**
 > porque el tratamiento no es ocasional y puede incluir **categorías especiales** (art. 9) a través

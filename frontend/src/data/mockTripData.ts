@@ -334,7 +334,7 @@ export const mockTrips: Record<string, TripData> = {
     share: {
       private_url: '/trip/justenjoy-lisbon-2026',
       pdf_enabled: true,
-      calendar_enabled: false
+      calendar_enabled: true
     }
   },
   'justenjoy-oporto-cheapest': {
@@ -490,7 +490,7 @@ export const mockTrips: Record<string, TripData> = {
     share: {
       private_url: '/trip/justenjoy-oporto-cheapest',
       pdf_enabled: true,
-      calendar_enabled: false
+      calendar_enabled: true
     }
   },
   'justenjoy-roma-premium': {
@@ -646,7 +646,7 @@ export const mockTrips: Record<string, TripData> = {
     share: {
       private_url: '/trip/justenjoy-roma-premium',
       pdf_enabled: true,
-      calendar_enabled: false
+      calendar_enabled: true
     }
   }
 };

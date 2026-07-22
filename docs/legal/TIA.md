@@ -1,7 +1,7 @@
 # Revisión de transferencias internacionales + Transfer Impact Assessment (TIA)
 
 **Norma:** RGPD Capítulo V (arts. 44-49) · **Hallazgo:** #19
-**Fecha:** `[COMPLETAR]` · **Sistema:** Planificador v39
+**Fecha:** `[COMPLETAR]` · **Sistema:** Planificador v38
 
 > Mecanismos verificados contra fuente oficial en el anexo de cumplimiento (T21-T22). El estatus DPF
 > puede cambiar: **A VERIFICAR** en dataprivacyframework.gov antes de cada cita definitiva.
