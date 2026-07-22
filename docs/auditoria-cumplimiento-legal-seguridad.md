@@ -4,7 +4,7 @@
 > se entregó antes de la remediación) vive en un fichero aparte:
 > [`auditoria-cumplimiento-legal-seguridad-rev1.md`](auditoria-cumplimiento-legal-seguridad-rev1.md).
 
-> **Alcance:** frontend Next.js 16 (App Router), orquestador n8n `Planificador_de_Viajes_v39` (27 nodos),
+> **Alcance:** frontend Next.js 16 (App Router), orquestador n8n `Planificador_de_Viajes_v38` (27 nodos),
 > LLMs OpenAI (`gpt-4.1`/`gpt-4o-mini`) y Anthropic (`claude-3-5-sonnet`), Firebase Auth/Admin,
 > Supabase Postgres (`travel_plans`), e integraciones SerpAPI, Tavily, Google Places/Maps,
 > Open-Meteo, OpenStreetMap/Nominatim. Botpress y Stripe están **declarados pero NO implementados**.
@@ -31,17 +31,23 @@
 Cambios integrados en `develop` desde la Revisión 1:
 - **PR #63** — esta auditoría · **PR #64** — 7 artefactos en `docs/legal/`
 - **PR #65** — fixes de UX engañosa (#28, #29) · **PR #66** — endurecimiento n8n (#7, #13) + rename v38→v39
+- **PR #70 (REVERT)** — a petición del cliente se **revirtieron #65 y #66**: el workflow vuelve a **v38** (reaparecen la fuga #13 y `:latest`) y el frontend recupera los patrones #28/#29. Los artefactos (#64) **siguen aprobados**.
+
+> ⚠️ **Revisión 2.1 — tras el revert (PR #70).** Los fixes de código #7, #13, #28 y #29 quedaron
+> **DESHECHOS**; sus estados vuelven a los de la Revisión 1 (ver columna "Rev2.1"). El rename a v39
+> también se revirtió: el workflow vigente es de nuevo **v38**. Los artefactos de `docs/legal/`
+> **no** se revirtieron (siguen aprobados v1.0).
 
 ### 0.1 Delta de estados
 
-**Resueltos por código (en `develop`):**
+**Correcciones de código: aplicadas en Rev2 y luego REVERTIDAS (PR #70) → vuelven a su estado de Rev1:**
 
-| # | Obligación | Rev1 | Rev2 | Evidencia del cambio |
-|---|---|---|---|---|
-| 7 | Pin de imagen n8n | FALTA | ✅ **CUMPLE** | `docker-compose.yml` → `n8nio/n8n:2.25.7` (PR #66) |
-| 13 | Fuga de `_debug`/`_supabase_record` | FALTA | ✅ **CUMPLE** | Responder saneado a `{status, session_id, plan, warnings}` + ejemplo `n8n/examples/output-plan-v39-saneado.json` (PR #66) |
-| 28 | "Enlace copiado" sin manejo de error | PARCIAL | ✅ **CUMPLE** | `ShareTripPanel.tsx` `handleCopyLink` con `try/catch` + fallback (PR #65) |
-| 29 | Botones `alert()` que fingen éxito | FALTA | ✅ **CUMPLE** | Calendar/email deshabilitados "Pronto" + `calendar_enabled=false` en todas las rutas (PR #65) |
+| # | Obligación | Rev1 | Rev2 (fix) | **Rev2.1 (tras revert)** | Nota |
+|---|---|---|---|---|---|
+| 7 | Pin de imagen n8n | FALTA | ✅ CUMPLE | ↩️ **FALTA** | vuelve a `n8nio/n8n:latest` |
+| 13 | Fuga de `_debug`/`_supabase_record` | FALTA | ✅ CUMPLE | ↩️ **FALTA** | responder vuelve a `JSON.stringify($json)` |
+| 28 | "Enlace copiado" sin manejo de error | PARCIAL | ✅ CUMPLE | ↩️ **PARCIAL** | `handleCopyLink` sin `try/catch` de nuevo |
+| 29 | Botones `alert()` que fingen éxito | FALTA | ✅ CUMPLE | ↩️ **FALTA** | Calendar/email vuelven a `alert()`; `calendar_enabled=true` |
 
 **Artefactos redactados y APROBADOS v1.0 (2026-07-22, Grupo 7 TFM) (FALTA → PARCIAL; siguen PARCIAL porque la aprobación no completa las acciones externas — firmar/portar/implementar/`[COMPLETAR]`):**
 
@@ -60,14 +66,18 @@ Cambios integrados en `develop` desde la Revisión 1:
 - **FALTA:** #2 (LIA 6.1.f), #4 (filtrado del texto libre art. 9 en código), #8 (RLS Supabase), #15 (DDL/migraciones versionadas), #25 (progreso simulado ~4,5 s), #26 (checklist de tareas inventada).
 - **NO APLICA (mejor documentado ahora en EIPD):** #6 (art. 22).
 
-### 0.2 Resumen de estados — Revisión 2
+### 0.2 Resumen de estados — Revisión 2.1 (tras el revert PR #70)
 
-| Estado | Rev1 | **Rev2** |
-|---|---|---|
-| CUMPLE | 1 | **5** (#7, #13, #21, #28, #29) |
-| PARCIAL | 13 | **19** |
-| FALTA | 16 | **6** (#2, #4, #8, #15, #25, #26) |
-| NO APLICA | 1 | **1** (#6) |
+| Estado | Rev1 | Rev2 (fix) | **Rev2.1 (tras revert)** |
+|---|---|---|---|
+| CUMPLE | 1 | 5 | **1** (#21) |
+| PARCIAL | 13 | 19 | **20** |
+| FALTA | 16 | 6 | **9** (#2, #4, #7, #8, #13, #15, #25, #26, #29) |
+| NO APLICA | 1 | 1 | **1** (#6) |
+
+> El revert deja el **código** igual que en la Revisión 1 (reaparecen #7, #13, #28, #29); lo único
+> que se conserva de la remediación son los **artefactos aprobados** de `docs/legal/` (#1, #16–20,
+> #23, #24 siguen PARCIAL). Los 9 en FALTA son ahora la prioridad, con #8 (RLS) y #13 (fuga) al frente.
 
 > **Prioridad restante:** los 6 en FALTA. Los más críticos para un go-live: **#8** (RLS Supabase) y
 > **#4** (filtrado de categorías especiales antes de LLM/buscadores).
@@ -134,15 +144,17 @@ Cambios integrados en `develop` desde la Revisión 1:
 
 ## 3. Hallazgos prioritarios (acción inmediata)
 
-> Estado actualizado en Revisión 2 (ver §0).
+> Estado actualizado en **Revisión 2.1** tras el revert (PR #70): los fixes #7/#13/#29 se DESHICIERON.
 
-1. ✅ **#13 (RESUELTO)** — fuga de `_debug`/`_supabase_record`/`session_state` en la respuesta del webhook → saneada en `n8n/workflows/Planificador_de_Viajes_v39.json:343` (PR #66).
-2. ⏳ **#8 / #9 (PENDIENTE)** — RLS desactivado + service_role → activar RLS y versionar DDL (#15). **Sigue abierto — máxima prioridad.**
-3. ✅ **#29 (RESUELTO)** — botones `alert()` que fingían éxito → deshabilitados y marcados "Pronto" (PR #65).
-4. ⏳ **#4 (PENDIENTE)** — texto libre `feedback_text` / accesibilidad enviados a LLM y buscadores sin base ni filtrado → reencuadrar o consentimiento explícito + filtrar. **Sigue abierto.**
-5. ✅ **#7 (RESUELTO)** — pin de imagen → `n8nio/n8n:2.25.7` (PR #66).
+1. ⏳ **#13 (ABIERTO de nuevo)** — fuga de `_debug`/`_supabase_record`/`session_state` en la respuesta del webhook. Se saneó en Rev2 pero **el revert (PR #70) lo deshizo**: `n8n/workflows/Planificador_de_Viajes_v38.json:343` vuelve a `JSON.stringify($json)`. **Máxima prioridad.**
+2. ⏳ **#8 / #9 (ABIERTO)** — RLS desactivado + service_role → activar RLS y versionar DDL (#15). **Máxima prioridad.**
+3. ⏳ **#29 (ABIERTO de nuevo)** — botones `alert()` que fingen éxito → el revert restauró los `alert()`; volver a deshabilitarlos/etiquetarlos.
+4. ⏳ **#4 (ABIERTO)** — texto libre `feedback_text` / accesibilidad enviados a LLM y buscadores sin base ni filtrado → reencuadrar o consentimiento explícito + filtrar.
+5. ⏳ **#7 (ABIERTO de nuevo)** — pin de imagen → el revert devolvió `n8nio/n8n:latest`; volver a fijar versión/digest.
 
-> **Nota operativa:** #7, #13 y el rename v39 están en `develop` pero **requieren re-import** (`docker compose up`) para surtir efecto en la instancia n8n en marcha; falta el **E2E** post-reimport.
+> **Nota operativa:** el código vigente es v38 (sin saneo). La instancia n8n local puede seguir
+> sirviendo el v39 saneado del último E2E; para alinearla con el código v38 hay que **reimportar**
+> (`docker compose up`).
 
 ---
 

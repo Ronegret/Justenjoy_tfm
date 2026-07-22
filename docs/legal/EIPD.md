@@ -1,7 +1,7 @@
 # Evaluación de Impacto relativa a la Protección de Datos (EIPD / DPIA)
 
 **Norma:** RGPD art. 35 · **Hallazgo de auditoría:** #18
-**Responsable:** `[COMPLETAR]` · **Fecha:** `[COMPLETAR]` · **Sistema:** Planificador v39
+**Responsable:** `[COMPLETAR]` · **Fecha:** `[COMPLETAR]` · **Sistema:** Planificador v38
 
 > **Naturaleza:** borrador para la memoria del TFM. La decisión final sobre si procede consulta
 > previa a la AEPD (art. 36) debe validarse con asesoría jurídica.
@@ -22,7 +22,7 @@ Con **dos o más** criterios, la EIPD se considera **exigible antes del go-live*
 **Flujo de datos:**
 ```
 Usuario → Frontend (Next.js) → /api/plan-trip (autenticado, Firebase Admin)
-   → Webhook n8n (Planificador v39)
+   → Webhook n8n (Planificador v38)
        → LLMs (OpenAI / Anthropic)         [EEUU]
        → Buscadores (SerpAPI, Tavily)      [EEUU]
        → Google Places/Maps                [EEUU, DPF]
@@ -51,11 +51,11 @@ Usuario → Frontend (Next.js) → /api/plan-trip (autenticado, Firebase Admin)
 |---|---|---|---|---|---|---|
 | R1 | Tratamiento de datos del art. 9 sin garantías (texto libre → LLM/buscadores) | Media | Alto | **Alto** | Consentimiento explícito 9.2.a + filtrado + aviso previo | #4 |
 | R2 | Transferencia a EEUU sin mecanismo formalizado | Alta | Medio | **Alto** | SCC + TIA por proveedor; DPF para Google | #19 |
-| R3 | Fuga de campos internos por el webhook (`_debug`, `_supabase_record`, `session_state`) | Media | Medio | **Medio** | **Resuelto en v39**: respuesta saneada | #13 |
+| R3 | Fuga de campos internos por el webhook (`_debug`, `_supabase_record`, `session_state`) | Media | Medio | **Medio** | Se saneó en v39 pero **se REVIRTIÓ (PR #70)**: el responder v38 vuelve a exponer estos campos → **riesgo abierto** | #13 |
 | R4 | Acceso no autorizado a `travel_plans` (RLS desactivado + service_role) | Media | Alto | **Alto** | Activar RLS + políticas por sesión; minimizar service_role | #8, #9 |
 | R5 | Copia sin cifrar en `localStorage` | Baja | Bajo | **Bajo** | Valorar cifrado o traslado a servidor | #22 |
 | R6 | Decisiones inexactas por alucinación de IA | Media | Medio | **Medio** | Disclaimers + no presentar como infalible | #30 |
-| R7 | Imagen de contenedor no fijada (comportamiento no reproducible) | Baja | Medio | **Bajo** | **Resuelto en v39**: pin `n8nio/n8n:2.25.7` | #7 |
+| R7 | Imagen de contenedor no fijada (comportamiento no reproducible) | Baja | Medio | **Bajo** | Se fijó en v39 pero **se REVIRTIÓ (PR #70)**: vuelve a `n8nio/n8n:latest` → **riesgo abierto** | #7 |
 
 ## 5. Art. 22 RGPD — decisiones automatizadas
 

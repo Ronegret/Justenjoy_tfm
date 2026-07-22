@@ -51,7 +51,7 @@ personales (confidencialidad, integridad o disponibilidad).
 
 ## 6. Escenarios probables en Just Enjoy (de la auditoría)
 - Exposición de planes por **RLS desactivado** en Supabase (#8) o filtración de la `service_role` (#9).
-- Fuga de campos internos por el webhook (#13 — mitigado en v39).
+- Fuga de campos internos por el webhook (#13 — se mitigó en v39 pero se **revirtió (PR #70)**; sigue abierto en v38).
 - Exposición de claves API en el historial de git (`.env.example:8` exige rotación — **A VERIFICAR**).
 
 ---
