@@ -1,0 +1,370 @@
+{
+  "session_id": "session_1784757441528_jt6wx41wk",
+  "status": "plan_ready",
+  "revision_count": 0,
+  "revision_snapshot": 0,
+  "generated_at": "2026-07-22T21:57:54.535Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Madrid",
+        "destination": "Barcelona",
+        "flights": {
+          "outbound": {
+            "airline": "Iberia",
+            "flight_no": "IB 425",
+            "origin": "MAD",
+            "destination": "BCN",
+            "departure_datetime": "2026-09-15T20:00:00",
+            "arrival_datetime": "2026-09-15T21:20:00",
+            "layovers": [],
+            "price_usd": 98,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20BCN%20from%20MAD%20on%202026-09-15%20through%202026-09-18"
+          },
+          "return": {
+            "airline": "Air Europa",
+            "flight_no": "UX 7708",
+            "origin": "BCN",
+            "destination": "MAD",
+            "departure_datetime": "2026-09-18T20:30:00",
+            "arrival_datetime": "2026-09-18T21:55:00",
+            "layovers": [],
+            "price_usd": 75,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20BCN%20from%20MAD%20on%202026-09-15%20through%202026-09-18"
+          }
+        },
+        "hotel": {
+          "name": "Urbany Hostel BCN GO!",
+          "address": "",
+          "stars": null,
+          "rating": 4.3,
+          "check_in": "2026-09-15",
+          "check_out": "2026-09-18",
+          "price_per_night_usd": 71,
+          "total_usd": 213,
+          "booking_url": "http://www.urbanyhostels.com/",
+          "lat": 41.384532899999996,
+          "lng": 2.1612563
+        },
+        "activities": [
+          {
+            "name": "Casa Batlló",
+            "date": "2026-09-16",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 41.3917,
+            "lng": 2.164918
+          },
+          {
+            "name": "Basilica of the Sagrada Familia",
+            "date": "2026-09-17",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 41.4036299,
+            "lng": 2.1743558
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 346,
+      "hotel_usd": 213,
+      "activities_usd": 0,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": null,
+      "local_transport_data_source": "null",
+      "total_usd": 559,
+      "budget_total_usd": 1200,
+      "budget_remaining_usd": 641
+    },
+    "trip_summary": "Viaje de 3 noches a Barcelona con vuelos directos y alojamiento céntrico tipo hostel. El itinerario incluye cultura, gastronomía y visitas a los principales puntos de interés de la ciudad.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-09-15",
+        "title": "Día de llegada a Barcelona",
+        "summary": "Llegada a Barcelona a las 21:20. Traslado al hotel y check-in. Aprovecha la noche para dar un paseo corto por los alrededores y cenar en algún restaurante cercano.",
+        "points_of_interest": [
+          "Josep Tarradellas Barcelona-El Prat Airport"
+        ],
+        "activities": [],
+        "lat": 41.3851,
+        "lng": 2.1734,
+        "coordinate_source": "city_center"
+      },
+      {
+        "day": 2,
+        "date": "2026-09-16",
+        "title": "Casa Batlló",
+        "summary": "Comienza el día explorando la Casa Batlló, una joya modernista de Gaudí. Disfruta de la arquitectura y sumérgete en la cultura local. Por la tarde, puedes pasear por el Passeig de Gràcia y descubrir tiendas y cafeterías emblemáticas.",
+        "points_of_interest": [
+          "Casa Batlló"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Casa Batlló",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 41.3917,
+            "lng": 2.164918
+          }
+        ],
+        "lat": 41.3917,
+        "lng": 2.164918,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 3,
+        "date": "2026-09-17",
+        "title": "Basilica of the Sagrada Familia",
+        "summary": "Visita la impresionante Sagrada Familia por la mañana, uno de los monumentos más icónicos de Barcelona. Aprovecha para conocer el barrio del Eixample y probar la gastronomía local en los alrededores.",
+        "points_of_interest": [
+          "Basilica of the Sagrada Familia"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Basilica of the Sagrada Familia",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 41.4036299,
+            "lng": 2.1743558
+          }
+        ],
+        "lat": 41.4036299,
+        "lng": 2.1743558,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 4,
+        "date": "2026-09-18",
+        "title": "Último día en Barcelona — Regreso a Madrid",
+        "summary": "Check-out del hotel y tiempo libre hasta el vuelo de regreso a las 20:30. Puedes aprovechar para visitar algún mercado o dar un último paseo por el centro antes de dirigirte al aeropuerto.",
+        "points_of_interest": [
+          "Urbany Hostel BCN GO!"
+        ],
+        "activities": [],
+        "lat": 41.3845953,
+        "lng": 2.1611705,
+        "coordinate_source": "geocoded"
+      }
+    ],
+    "plan_notes": [
+      "No se requieren visados para ciudadanos españoles viajando a Barcelona.",
+      "El transporte local en Barcelona incluye metro, autobuses y taxis; el metro conecta bien el centro y el aeropuerto.",
+      "Se recomienda conservar comprobantes de alojamiento y billete de regreso para posibles controles."
+    ],
+    "revision_snapshot": 0
+  },
+  "error_detail": "",
+  "_debug": {
+    "execution_time_ms": 3564,
+    "plan_metrics": {
+      "activities_found": 2,
+      "itinerary_days": 4,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_supabase_record": {
+    "session_id": "session_1784757441528_jt6wx41wk",
+    "status": "plan_ready",
+    "destination": "Barcelona",
+    "origin": "Madrid",
+    "departure_date": "2026-09-15",
+    "return_date": "2026-09-18",
+    "budget_usd": 1200,
+    "total_cost_usd": 559,
+    "travelers_count": 2,
+    "activity_interests": [
+      "food",
+      "culture"
+    ],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Madrid",
+          "destination": "Barcelona",
+          "flights": {
+            "outbound": {
+              "airline": "Iberia",
+              "flight_no": "IB 425",
+              "origin": "MAD",
+              "destination": "BCN",
+              "departure_datetime": "2026-09-15T20:00:00",
+              "arrival_datetime": "2026-09-15T21:20:00",
+              "layovers": [],
+              "price_usd": 98,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20BCN%20from%20MAD%20on%202026-09-15%20through%202026-09-18"
+            },
+            "return": {
+              "airline": "Air Europa",
+              "flight_no": "UX 7708",
+              "origin": "BCN",
+              "destination": "MAD",
+              "departure_datetime": "2026-09-18T20:30:00",
+              "arrival_datetime": "2026-09-18T21:55:00",
+              "layovers": [],
+              "price_usd": 75,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20BCN%20from%20MAD%20on%202026-09-15%20through%202026-09-18"
+            }
+          },
+          "hotel": {
+            "name": "Urbany Hostel BCN GO!",
+            "address": "",
+            "stars": null,
+            "rating": 4.3,
+            "check_in": "2026-09-15",
+            "check_out": "2026-09-18",
+            "price_per_night_usd": 71,
+            "total_usd": 213,
+            "booking_url": "http://www.urbanyhostels.com/",
+            "lat": 41.384532899999996,
+            "lng": 2.1612563
+          },
+          "activities": [
+            {
+              "name": "Casa Batlló",
+              "date": "2026-09-16",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Tourist attraction",
+              "source": "google_maps",
+              "lat": 41.3917,
+              "lng": 2.164918
+            },
+            {
+              "name": "Basilica of the Sagrada Familia",
+              "date": "2026-09-17",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Tourist attraction",
+              "source": "google_maps",
+              "lat": 41.4036299,
+              "lng": 2.1743558
+            }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 346,
+        "hotel_usd": 213,
+        "activities_usd": 0,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": null,
+        "local_transport_data_source": "null",
+        "total_usd": 559,
+        "budget_total_usd": 1200,
+        "budget_remaining_usd": 641
+      },
+      "trip_summary": "Viaje de 3 noches a Barcelona con vuelos directos y alojamiento céntrico tipo hostel. El itinerario incluye cultura, gastronomía y visitas a los principales puntos de interés de la ciudad.",
+      "daily_itinerary": [
+        {
+          "day": 1,
+          "date": "2026-09-15",
+          "title": "Día de llegada a Barcelona",
+          "summary": "Llegada a Barcelona a las 21:20. Traslado al hotel y check-in. Aprovecha la noche para dar un paseo corto por los alrededores y cenar en algún restaurante cercano.",
+          "points_of_interest": [
+            "Josep Tarradellas Barcelona-El Prat Airport"
+          ],
+          "activities": [],
+          "lat": 41.3851,
+          "lng": 2.1734,
+          "coordinate_source": "city_center"
+        },
+        {
+          "day": 2,
+          "date": "2026-09-16",
+          "title": "Casa Batlló",
+          "summary": "Comienza el día explorando la Casa Batlló, una joya modernista de Gaudí. Disfruta de la arquitectura y sumérgete en la cultura local. Por la tarde, puedes pasear por el Passeig de Gràcia y descubrir tiendas y cafeterías emblemáticas.",
+          "points_of_interest": [
+            "Casa Batlló"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Casa Batlló",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Tourist attraction",
+              "lat": 41.3917,
+              "lng": 2.164918
+            }
+          ],
+          "lat": 41.3917,
+          "lng": 2.164918,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 3,
+          "date": "2026-09-17",
+          "title": "Basilica of the Sagrada Familia",
+          "summary": "Visita la impresionante Sagrada Familia por la mañana, uno de los monumentos más icónicos de Barcelona. Aprovecha para conocer el barrio del Eixample y probar la gastronomía local en los alrededores.",
+          "points_of_interest": [
+            "Basilica of the Sagrada Familia"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Basilica of the Sagrada Familia",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Tourist attraction",
+              "lat": 41.4036299,
+              "lng": 2.1743558
+            }
+          ],
+          "lat": 41.4036299,
+          "lng": 2.1743558,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 4,
+          "date": "2026-09-18",
+          "title": "Último día en Barcelona — Regreso a Madrid",
+          "summary": "Check-out del hotel y tiempo libre hasta el vuelo de regreso a las 20:30. Puedes aprovechar para visitar algún mercado o dar un último paseo por el centro antes de dirigirte al aeropuerto.",
+          "points_of_interest": [
+            "Urbany Hostel BCN GO!"
+          ],
+          "activities": [],
+          "lat": 41.3845953,
+          "lng": 2.1611705,
+          "coordinate_source": "geocoded"
+        }
+      ],
+      "plan_notes": [
+        "No se requieren visados para ciudadanos españoles viajando a Barcelona.",
+        "El transporte local en Barcelona incluye metro, autobuses y taxis; el metro conecta bien el centro y el aeropuerto.",
+        "Se recomienda conservar comprobantes de alojamiento y billete de regreso para posibles controles."
+      ],
+      "revision_snapshot": 0
+    }
+  },
+  "_skip_supabase": false
+}
