@@ -12,7 +12,7 @@
 services:
   # ── n8n — Motor orquestador ──────────────────────────────────────────────
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.25.7
     restart: unless-stopped
     ports:
       - "5678:5678"
@@ -76,7 +76,7 @@ services:
   # activo (v38) y lo marca como activo para que n8n registre el webhook al
   # arrancar. Termina; n8n solo arranca si este servicio finaliza con exito.
   n8n-import:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.25.7
     user: node
     entrypoint: ["/bin/sh", "-c"]
     command:

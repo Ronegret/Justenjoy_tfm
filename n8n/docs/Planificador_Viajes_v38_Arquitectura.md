@@ -367,6 +367,25 @@ es que ya no lo escribe el LLM directamente, sino que se reconstruye desde
 }
 ```
 
+### 11.1 Saneo de la respuesta HTTP (nodo `Responder — Plan Listo`)
+
+El nodo responder **ya no** devuelve `JSON.stringify($json)`. El item que llega al responder
+(desde `Preparar Payload Supabase`, que alimenta a la vez al responder y a la rama de guardado)
+arrastra campos internos que **no deben salir por el webhook**: `_debug` (métricas del logger),
+`_supabase_record` (copia exacta del registro persistido), `_skip_supabase`, y el
+`session_state`/`travel_brief` interno.
+
+Desde v38 (fix de auditoría de cumplimiento #13) la respuesta se limita a los campos públicos
+que consume el frontend:
+
+```
+responseBody = {{ JSON.stringify({ status, session_id, plan, warnings }) }}
+```
+
+Esto no cambia lo que ve el usuario final (el frontend ya remapeaba solo esos campos en
+`route.ts`), pero cierra la fuga para cualquier consumidor directo del webhook. Los ejemplos
+en `n8n/examples/` anteriores a este fix pueden mostrar todavía los campos internos.
+
 ---
 
 ## 12. Taxonomía de Advertencias
