@@ -38,7 +38,7 @@ Cambios integrados en `develop` desde la Revisión 1:
 | 28 | "Enlace copiado" sin manejo de error | PARCIAL | ✅ **CUMPLE** | `ShareTripPanel.tsx` `handleCopyLink` con `try/catch` + fallback (PR #65) |
 | 29 | Botones `alert()` que fingen éxito | FALTA | ✅ **CUMPLE** | Calendar/email deshabilitados "Pronto" + `calendar_enabled=false` en todas las rutas (PR #65) |
 
-**Artefactos redactados como borrador (FALTA → PARCIAL; pendiente completar/firmar/implementar):**
+**Artefactos redactados y APROBADOS v1.0 (2026-07-22, Grupo 7 TFM) (FALTA → PARCIAL; siguen PARCIAL porque la aprobación no completa las acciones externas — firmar/portar/implementar/`[COMPLETAR]`):**
 
 | # | Obligación | Rev1 | Rev2 | Borrador |
 |---|---|---|---|---|
