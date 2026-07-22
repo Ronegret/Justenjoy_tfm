@@ -170,7 +170,7 @@ La estructura JSON que debes devolver es la siguiente:
   "share": {
     "private_url": "/trip/temp-id",
     "pdf_enabled": true,
-    "calendar_enabled": false
+    "calendar_enabled": true
   }
 }
 
@@ -986,9 +986,7 @@ async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[], origin
     share: {
       private_url: `/trip/${generatedId}`,
       pdf_enabled: true,
-      // La sincronización con calendario aún no está implementada; no se anuncia
-      // como disponible (auditoría #29). El PDF sí funciona (downloadTripPdf).
-      calendar_enabled: false
+      calendar_enabled: true
     }
   };
 }
