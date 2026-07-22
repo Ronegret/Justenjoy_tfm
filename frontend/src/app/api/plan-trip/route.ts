@@ -170,7 +170,7 @@ La estructura JSON que debes devolver es la siguiente:
   "share": {
     "private_url": "/trip/temp-id",
     "pdf_enabled": true,
-    "calendar_enabled": true
+    "calendar_enabled": false
   }
 }
 
