@@ -1,7 +1,7 @@
 # Planificador de Viajes — v34
 
-> ⚠️ **DOCUMENTO HISTÓRICO — v34 está archivada.** La versión canónica es **v38**:
-> ver [`Planificador_Viajes_v38_Arquitectura.md`](Planificador_Viajes_v38_Arquitectura.md).
+> ⚠️ **DOCUMENTO HISTÓRICO — v34 está archivada.** La versión canónica es **v39**:
+> ver [`Planificador_Viajes_v39_Arquitectura.md`](Planificador_Viajes_v39_Arquitectura.md).
 > El JSON de v34 vive en `../workflows/archive/`. Se conserva solo como referencia.
 
 ## Documentación de Arquitectura

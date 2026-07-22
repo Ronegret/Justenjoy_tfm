@@ -1,9 +1,15 @@
-# Planificador de Viajes — v38
+# Planificador de Viajes — v39
 ## Documentación de Arquitectura
 
-> **Versión:** v38
-> **Plataforma:** n8n 2.23.2 (Self Hosted)
+> **Versión:** v39
+> **Plataforma:** n8n 2.25.7 (Self Hosted)
 > **Estado:** Estable — versión activa del proyecto (TFM)
+>
+> **v39 = v38 + saneo de la respuesta del webhook (auditoría de cumplimiento #13) + pin de
+> imagen n8n.** No cambia la lógica del planificador; el `id` del workflow se mantiene
+> (`8Kym9GIgNKp7Nrdh`). Toda la sección de "Novedades" y el changelog de abajo referidos a
+> v38/v38.1 son historia de la línea (se conservan tal cual); lo introducido en v39 está en
+> §11.1 y en la tabla de changelog (§17).
 > **Workflow:** 1 main workflow (27 nodos)
 > **Modelo Motor Planificador:** GPT-4.1 (maxTokens 4096, temperature 0.1, retry on fail 65s)
 > **Modelo Agente Refinamiento:** GPT-4o-mini (maxTokens 1024, temperature 0.1)
@@ -55,7 +61,7 @@ que quedaron fuera de producción:
 
 ## 1. Descripción General
 
-El Planificador de Viajes v38 es un agente de IA automatizado en n8n que genera planes de viaje completos a partir de un formulario web estructurado. Dada la entrada del usuario (origen, destino, fechas, presupuesto, preferencias), el sistema:
+El Planificador de Viajes v39 es un agente de IA automatizado en n8n que genera planes de viaje completos a partir de un formulario web estructurado. Dada la entrada del usuario (origen, destino, fechas, presupuesto, preferencias), el sistema:
 
 1. Busca vuelo de ida y vuelo de vuelta mediante dos búsquedas one-way independientes (SerpAPI Google Flights)
 2. Busca el hotel con mejor valoración en las fechas reales del vuelo confirmado (SerpAPI Google Hotels)
@@ -367,6 +373,25 @@ es que ya no lo escribe el LLM directamente, sino que se reconstruye desde
 }
 ```
 
+### 11.1 Saneo de la respuesta HTTP (nodo `Responder — Plan Listo`)
+
+El nodo responder **ya no** devuelve `JSON.stringify($json)`. El item que llega al responder
+(desde `Preparar Payload Supabase`, que alimenta a la vez al responder y a la rama de guardado)
+arrastra campos internos que **no deben salir por el webhook**: `_debug` (métricas del logger),
+`_supabase_record` (copia exacta del registro persistido), `_skip_supabase`, y el
+`session_state`/`travel_brief` interno.
+
+Desde v39 (fix de auditoría de cumplimiento #13) la respuesta se limita a los campos públicos
+que consume el frontend:
+
+```
+responseBody = {{ JSON.stringify({ status, session_id, plan, warnings }) }}
+```
+
+Esto no cambia lo que ve el usuario final (el frontend ya remapeaba solo esos campos en
+`route.ts`), pero cierra la fuga para cualquier consumidor directo del webhook. Los ejemplos
+en `n8n/examples/` anteriores a este fix pueden mostrar todavía los campos internos.
+
 ---
 
 ## 12. Taxonomía de Advertencias
@@ -386,7 +411,7 @@ Sin cambios respecto a v34 — ver §13 de
 ## 14. Setup — Paso a Paso
 
 ### 14.1 Importar y configurar
-1. **Workflows → Import from File** → `Planificador_de_Viajes_v38.json`
+1. **Workflows → Import from File** → `Planificador_de_Viajes_v39.json`
 2. Asignar credenciales de OpenAI, SerpAPI, Tavily y Supabase en los nodos correspondientes
 3. Verificar en `Tool: Google Maps (Actividades)` que los campos `query` y `ll` tengan el ícono ✨ activo (modo `$fromAI`)
 4. Verificar que la tabla `travel_plans` existe en Supabase con RLS desactivado
@@ -465,6 +490,7 @@ POST https://[ngrok-url]/webhook/travel-planner
 | v36-v37 (internas, no publicadas) | Reparto declarativo (fix del TPM en frío); quedó sin ancla de cantidad |
 | v38 | Reintroduce la cantidad exacta de actividades como propiedad declarativa; fin de la duplicación de actividades (reconstrucción en código); salvaguarda de concisión en viajes ≥17 días |
 | **v38.1** | **Fix post-lanzamiento: agrupa los días con actividad al principio y los libres al final en código (§7.1) — el prompt lo pedía pero no lo cumplía de forma fiable en viajes largos** |
+| **v39** | **Saneo de la respuesta del webhook: el responder solo devuelve `status`, `session_id`, `plan` y `warnings`, sin filtrar `_debug`/`_supabase_record`/`_skip_supabase` ni `session_state`/`travel_brief` (auditoría de cumplimiento #13, §11.1). Pin de imagen `n8nio/n8n:2.25.7`. Sin cambios de lógica; mismo `id` de workflow.** |
 
 ---
 

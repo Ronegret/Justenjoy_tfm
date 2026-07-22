@@ -70,7 +70,7 @@ La lógica vive en herramientas de orquestación y en LLMs, conectados mediante 
 
 ### 2. n8n — Orquestador (Curación + Transacción)
 - **Rol:** motor del sistema. Gestiona toda la lógica condicional y las llamadas a APIs.
-- **Versión canónica:** v38 (ver `n8n/docs/Planificador_Viajes_v38_Arquitectura.md`).
+- **Versión canónica:** v39 (ver `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`).
   El código de sus 10 nodos Code vive versionado en `n8n/nodes-code/`. Las versiones
   anteriores (v24–v34) están congeladas en `n8n/workflows/archive/`.
 - **Despliegue:** self-hosted. URL expuesta via ngrok en desarrollo.
@@ -135,11 +135,15 @@ Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 > fechas del ejemplo antes de lanzar la prueba.
 
 ### Salida (HTTP 200)
-Ver `n8n/examples/output-plan.json` (genérico) y
-`n8n/examples/output-plan-v29-amsterdam-paris.json` (respuesta real de v29) para el esquema completo.
-Campos clave: `status`, `plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`,
-`warnings[]`, `_debug`. Desde v29 la respuesta añade además campos internos de la
-persistencia en Supabase (`_supabase_record`, `_skip_supabase`); el frontend los ignora.
+Ver `n8n/examples/output-plan-v39-saneado.json` (formato actual de la respuesta) y
+`n8n/examples/output-plan-v29-amsterdam-paris.json` (respuesta histórica de v29) para el esquema.
+**Desde v39 la respuesta del webhook está saneada**: el nodo "Responder — Plan Listo" devuelve
+únicamente los campos públicos `status`, `session_id`, `plan` y `warnings[]`
+(`plan.segments[]`, `plan.cost_summary`, `plan.daily_itinerary[]`, `plan.plan_notes[]`).
+**Ya NO se filtran** los campos internos que antes arrastraba la respuesta —`_debug`,
+`_supabase_record`, `_skip_supabase` y `session_state`/`travel_brief`— (auditoría de cumplimiento
+#13; ver §11.1 de `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`). Los ejemplos v27/v29/v31,
+anteriores al saneo, aún muestran esos campos internos.
 Desde v31 cada elemento de `plan.daily_itinerary[]` incluye `lat`, `lng` y
 `coordinate_source` (`activity` | `geocoded` | `city_center` | `none`), que alimentan el
 mapa del portal del viajero (nodo "Enriquecer Coordenadas (OpenStreetMap)").

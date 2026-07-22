@@ -1,5 +1,5 @@
 {
-  "name": "Planificador de Viajes — v38",
+  "name": "Planificador de Viajes — v39",
   "nodes": [
     {
       "parameters": {
@@ -340,7 +340,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
+        "responseBody": "={{ JSON.stringify({ status: $json.status, session_id: $json.session_id, plan: $json.plan, warnings: $json.warnings }) }}",
         "options": {
           "responseCode": 200
         }
@@ -353,7 +353,7 @@
         1968,
         112
       ],
-      "notes": "Devuelve el plan completo como JSON al frontend. El frontend renderiza la página de resultados."
+      "notes": "Devuelve SOLO los campos públicos (status, session_id, plan, warnings) al frontend. Se saneó la salida (antes JSON.stringify($json)) para no filtrar campos internos _debug, _supabase_record, _skip_supabase ni session_state/travel_brief (auditoría de cumplimiento #13)."
     },
     {
       "parameters": {
