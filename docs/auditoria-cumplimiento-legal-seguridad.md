@@ -1,4 +1,8 @@
-# Auditoría de cumplimiento legal y de seguridad — Just Enjoy
+# Auditoría de cumplimiento legal y de seguridad — Just Enjoy (Revisión 2)
+
+> 📌 **Documento VIGENTE (Revisión 2).** La **Revisión 1** (evaluación inicial, congelada tal como
+> se entregó antes de la remediación) vive en un fichero aparte:
+> [`auditoria-cumplimiento-legal-seguridad-rev1.md`](auditoria-cumplimiento-legal-seguridad-rev1.md).
 
 > **Alcance:** frontend Next.js 16 (App Router), orquestador n8n `Planificador_de_Viajes_v39` (27 nodos),
 > LLMs OpenAI (`gpt-4.1`/`gpt-4o-mini`) y Anthropic (`claude-3-5-sonnet`), Firebase Auth/Admin,
@@ -18,10 +22,11 @@
 
 ## 0. Revisión 2 — estado tras remediación (2026-07-22)
 
-> Esta sección se añade **después** de aplicar las primeras correcciones. La §1 (tabla original)
-> se conserva como **Revisión 1** (evaluación de partida, útil como *antes*); **para el estado
-> vigente de los ítems modificados prevalece la tabla delta de abajo.** Revisión 1 quedó
-> registrada en git (PR #63, commit `4a109ff`).
+> Esta sección refleja el estado **después** de aplicar las primeras correcciones. La evaluación
+> inicial completa (Revisión 1) está congelada en su propio fichero
+> [`auditoria-cumplimiento-legal-seguridad-rev1.md`](auditoria-cumplimiento-legal-seguridad-rev1.md).
+> La §1 de abajo reproduce el **detalle de hallazgos** (evidencia y acción); para el **estado
+> vigente** de cada obligación prevalece la tabla delta de esta §0.
 
 Cambios integrados en `develop` desde la Revisión 1:
 - **PR #63** — esta auditoría · **PR #64** — 7 artefactos en `docs/legal/`
@@ -69,10 +74,12 @@ Cambios integrados en `develop` desde la Revisión 1:
 
 ---
 
-## 1. Tabla de auditoría — Revisión 1 (evaluación de partida)
+## 1. Detalle de hallazgos (evidencia y acción)
 
-> Estado original previo a la remediación. Para los ítems #1, #7, #13, #16-20, #23, #24, #28, #29
-> consulta la **§0.1** (estado vigente). El resto no ha cambiado.
+> Los **estados** de esta tabla son los de partida (se conservan por trazabilidad). Para el
+> **estado vigente** tras la remediación, consulta la **§0**. Los ítems #1, #7, #13, #16-20, #23,
+> #24, #28, #29 han cambiado; el resto no. La instantánea íntegra de la evaluación inicial está en
+> [`auditoria-cumplimiento-legal-seguridad-rev1.md`](auditoria-cumplimiento-legal-seguridad-rev1.md).
 
 
 | # | Obligación | Evidencia (`fichero:línea`) | Estado | Hueco y corrección |
