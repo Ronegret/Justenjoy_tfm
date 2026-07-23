@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus, Compass, MapPin, CheckSquare, Smile, Search, X
@@ -45,6 +45,48 @@ export default function DashboardPage() {
   const router = useRouter();
   const { savedTrips, deleteTrip } = useTrips();
   const [query, setQuery] = useState('');
+  // Coincidencias por CLIENTE resueltas en el servidor (sobre `plan_holders`), para
+  // que la búsqueda por nombre/teléfono/email funcione **tras recargar** (cuando el
+  // `holder` ya no está en memoria). `null` = sin búsqueda activa / no resuelta. El
+  // endpoint devuelve solo `session_id` (== `trip_id`); nunca PII. Ver spec
+  // 2026-07-23-buscador-clientes-servidor.
+  const [serverMatchIds, setServerMatchIds] = useState<Set<string> | null>(null);
+
+  // Consulta al endpoint server-side (debounced) cuando cambia la búsqueda. Es una
+  // MEJORA no bloqueante: si falla (401/503/red), la búsqueda por destino/título y
+  // por titular en memoria (misma sesión) sigue funcionando en cliente.
+  useEffect(() => {
+    const q = query.trim();
+    const ids = savedTrips.map((t) => t.trip_id);
+    if (!q || ids.length === 0) {
+      // Limpiar las coincidencias del servidor al vaciar la búsqueda es intencional
+      // (evita falsos positivos de una query anterior). El memo de filtrado ignora
+      // serverMatchIds cuando la query está vacía, así que no cascadea render útil.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setServerMatchIds(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/holders/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_ids: ids, query: q }),
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setServerMatchIds(new Set(Array.isArray(data?.matching_session_ids) ? data.matching_session_ids : []));
+      } catch {
+        // Abort (nueva pulsación) o error de red: se ignora; el filtro en cliente sigue.
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, savedTrips]);
 
   // Filtra los planes por los datos del titular/cliente (nombre, apellidos,
   // nombre completo, teléfono, email) y también por destino/título del viaje, en
@@ -58,10 +100,16 @@ export default function DashboardPage() {
     const q = normalizeLoose(query.trim());
     if (!q) return savedTrips;
     return savedTrips.filter((trip) => {
+      // Coincidencia persistente por cliente resuelta en el servidor (sobre
+      // `plan_holders`): funciona tras recargar, cuando el `holder` ya no está en
+      // memoria. Se une (OR) con el filtro en cliente de abajo.
+      if (serverMatchIds?.has(trip.trip_id)) return true;
       const holder = trip.user_preferences.holder;
       // `holderFullName` cubre nombre y apellidos: con matching laxo, cualquier
       // consulta que casaría uno de ellos casa también el nombre completo (los
-      // contiene como subcadena), así que no se listan por separado.
+      // contiene como subcadena), así que no se listan por separado. El titular en
+      // memoria solo existe en la sesión en que se generó el plan; destino/título
+      // siempre están disponibles en cliente.
       const fields = [
         holderFullName(holder),
         holder?.phone,
@@ -71,7 +119,7 @@ export default function DashboardPage() {
       ];
       return fields.some((field) => field && normalizeLoose(field).includes(q));
     });
-  }, [savedTrips, query]);
+  }, [savedTrips, query, serverMatchIds]);
 
   // Con búsqueda activa, la fila de stats refleja el subconjunto filtrado, así
   // que el rótulo del primer stat se adapta para no contradecir el número.

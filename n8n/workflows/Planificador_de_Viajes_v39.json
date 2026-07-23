@@ -588,6 +588,83 @@
       },
       "onError": "continueRegularOutput",
       "notes": "Crea un registro en plan_holders con los datos del titular. No bloqueante: un fallo aquí no detiene la planificación."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "holders-search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c3d4e5f6-9a0b-4c1d-8e2f-3a4b5c6d7e81",
+      "name": "Webhook — Buscar Titulares",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        720
+      ],
+      "webhookId": "holders-search-lookup",
+      "notes": "RAMA DE LECTURA — búsqueda de titulares por datos de cliente para el dashboard. URL: POST /webhook/holders-search. In: {session_ids[],query}. Out: {matching_session_ids[]} (sin PII)."
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "plan_holders",
+        "returnAll": true,
+        "filters": {
+          "conditions": []
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-0b1c-4d2e-9f30-4b5c6d7e8f92",
+      "name": "Supabase — Leer Titulares",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        720
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "Pi2WEi9yKJ08eQQ3",
+          "name": "Supabase - JustEnjoy"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Lee plan_holders (todas las filas) para que el filtrado por session_id propio + query se haga en el code node, sin meter input de cliente en la query (evita inyección). alwaysOutputData para que el code node corra aunque la tabla esté vacía."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Buscar titulares por datos de cliente (nombre/apellidos/teléfono/email) entre\n// los planes que el propio cliente posee. Rama de LECTURA (webhook holders-search),\n// independiente del planificador. Sostiene la búsqueda persistente del dashboard.\n//\n// PRIVACIDAD (D1 de la spec, server-side puro): devuelve SOLO los `session_id` que\n// casan, NUNCA PII. El endpoint del frontend solo aporta los `session_id` que ya\n// posee (localStorage) + la query; el filtrado por posesión se hace aquí (no en la\n// consulta a Supabase, que trae todas las filas: así no hay input de cliente en la\n// query → sin superficie de inyección). El match usa la MISMA normalización laxa\n// que el frontend (lib/text.ts normalizeLoose): minúsculas, sin acentos ni\n// separadores (\"jose perez\" casa \"José Pérez\"; \"600123456\" casa \"+34 600 123 456\").\nconst normalizeLoose = (v) =>\n  (v || '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, '');\n\n// Cuerpo del webhook: { session_ids: string[], query: string }.\nconst req = $('Webhook — Buscar Titulares').first().json.body || {};\nconst sessionIds = Array.isArray(req.session_ids)\n  ? req.session_ids.filter((s) => typeof s === 'string')\n  : [];\nconst q = normalizeLoose(typeof req.query === 'string' ? req.query : '');\n\n// Sin query o sin planes que aportar → nada que casar (no exponemos toda la tabla).\nif (!q || sessionIds.length === 0) {\n  return [{ json: { matching_session_ids: [] } }];\n}\n\n// Filas de plan_holders (nodo Supabase getAll). Con alwaysOutputData puede venir un\n// item vacío si la tabla está vacía; se descarta al no tener session_id propio.\nconst owned = new Set(sessionIds);\nconst rows = $input\n  .all()\n  .map((i) => i.json)\n  .filter((r) => r && owned.has(r.session_id));\n\n// Match campo a campo (nombre completo, teléfono, email), igual que el frontend.\nconst matching = [];\nfor (const r of rows) {\n  const fields = [\n    `${r.first_name || ''} ${r.last_name || ''}`,\n    r.phone || '',\n    r.email || ''\n  ];\n  if (fields.some((f) => normalizeLoose(f).includes(q))) {\n    matching.push(r.session_id);\n  }\n}\n\nreturn [{ json: { matching_session_ids: Array.from(new Set(matching)) } }];"
+      },
+      "id": "e5f6a7b8-1c2d-4e3f-a041-5c6d7e8f90a3",
+      "name": "Buscar Titulares",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        720
+      ],
+      "notes": "Filtra las filas de plan_holders por los session_id que aporta el cliente y por la query (normalización laxa, igual que el frontend). Devuelve SOLO session_ids (sin PII)."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f6a7b8c9-2d3e-4f40-b152-6d7e8f90a1b4",
+      "name": "Responder — Titulares",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        720
+      ],
+      "notes": "Devuelve { matching_session_ids } al frontend. Sin PII."
     }
   ],
   "pinData": {},
@@ -874,6 +951,39 @@
         [
           {
             "node": "Preparar Payload Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook — Buscar Titulares": {
+      "main": [
+        [
+          {
+            "node": "Supabase — Leer Titulares",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase — Leer Titulares": {
+      "main": [
+        [
+          {
+            "node": "Buscar Titulares",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Titulares": {
+      "main": [
+        [
+          {
+            "node": "Responder — Titulares",
             "type": "main",
             "index": 0
           }

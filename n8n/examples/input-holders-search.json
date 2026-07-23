@@ -1,0 +1,8 @@
+{
+  "_comment": "Entrada del webhook de LECTURA POST /webhook/holders-search. El endpoint autenticado /api/holders/search reenvía los session_id que el cliente ya posee (localStorage) + la query de búsqueda. El code node 'Buscar Titulares' filtra plan_holders por esos session_id (posesión) y por la query (normalización laxa), y devuelve solo los que casan. Ver n8n/docs/Planificador_Viajes_v39_Arquitectura.md §9.2.",
+  "session_ids": [
+    "session_1758000000000_abc123def",
+    "justenjoy-paris-1758000000001"
+  ],
+  "query": "ana garcia"
+}

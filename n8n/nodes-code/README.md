@@ -1,6 +1,6 @@
 # Código de los nodos Code del workflow Planificador v39
 
-Los 11 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v39.json`
+Los 12 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v39.json`
 (canónico; v38 quedó congelado en `../workflows/archive/`) viven aquí como **fuente de
 verdad versionada**. El JSON del workflow lleva el código embebido en el campo `jsCode` de
 cada nodo, pero es frágil (n8n puede vaciarlo al reimportar, y editar JS dentro de un string
@@ -26,6 +26,7 @@ JSON es incómodo). Estos `.js` son la copia canónica y revisable.
 | `09_extraer_record.js` | Extraer Record | Aísla el `_supabase_record` para el nodo de inserción en Supabase |
 | `10_enriquecer_coordenadas.js` | Enriquecer Coordenadas (OpenStreetMap) | Añade 1 coordenada/día al `daily_itinerary` (actividad → geocoding Nominatim del `points_of_interest` del LLM → centro de ciudad) para el mapa del frontend |
 | `11_preparar_payload_titular.js` | Preparar Payload Titular | Construye el registro de la tabla `plan_holders` desde `travel_brief.holder`; emite `[]` si no hay titular (paso opcional omitido). Rama paralela tras validar el formulario |
+| `12_buscar_titulares.js` | Buscar Titulares | **Rama de lectura** (webhook `holders-search`): filtra `plan_holders` por los `session_id` que el cliente posee + la query (normalización laxa) y devuelve solo `matching_session_ids` (sin PII). Sostiene la búsqueda persistente del dashboard |
 
 ## Reaplicar el código al workflow JSON
 
