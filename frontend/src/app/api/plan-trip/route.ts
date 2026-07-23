@@ -1035,6 +1035,14 @@ export async function POST(req: NextRequest) {
 
     console.log('Received travel preferences for Just Enjoy API:', redactHolderForLog(body));
 
+    // El titular (`holder`) es PII de contacto del lead y NO interviene en generar
+    // el plan: solo se persiste en `plan_holders` (rama n8n, con consentimiento).
+    // Los respaldos directos a LLM (OpenAI/Anthropic) reciben este cuerpo saneado,
+    // para no filtrar nombre/teléfono/email a terceros ni saltarse el gate de
+    // consentimiento (que solo cubre la rama n8n vía holderToN8nPayload).
+    const bodyForLlm = { ...body };
+    delete (bodyForLlm as Partial<TripPreferences>).holder;
+
     // -------------------------------------------------------------------------
     // 1. INTENTAR LLAMADA A WEBHOOK DE N8N (Si está configurada)
     // -------------------------------------------------------------------------
@@ -1142,7 +1150,7 @@ export async function POST(req: NextRequest) {
             temperature: 0.7,
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: `Genera un viaje completo con las siguientes preferencias del usuario: ${JSON.stringify(body)}` }
+              { role: 'user', content: `Genera un viaje completo con las siguientes preferencias del usuario: ${JSON.stringify(bodyForLlm)}` }
             ]
           })
         });
@@ -1199,7 +1207,7 @@ export async function POST(req: NextRequest) {
             messages: [
               {
                 role: 'user',
-                content: `${SYSTEM_PROMPT}\n\nGenera un viaje completo con las siguientes preferencias. Recuerda responder únicamente con el objeto JSON puro solicitado: ${JSON.stringify(body)}`
+                content: `${SYSTEM_PROMPT}\n\nGenera un viaje completo con las siguientes preferencias. Recuerda responder únicamente con el objeto JSON puro solicitado: ${JSON.stringify(bodyForLlm)}`
               }
             ]
           })

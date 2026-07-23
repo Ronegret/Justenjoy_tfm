@@ -7,6 +7,13 @@ export interface PlanHolder {
   lastName: string;
   phone: string;
   email: string;
+  // Evidencia del consentimiento (RGPD 6.1.a). Se rellenan al marcar la casilla
+  // de consentimiento en el paso del titular; `consentAt` es el momento (ISO) y
+  // `consentVersion` la versión de la política aceptada. Sin `consentAt` el
+  // titular NO se envía a n8n ni se persiste (ver lib/holder.ts). No cuentan
+  // como "datos de titular" (holderHasData mira solo nombre/tel/email).
+  consentAt?: string;
+  consentVersion?: string;
 }
 
 export interface TripPreferences {

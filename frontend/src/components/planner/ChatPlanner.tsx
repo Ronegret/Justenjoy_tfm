@@ -9,7 +9,7 @@ import {
   User, Mail, Phone
 } from 'lucide-react';
 import { TripPreferences, PlanHolder } from '@/types/trip';
-import { holderHasData, holderFullName } from '@/lib/holder';
+import { holderHasData, holderFullName, HOLDER_CONSENT_POLICY_VERSION } from '@/lib/holder';
 import { SmartChip } from '../shared/SmartChip';
 import { CityAutocompleteInput } from './CityAutocompleteInput';
 import { todayISO } from '@/lib/dates';
@@ -256,7 +256,26 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   };
   const emailInvalid = !!holder.email && !isValidEmail(holder.email);
 
+  // Consentimiento del titular (RGPD 6.1.a). Solo aplica si el viajero rellenó
+  // datos de titular; su evidencia (momento + versión de política) vive en el
+  // propio `holder` para viajar con él a n8n. Marcar la casilla sella `consentAt`;
+  // desmarcarla lo limpia. Sin consentimiento, el titular no se envía ni persiste.
+  const holderHasContactData = holderHasData(preferences.holder);
+  const holderConsented = holderHasContactData && !!preferences.holder?.consentAt;
+  const setHolderConsent = (checked: boolean) => {
+    if (!preferences.holder) return;
+    updatePrefs({
+      holder: checked
+        ? { ...preferences.holder, consentAt: new Date().toISOString(), consentVersion: HOLDER_CONSENT_POLICY_VERSION }
+        : { ...preferences.holder, consentAt: undefined, consentVersion: undefined }
+    });
+  };
+  // Bloquea avanzar del paso del titular si hay datos pero falta el consentimiento
+  // (usar "Omitir" para no dejar datos es siempre una salida válida).
+  const consentBlocksNext = currentStep === 8 && holderHasContactData && !holderConsented;
+
   const handleNext = () => {
+    if (consentBlocksNext) return;
     let nextPrefs = preferences;
 
     if (currentStep === 1) {
@@ -890,6 +909,29 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
                   </p>
                 )}
               </div>
+              {/* Consentimiento (RGPD 6.1.a): obligatorio solo si se rellenaron
+                  datos. Sin marcarlo no se puede avanzar (o usar "Omitir"). */}
+              {holderHasContactData && (
+                <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
+                  holderConsented
+                    ? 'border-brand-teal/40 bg-brand-teal/5'
+                    : 'border-amber-400/60 bg-amber-400/5'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={holderConsented}
+                    onChange={(e) => setHolderConsent(e.target.checked)}
+                    className="mt-0.5 accent-brand-blue cursor-pointer"
+                  />
+                  <span className="text-[10px] text-brand-dark dark:text-brand-white leading-relaxed">
+                    Consiento que Just Enjoy trate los datos de contacto del titular para gestionar este
+                    plan, conforme a la{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-blue font-semibold hover:underline">
+                      política de privacidad
+                    </a>. Puedo retirar el consentimiento en cualquier momento.
+                  </span>
+                </label>
+              )}
               <p className="text-[10px] text-text-muted leading-relaxed">
                 Guardamos estos datos solo para identificar al titular de este plan. Puedes omitir este paso.
               </p>
@@ -914,7 +956,9 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
             <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE {TOTAL_STEPS}</span>
             <button
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer select-none"
+              disabled={consentBlocksNext}
+              title={consentBlocksNext ? 'Marca el consentimiento o pulsa "Omitir" para continuar' : undefined}
+              className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md"
             >
               {currentStep === TOTAL_STEPS ? (
                 <>

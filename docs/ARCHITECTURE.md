@@ -127,8 +127,10 @@ Ver `n8n/examples/input-formulario.json` para el esquema completo.
 Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 `return_date`, `travelers`, `budget_total_usd`, `accommodation_type`, `activity_interests[]`.
 
-Campo **opcional** `holder` (`{ first_name, last_name, phone, email }`): datos del
-titular/cliente del plan (novedad de **v39**). Si viene informado, se persiste en la tabla
+Campo **opcional** `holder` (`{ first_name, last_name, phone, email, consent_at, consent_version }`):
+datos del titular/cliente del plan (novedad de **v39**). Solo se envía con **consentimiento
+explícito** (RGPD 6.1.a): `consent_at` (ISO) y `consent_version` son la evidencia; sin ellos el
+frontend no manda el `holder` y n8n no lo persiste. Si viene informado, se persiste en la tabla
 `plan_holders` de Supabase (rama paralela, no bloqueante; ver §9.1 de
 `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`). Ejemplo:
 `n8n/examples/input-formulario-con-titular.json`. Contiene PII → tratar según `docs/legal/`.
