@@ -1,0 +1,6 @@
+{
+  "_comment": "Salida del webhook holders-search (nodo 'Responder — Titulares'), correspondiente a input-holders-search.json. Contiene SOLO los session_id (== trip_id) que casan por datos de cliente; NUNCA PII (nombre/teléfono/email se quedan en n8n). El dashboard usa estos ids para mostrar los planes que coinciden aunque el holder ya no esté en memoria (tras recargar). Lista vacía si nada casa.",
+  "matching_session_ids": [
+    "session_1758000000000_abc123def"
+  ]
+}

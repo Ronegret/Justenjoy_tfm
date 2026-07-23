@@ -124,3 +124,28 @@ Validar Formulario → ¿Error Formulario?
 
 La rama del titular es independiente y no bloqueante: un fallo (o la ausencia de titular) no
 afecta ni a la respuesta al usuario ni a la persistencia del plan.
+
+---
+
+## 9.2 Búsqueda de titulares — rama de lectura (`holders-search`)
+
+Rama **independiente** del planificador que sostiene la búsqueda **persistente por cliente**
+del dashboard (spec `docs/specs/2026-07-23-buscador-clientes-servidor.md`, D1=server-side puro,
+D2=vía n8n). Tiene su **propio webhook**; no se conecta con el flujo de planificación.
+
+- **Entrada:** `POST /webhook/holders-search` con `{ session_ids: string[], query: string }`.
+  El endpoint autenticado `frontend/.../api/holders/search` reenvía los `session_id` que el
+  cliente ya posee (localStorage) + la query. Ejemplo:
+  [`../examples/input-holders-search.json`](../examples/input-holders-search.json).
+- **Nodos:** `Webhook — Buscar Titulares` → `Supabase — Leer Titulares` (`getAll` sobre
+  `plan_holders`, `alwaysOutputData` para correr aunque la tabla esté vacía) → `Buscar Titulares`
+  (`12_buscar_titulares.js`) → `Responder — Titulares`.
+- **Por qué se lee toda la tabla y se filtra en el code node:** el filtrado por `session_id`
+  (posesión) y por la query se hace en JS, **no** en la consulta a Supabase, para no meter
+  input del cliente en el filtro (sin superficie de inyección). El `service_role` se queda en
+  n8n. Coste: lee `plan_holders` completa en memoria del nodo — aceptable a escala de este
+  proyecto; para escalar, añadir paginación/índice. Mismo criterio de match laxo que el frontend.
+- **Salida:** `{ matching_session_ids: string[] }` — **solo** `session_id`, **nunca PII**.
+  Ejemplo: [`../examples/output-holders-search.json`](../examples/output-holders-search.json).
+- **Contrato de datos = cambio de API →** requiere ejemplo en `n8n/examples/` (§9.1) y
+  aprobación previa (§3.2). Variable de entorno nueva: `N8N_HOLDERS_SEARCH_WEBHOOK_URL`.

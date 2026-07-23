@@ -156,6 +156,15 @@ mapa del portal del viajero (nodo "Enriquecer Coordenadas (OpenStreetMap)").
 Entrada: `{ session_id, feedback_text }`.
 El sistema re-ejecuta solo los pasos afectados por el feedback.
 
+### Búsqueda de titulares (POST `/webhook/holders-search`)
+Rama de **lectura** para la búsqueda persistente de clientes en el dashboard (novedad **v39**).
+Entrada `{ session_ids[], query }`; salida `{ matching_session_ids[] }` — **solo `session_id`,
+sin PII**. El endpoint autenticado `/api/holders/search` (frontend) reenvía aquí los
+`session_id` que el cliente posee + la query; n8n consulta `plan_holders` con `service_role`
+(que no sale de n8n) y filtra por posesión + query en un code node. Env
+`N8N_HOLDERS_SEARCH_WEBHOOK_URL`. Ejemplos: `n8n/examples/input-holders-search.json` /
+`output-holders-search.json`. Ver §9.2 de `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`.
+
 ---
 
 ## Gestión de sesiones
