@@ -56,29 +56,37 @@ Se añade la captura **opcional** de los datos del titular por plan. Contrato y 
   - `Supabase — Guardar Titular` (`operation: create`, `tableId: plan_holders`,
     `onError: continueRegularOutput`, credencial `Supabase - JustEnjoy`).
   - Salida de ejemplo: [`../examples/output-plan-holders-record.json`](../examples/output-plan-holders-record.json).
-- **DDL (crear manualmente en Supabase; el repo no versiona migraciones, solo el DDL en
-  prosa, igual que `travel_plans`):**
+- **DDL — fuente de verdad versionada:** [`supabase/migrations/2026-07-23_0001_plan_holders.sql`](../../supabase/migrations/2026-07-23_0001_plan_holders.sql)
+  (cierra el gap #15 de la auditoría; antes el DDL vivía solo en esta prosa). Resumen:
 
 ```sql
 CREATE TABLE plan_holders (
-  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id  TEXT NOT NULL,   -- referencia a travel_plans.session_id (indexado, SIN FK dura)
-  first_name  TEXT,
-  last_name   TEXT,
-  phone       TEXT,
-  email       TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id      TEXT NOT NULL,   -- referencia a travel_plans.session_id (indexado, SIN FK dura)
+  first_name      TEXT,
+  last_name       TEXT,
+  phone           TEXT,
+  email           TEXT,
+  consent_at      TIMESTAMPTZ,     -- RGPD 6.1.a: momento del consentimiento (captura: frente titular)
+  consent_version TEXT,            -- RGPD 6.1.a: versión de la política aceptada
+  created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX idx_plan_holders_session_id ON plan_holders (session_id);
-ALTER TABLE plan_holders DISABLE ROW LEVEL SECURITY;
+CREATE UNIQUE INDEX uq_plan_holders_email ON plan_holders (email) WHERE email IS NOT NULL;  -- dedup
+ALTER TABLE plan_holders ENABLE ROW LEVEL SECURITY;  -- OBJETIVO (pendiente de aplicar); solo service_role (BYPASSRLS)
 ```
 
 > Sin FK dura a `travel_plans.session_id`: así el lead se guarda aunque el plan falle
-> (captación). RLS desactivado, coherente con `travel_plans`. Contiene **datos personales**
-> (PII): tratar según `docs/legal/` (ROPA/EIPD/política de privacidad). Endurecimiento
-> pendiente: activar RLS sin políticas cuando se confirme que la credencial de n8n usa la
-> clave `service_role` (que salta la RLS); si usara la `anon`, activar RLS rompería el
-> guardado en silencio (`onError: continueRegularOutput`).
+> (captación). Contiene **datos personales** (PII): tratar según `docs/legal/`
+> (ROPA Actividad 6 / EIPD R8 / política de privacidad; base jurídica **6.1.a consentimiento**,
+> conservación **24 meses**). **Estado del endurecimiento RLS:** el SQL está versionado en la
+> migración, **pendiente de aplicar en la instancia** por infra (requiere admin). Antes de
+> activar hay que confirmar que la credencial de n8n usa la clave `service_role` (que salta la
+> RLS); si usara la `anon`, activar RLS rompería el guardado en silencio
+> (`onError: continueRegularOutput`). Ver el runbook en
+> [`docs/specs/2026-07-23-rgpd-plan-holders-rls.md`](../../docs/specs/2026-07-23-rgpd-plan-holders-rls.md).
+> Las columnas `consent_at`/`consent_version` las **rellena** la captura de consentimiento
+> (frente `feature/consentimiento-titular`); hasta entonces quedan nulas.
 
 ### Minimización de PII del titular
 
@@ -88,17 +96,11 @@ ALTER TABLE plan_holders DISABLE ROW LEVEL SECURITY;
 - El frontend **no** serializa el `holder` en `localStorage` (solo lo mantiene en memoria
   durante la sesión); su fuente de verdad es `plan_holders`.
 - **Dedup por email** (un lead por persona) mediante un índice `UNIQUE` parcial sobre
-  `plan_holders(email) WHERE email IS NOT NULL` (crear manualmente en Supabase, como la
-  propia tabla). Evita acumular leads duplicados por regeneraciones/reintentos:
-
-```sql
--- Deduplicar emails existentes (conserva el más antiguo) antes de crear el índice:
-DELETE FROM plan_holders a USING plan_holders b
-  WHERE a.email = b.email AND a.email IS NOT NULL AND a.created_at > b.created_at;
--- Índice único parcial (dedup por email; los titulares sin email no se deduplican):
-CREATE UNIQUE INDEX IF NOT EXISTS uq_plan_holders_email
-  ON plan_holders (email) WHERE email IS NOT NULL;
-```
+  `plan_holders(email) WHERE email IS NOT NULL`. Evita acumular leads duplicados por
+  regeneraciones/reintentos. El DDL exacto (con el `DELETE` de deduplicación previo,
+  obligatorio antes de crear el índice si ya hubiera duplicados) está en la migración
+  versionada [`supabase/migrations/2026-07-23_0001_plan_holders.sql`](../../supabase/migrations/2026-07-23_0001_plan_holders.sql)
+  — **fuente de verdad única**; no dupliques el DDL aquí.
 
 ---
 
