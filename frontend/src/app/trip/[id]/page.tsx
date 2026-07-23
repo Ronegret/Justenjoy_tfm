@@ -20,6 +20,7 @@ import { BudgetBreakdown } from '@/components/trip/BudgetBreakdown';
 import { ShareTripPanel } from '@/components/trip/ShareTripPanel';
 import { PracticalInfoCard } from '@/components/trip/PracticalInfoCard';
 import { getFallbackDestinationImage } from '@/lib/destinationImages';
+import { holderHasData, holderFullName } from '@/lib/holder';
 
 interface TripPageProps {
   params: Promise<{ id: string }>;
@@ -70,10 +71,11 @@ export default function DynamicTripPage({ params }: TripPageProps) {
   const trip = currentTrip!;
 
   // Titular/cliente del plan (opcional): viaja embebido en user_preferences. Solo
-  // se muestra si el viajero rellenó algo en el paso del wizard.
+  // se muestra si el viajero rellenó algo en el paso del wizard. Mismo criterio
+  // (recortado) que la captura y el envío, vía @/lib/holder.
   const holder = trip.user_preferences?.holder;
-  const holderName = holder ? [holder.firstName, holder.lastName].filter(Boolean).join(' ').trim() : '';
-  const hasHolder = !!holder && !!(holderName || holder.phone || holder.email);
+  const holderName = holderFullName(holder);
+  const hasHolder = holderHasData(holder);
 
   const handleToggleChecklist = (checkId: string) => {
     setChecklist(prev =>

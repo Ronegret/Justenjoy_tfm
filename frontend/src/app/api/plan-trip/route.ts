@@ -12,6 +12,7 @@ import {
   BudgetBreakdown
 } from '@/types/trip';
 import { N8nWarning } from '@/types/planResult';
+import { holderToN8nPayload } from '@/lib/holder';
 import { todayISO } from '@/lib/dates';
 
 const SYSTEM_PROMPT = `
@@ -181,6 +182,15 @@ Investiga y sugiere opciones de vuelos, hoteles, monumentos, restaurantes y acti
  * Mapea las preferencias del frontend (TripPreferences) al formato de entrada
  * esperado por el orquestador n8n (input-formulario.json).
  */
+// Evita volcar PII del titular (`holder`: nombre, teléfono, email) a los logs del
+// servidor. Devuelve una copia superficial con `holder` redactado si viene.
+function redactHolderForLog(obj: unknown): unknown {
+  if (obj && typeof obj === 'object' && 'holder' in obj && (obj as { holder?: unknown }).holder) {
+    return { ...(obj as Record<string, unknown>), holder: '[REDACTADO]' };
+  }
+  return obj;
+}
+
 function mapPreferencesToN8n(prefs: TripPreferences) {
   const start = new Date(prefs.dates.start);
   const end = new Date(prefs.dates.end);
@@ -212,25 +222,11 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
 
   const childrenAges = Array.from({ length: prefs.travelers.children || 0 }, () => 10);
 
-  // Titular/cliente (opcional): solo se envía si el viajero rellenó algo real en
-  // el paso del wizard. Se recorta primero y se decide sobre los valores ya
-  // recortados, para no mandar un `holder` con solo espacios. Se mapea a
-  // snake_case como el resto del contrato de n8n; n8n lo arrastra hasta la tabla
-  // `plan_holders` y el planificador no lo usa.
-  const h = prefs.holder;
-  const holderTrimmed = h
-    ? {
-        first_name: (h.firstName || '').trim(),
-        last_name: (h.lastName || '').trim(),
-        phone: (h.phone || '').trim(),
-        email: (h.email || '').trim()
-      }
-    : null;
-  const holder =
-    holderTrimmed &&
-    (holderTrimmed.first_name || holderTrimmed.last_name || holderTrimmed.phone || holderTrimmed.email)
-      ? holderTrimmed
-      : undefined;
+  // Titular/cliente (opcional): se mapea a snake_case (recortado, o undefined si
+  // no hay datos) con el helper compartido, para que el criterio de "hay titular"
+  // sea idéntico al de la captura y la visualización. n8n lo arrastra hasta la
+  // tabla `plan_holders`; el planificador no lo usa.
+  const holder = holderToN8nPayload(prefs.holder);
 
   return {
     origin_city: prefs.origin || 'Barcelona',
@@ -1037,7 +1033,7 @@ export async function POST(req: NextRequest) {
     const body: TripPreferences = await req.json();
     const { destination, budget } = body;
 
-    console.log('Received travel preferences for Just Enjoy API:', body);
+    console.log('Received travel preferences for Just Enjoy API:', redactHolderForLog(body));
 
     // -------------------------------------------------------------------------
     // 1. INTENTAR LLAMADA A WEBHOOK DE N8N (Si está configurada)
@@ -1045,7 +1041,7 @@ export async function POST(req: NextRequest) {
     if (process.env.N8N_WEBHOOK_URL) {
       console.log('Forwarding request to n8n webhook:', process.env.N8N_WEBHOOK_URL);
       const n8nInputBody = mapPreferencesToN8n(body);
-      console.log('Mapped input for n8n:', n8nInputBody);
+      console.log('Mapped input for n8n:', redactHolderForLog(n8nInputBody));
 
       // Reintenta antes de degradar al respaldo de OpenAI directo (sin n8n),
       // que no lleva coordenadas, links de reserva reales ni fotos: un fallo

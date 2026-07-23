@@ -9,6 +9,7 @@ import {
   User, Mail, Phone
 } from 'lucide-react';
 import { TripPreferences, PlanHolder } from '@/types/trip';
+import { holderHasData, holderFullName } from '@/lib/holder';
 import { SmartChip } from '../shared/SmartChip';
 import { CityAutocompleteInput } from './CityAutocompleteInput';
 import { todayISO } from '@/lib/dates';
@@ -199,13 +200,18 @@ const getRestrictionLabel = (restriction: string) => {
   return match?.label || restriction.replaceAll('_', ' ');
 };
 
+// Total de pasos del wizard. Fuente única para no repetir el número mágico en la
+// navegación, el botón de generar y el contador "PASO x DE y". El paso 8 es el
+// titular y el último (TOTAL_STEPS) es la confirmación.
+const TOTAL_STEPS = 9;
+
 const EMPTY_HOLDER: PlanHolder = { firstName: '', lastName: '', phone: '', email: '' };
 
 // Validación mínima y NO bloqueante (los datos del titular son opcionales, ver
 // spec 2026-07-23-registro-titular-plan). No se añade librería de validación:
 // el resto del repo valida a mano. Solo se avisa si el email escrito es inválido.
+// El criterio de "hay datos de titular" se comparte vía @/lib/holder (holderHasData).
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-const holderHasAnyData = (h: PlanHolder) => !!(h.firstName || h.lastName || h.phone || h.email);
 
 export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   preferences,
@@ -246,7 +252,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   const holder = preferences.holder ?? EMPTY_HOLDER;
   const updateHolder = (patch: Partial<PlanHolder>) => {
     const next = { ...holder, ...patch };
-    updatePrefs({ holder: holderHasAnyData(next) ? next : undefined });
+    updatePrefs({ holder: holderHasData(next) ? next : undefined });
   };
   const emailInvalid = !!holder.email && !isValidEmail(holder.email);
 
@@ -268,7 +274,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
       onUpdatePreferences(nextPrefs);
     }
 
-    if (currentStep < 9) {
+    if (currentStep < TOTAL_STEPS) {
       onStepChange(currentStep + 1);
     } else {
       onComplete(nextPrefs);
@@ -278,7 +284,7 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   // "Omitir" en el paso del titular: limpia los datos y avanza a la confirmación.
   const handleSkipHolder = () => {
     updatePrefs({ holder: undefined });
-    onStepChange(9);
+    onStepChange(TOTAL_STEPS);
   };
 
   const handleBack = () => {
@@ -409,8 +415,8 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
       history.push({
         id: 16,
         sender: 'user',
-        text: preferences.holder && holderHasAnyData(preferences.holder)
-          ? `Titular: ${[preferences.holder.firstName, preferences.holder.lastName].filter(Boolean).join(' ') || '(sin nombre)'}${preferences.holder.email ? `, ${preferences.holder.email}` : ''}.`
+        text: holderHasData(preferences.holder)
+          ? `Titular: ${holderFullName(preferences.holder) || '(sin nombre)'}${preferences.holder?.email?.trim() ? `, ${preferences.holder.email.trim()}` : ''}.`
           : 'Prefiero no dejar datos de titular por ahora.',
         step: 8
       });
@@ -890,8 +896,8 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
             </div>
           )}
 
-          {/* STEP 9: CONFIRMACION */}
-          {currentStep === 9 && (
+          {/* STEP 9: CONFIRMACION (último paso) */}
+          {currentStep === TOTAL_STEPS && (
             <div className="flex flex-col gap-3 text-center py-2">
               <div className="w-10 h-10 rounded-full bg-brand-teal/20 text-brand-teal flex items-center justify-center mx-auto">
                 <Check className="w-5 h-5 stroke-[3px]" />
@@ -905,12 +911,12 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
 
           {/* Actions button footer */}
           <div className="flex items-center justify-between border-t border-brand-dark/5 dark:border-brand-white/5 pt-4">
-            <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE 9</span>
+            <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE {TOTAL_STEPS}</span>
             <button
               onClick={handleNext}
               className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer select-none"
             >
-              {currentStep === 9 ? (
+              {currentStep === TOTAL_STEPS ? (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Generar Ruta Just Enjoy</span>
