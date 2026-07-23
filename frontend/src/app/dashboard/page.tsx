@@ -1,29 +1,95 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
-  Plus, Compass, Calendar, Users,
-  MapPin, CheckSquare, Smile
+  Plus, Compass, MapPin, CheckSquare, Smile, Search, X
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useTrips } from '@/context/TripContext';
 import { DashboardTripCard } from '@/components/dashboard/DashboardTripCard';
+import { holderFullName } from '@/lib/holder';
+import { normalizeLoose } from '@/lib/text';
+
+// Panel de estado vacío reutilizable: mismo contenedor para "no hay viajes" y
+// "la búsqueda no tiene resultados", que antes eran dos bloques de JSX casi
+// idénticos copiados. Solo cambian icono, textos y la acción del botón.
+interface EmptyStateProps {
+  icon: LucideIcon;
+  animateIcon?: boolean;
+  title: string;
+  description: React.ReactNode;
+  actionLabel: string;
+  onAction: () => void;
+}
+
+function EmptyState({ icon: Icon, animateIcon, title, description, actionLabel, onAction }: EmptyStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/30 rounded-3xl gap-4">
+      <Icon aria-hidden className={`w-12 h-12 text-brand-blue/30${animateIcon ? ' animate-pulse' : ''}`} />
+      <div>
+        <h3 className="text-base font-extrabold text-brand-dark dark:text-brand-white uppercase">{title}</h3>
+        <p className="text-xs text-text-muted mt-1 max-w-xs leading-relaxed">{description}</p>
+      </div>
+      <button
+        onClick={onAction}
+        className="px-5 py-2.5 rounded-xl bg-brand-blue text-brand-white text-xs font-bold shadow-xs hover:bg-brand-blue/90 cursor-pointer"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const { savedTrips, deleteTrip } = useTrips();
+  const [query, setQuery] = useState('');
+
+  // Filtra los planes por los datos del titular/cliente (nombre, apellidos,
+  // nombre completo, teléfono, email) y también por destino/título del viaje, en
+  // una sola caja. Con la búsqueda vacía se muestran todos. Los planes sin
+  // titular solo pueden casar por destino/título. Se compara CAMPO A CAMPO (no
+  // un haystack unido) para no producir coincidencias falsas cruzando el límite
+  // entre dos campos, y con `normalizeLoose` (sin separadores) para que el
+  // formato no impida la coincidencia ("jose perez" casa "José Pérez";
+  // "600123456" casa "+34 600 123 456").
+  const filteredTrips = useMemo(() => {
+    const q = normalizeLoose(query.trim());
+    if (!q) return savedTrips;
+    return savedTrips.filter((trip) => {
+      const holder = trip.user_preferences.holder;
+      // `holderFullName` cubre nombre y apellidos: con matching laxo, cualquier
+      // consulta que casaría uno de ellos casa también el nombre completo (los
+      // contiene como subcadena), así que no se listan por separado.
+      const fields = [
+        holderFullName(holder),
+        holder?.phone,
+        holder?.email,
+        trip.best_option.destination,
+        trip.best_option.title,
+      ];
+      return fields.some((field) => field && normalizeLoose(field).includes(q));
+    });
+  }, [savedTrips, query]);
+
+  // Con búsqueda activa, la fila de stats refleja el subconjunto filtrado, así
+  // que el rótulo del primer stat se adapta para no contradecir el número.
+  const isSearching = query.trim().length > 0;
 
   // Antes esta fila mostraba "18% Ahorro Prom." y "Plan Premium: Plus Activo"
   // como texto fijo, sin relación con ningún dato real (no hay ningún sistema
   // de planes de pago: la página de precios dice explícitamente "aún se están
-  // preparando"). Ahora ambos stats son cálculos reales sobre los viajes
-  // guardados, igual que ya se hizo con el JustGo score y el desglose de
-  // presupuesto — si no hay viajes, se muestra 0/— en vez de un número inventado.
-  const avgMatch = savedTrips.length > 0
-    ? Math.round(savedTrips.reduce((acc, t) => acc + (t.justgo_score?.overall_match || 0), 0) / savedTrips.length)
+  // preparando"). Ahora ambos stats son cálculos reales, igual que ya se hizo
+  // con el JustGo score y el desglose de presupuesto — si no hay viajes, se
+  // muestra 0/— en vez de un número inventado.
+  // Los stats se calculan sobre `filteredTrips` (no sobre todos los guardados)
+  // para que la fila resumen sea coherente con la grid cuando hay una búsqueda
+  // activa; sin búsqueda, `filteredTrips === savedTrips`.
+  const avgMatch = filteredTrips.length > 0
+    ? Math.round(filteredTrips.reduce((acc, t) => acc + (t.justgo_score?.overall_match || 0), 0) / filteredTrips.length)
     : null;
-  const uniqueDestinations = new Set(savedTrips.map((t) => t.best_option.destination)).size;
+  const uniqueDestinations = new Set(filteredTrips.map((t) => t.best_option.destination)).size;
 
   return (
     <div className="w-full flex-grow py-10 px-4 lg:px-8 bg-brand-cream/30 dark:bg-brand-dark/10">
@@ -52,10 +118,43 @@ export default function DashboardPage() {
           </button>
         </div>
 
+        {/* Search bar — filtra por datos del cliente y por destino/título */}
+        {savedTrips.length > 0 && (
+          <div className="relative max-w-md">
+            <Search aria-hidden className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar por cliente, destino…"
+              aria-label="Buscar viajes por datos del cliente o destino"
+              className="w-full pl-11 pr-10 py-3 rounded-2xl bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 text-sm text-brand-dark dark:text-brand-white placeholder:text-text-muted shadow-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/40"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-text-muted hover:text-brand-coral hover:bg-brand-coral/10 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Dynamic Trip List */}
-        {savedTrips.length > 0 ? (
+        {savedTrips.length === 0 ? (
+          <EmptyState
+            icon={Compass}
+            animateIcon
+            title="No tienes viajes generados"
+            description="Cuéntale a nuestro concierge inteligente a dónde te gustaría ir y generaremos una propuesta en 3 minutos."
+            actionLabel="Comenzar a planificar"
+            onAction={() => router.push('/planner')}
+          />
+        ) : filteredTrips.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {savedTrips.map((trip) => (
+            {filteredTrips.map((trip) => (
               <DashboardTripCard
                 key={trip.trip_id}
                 trip={trip}
@@ -64,22 +163,13 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          /* Empty State */
-          <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/30 rounded-3xl gap-4">
-            <Compass className="w-12 h-12 text-brand-blue/30 animate-pulse" />
-            <div>
-              <h3 className="text-base font-extrabold text-brand-dark dark:text-brand-white uppercase">No tienes viajes generados</h3>
-              <p className="text-xs text-text-muted mt-1 max-w-xs leading-relaxed">
-                Cuéntale a nuestro concierge inteligente a dónde te gustaría ir y generaremos una propuesta en 3 minutos.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/planner')}
-              className="px-5 py-2.5 rounded-xl bg-brand-blue text-brand-white text-xs font-bold shadow-xs hover:bg-brand-blue/90 cursor-pointer"
-            >
-              Comenzar a planificar
-            </button>
-          </div>
+          <EmptyState
+            icon={Search}
+            title="Ningún plan coincide con la búsqueda"
+            description={<>No hay viajes que coincidan con «{query}». Prueba con otro nombre, email, teléfono o destino.</>}
+            actionLabel="Limpiar búsqueda"
+            onAction={() => setQuery('')}
+          />
         )}
 
         {/* User Stats/Dashboard summary row */}
@@ -87,11 +177,11 @@ export default function DashboardPage() {
           {/* Stat 1 */}
           <div className="p-5 rounded-2xl bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center font-bold">
-              {savedTrips.length}
+              {filteredTrips.length}
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">VIAJES TOTALES</span>
-              <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">Rutas creadas</span>
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">{isSearching ? 'VIAJES ENCONTRADOS' : 'VIAJES TOTALES'}</span>
+              <span className="text-sm font-extrabold text-brand-dark dark:text-brand-white">{isSearching ? 'Resultados' : 'Rutas creadas'}</span>
             </div>
           </div>
 

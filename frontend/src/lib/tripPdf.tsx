@@ -1,12 +1,10 @@
 import React from 'react';
 import { TripData } from '@/types/trip';
+import { normalizeForSearch } from '@/lib/text';
 
 /** Convierte un texto libre en un fragmento seguro para nombre de fichero. */
 function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // quita acentos
-    .toLowerCase()
+  return normalizeForSearch(value) // minúsculas + sin acentos (util compartido)
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '') || 'viaje';
 }
