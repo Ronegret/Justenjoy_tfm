@@ -38,14 +38,20 @@ Además, `01_validar_formulario.js` arrastra el campo opcional `holder` a
 Se añade la captura **opcional** de los datos del titular por plan. Contrato y flujo:
 
 - **Entrada:** el webhook `travel-planner` acepta un campo **opcional** `holder`
-  (`{ first_name, last_name, phone, email }`). `01_validar_formulario.js` **no** lo exige;
-  lo arrastra como passthrough a `session_state.travel_brief.holder`. Ejemplo:
+  (`{ first_name, last_name, phone, email, consent_at, consent_version }`).
+  `01_validar_formulario.js` **no** lo exige; lo arrastra como passthrough (objeto entero)
+  a `session_state.travel_brief.holder`. `consent_at` (ISO) y `consent_version` son la
+  **evidencia del consentimiento (RGPD 6.1.a)**: el frontend solo envía el `holder` si el
+  usuario marcó la casilla del paso "Datos del titular" (`holderToN8nPayload` devuelve
+  `undefined` sin consentimiento). Ejemplo:
   [`../examples/input-formulario-con-titular.json`](../examples/input-formulario-con-titular.json).
 - **Escritura:** rama **paralela** a la planificación que arranca tras validar el
   formulario (salida de éxito de `¿Error Formulario?`), de modo que el lead se guarda
   **aunque la planificación no llegue a `plan_ready`**:
   - `Preparar Payload Titular` (`11_preparar_payload_titular.js`) construye el registro
-    (con los valores recortados); si no hay ningún dato de titular emite `[]` (no inserta).
+    (con los valores recortados, incluidos `consent_at`/`consent_version`); si no hay ningún
+    dato de titular emite `[]` (no inserta). **Segunda barrera RGPD 6.1.a:** si hay datos pero
+    falta `consent_at`, también emite `[]` (no persiste PII sin consentimiento).
   - **Dedup por email** (un lead por persona) a nivel de **BD**: un índice `UNIQUE` parcial
     sobre `plan_holders(email)`. El nodo Supabase usa `create` + `onError:
     continueRegularOutput`, así que un segundo insert con el mismo email choca con el
@@ -86,7 +92,9 @@ ALTER TABLE plan_holders ENABLE ROW LEVEL SECURITY;  -- OBJETIVO (pendiente de a
 > (`onError: continueRegularOutput`). Ver el runbook en
 > [`docs/specs/2026-07-23-rgpd-plan-holders-rls.md`](../../docs/specs/2026-07-23-rgpd-plan-holders-rls.md).
 > Las columnas `consent_at`/`consent_version` las **rellena** la captura de consentimiento
-> (frente `feature/consentimiento-titular`); hasta entonces quedan nulas.
+> del frontend (casilla del paso "Datos del titular"): `consent_at` = momento (ISO) en que se
+> marcó, `consent_version` = versión de la política aceptada. Sin consentimiento el titular no
+> se envía ni se persiste (doble barrera: `holderToN8nPayload` en frontend + nodo 11 en n8n).
 
 ### Minimización de PII del titular
 

@@ -21,11 +21,21 @@ const holder = holderRaw
       first_name: (holderRaw.first_name || '').trim(),
       last_name: (holderRaw.last_name || '').trim(),
       phone: (holderRaw.phone || '').trim(),
-      email: (holderRaw.email || '').trim()
+      email: (holderRaw.email || '').trim(),
+      // Evidencia de consentimiento (RGPD 6.1.a): el frontend la sella al marcar
+      // la casilla. `consent_at` es el momento (ISO), `consent_version` la versión
+      // de la política aceptada.
+      consent_at: (holderRaw.consent_at || '').trim(),
+      consent_version: (holderRaw.consent_version || '').trim()
     }
   : null;
 const hasAny = holder && (holder.first_name || holder.last_name || holder.phone || holder.email);
 if (!hasAny) {
+  return [];
+}
+// RGPD 6.1.a: no persistir PII del titular sin evidencia de consentimiento. El
+// frontend ya bloquea el envío sin marcar la casilla; esta es la segunda barrera.
+if (!holder.consent_at) {
   return [];
 }
 
@@ -35,7 +45,9 @@ const record = {
   first_name: holder.first_name || null,
   last_name: holder.last_name || null,
   phone: holder.phone || null,
-  email: holder.email || null
+  email: holder.email || null,
+  consent_at: holder.consent_at,
+  consent_version: holder.consent_version || null
 };
 
 return [{ json: record }];

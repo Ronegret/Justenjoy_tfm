@@ -23,6 +23,8 @@
     "first_name": "Ana",
     "last_name": "García",
     "phone": "+34600111222",
-    "email": "ana.garcia@example.com"
+    "email": "ana.garcia@example.com",
+    "consent_at": "2026-08-15T10:15:00.000Z",
+    "consent_version": "2026-07-23"
   }
 }

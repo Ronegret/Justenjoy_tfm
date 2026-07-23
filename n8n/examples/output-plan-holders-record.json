@@ -1,8 +1,10 @@
 {
-  "_comment": "Salida del nodo 'Preparar Payload Titular' (11_preparar_payload_titular.js) que se inserta en la tabla plan_holders de Supabase. Corresponde a la entrada input-formulario-con-titular.json. Si el titular se omite en el frontend, el nodo emite [] y no se inserta ninguna fila. El session_id enlaza (indexado, sin FK dura) con travel_plans.session_id del mismo plan.",
+  "_comment": "Salida del nodo 'Preparar Payload Titular' (11_preparar_payload_titular.js) que se inserta en la tabla plan_holders de Supabase. Corresponde a la entrada input-formulario-con-titular.json. Si el titular se omite en el frontend, el nodo emite [] y no se inserta ninguna fila. Si hay datos pero SIN consentimiento (consent_at vacío), el nodo también emite [] (RGPD 6.1.a). El session_id enlaza (indexado, sin FK dura) con travel_plans.session_id del mismo plan.",
   "session_id": "session_1758000000000_abc123def",
   "first_name": "Ana",
   "last_name": "García",
   "phone": "+34600111222",
-  "email": "ana.garcia@example.com"
+  "email": "ana.garcia@example.com",
+  "consent_at": "2026-08-15T10:15:00.000Z",
+  "consent_version": "2026-07-23"
 }
