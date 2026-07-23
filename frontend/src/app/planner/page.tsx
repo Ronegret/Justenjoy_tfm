@@ -101,7 +101,8 @@ function PlannerContent() {
     { num: 5, label: 'Presupuesto' },
     { num: 6, label: 'Estilo' },
     { num: 7, label: 'Filtros' },
-    { num: 8, label: 'Confirmar' }
+    { num: 8, label: 'Titular' },
+    { num: 9, label: 'Confirmar' }
   ];
 
   return (

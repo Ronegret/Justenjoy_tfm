@@ -1,15 +1,15 @@
-# Código de los nodos Code del workflow Planificador v38
+# Código de los nodos Code del workflow Planificador v39
 
-Los 10 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v38.json`
-viven aquí como **fuente de verdad versionada**. El JSON del workflow lleva el código
-embebido en el campo `jsCode` de cada nodo, pero es frágil (n8n puede vaciarlo al
-reimportar, y editar JS dentro de un string JSON es incómodo). Estos `.js` son la copia
-canónica y revisable.
+Los 11 nodos `n8n-nodes-base.code` del workflow `../workflows/Planificador_de_Viajes_v39.json`
+(canónico; v38 quedó congelado en `../workflows/archive/`) viven aquí como **fuente de
+verdad versionada**. El JSON del workflow lleva el código embebido en el campo `jsCode` de
+cada nodo, pero es frágil (n8n puede vaciarlo al reimportar, y editar JS dentro de un string
+JSON es incómodo). Estos `.js` son la copia canónica y revisable.
 
 > **Contrato de gobernanza:** estos ficheros deben coincidir exactamente con el
-> `jsCode` embebido en v38. `_inject.py` es reversible: reinyectar los `.js` sin
+> `jsCode` embebido en v39. `_inject.py` es reversible: reinyectar los `.js` sin
 > editarlos deja el JSON byte-idéntico. Si añades, quitas o renombras un nodo Code
-> en v38, actualiza el mapeo de `_inject.py` y esta tabla en el mismo commit.
+> en v39, actualiza el mapeo de `_inject.py` y esta tabla en el mismo commit.
 
 ## Ficheros
 
@@ -25,6 +25,7 @@ canónica y revisable.
 | `08_preparar_payload_supabase.js` | Preparar Payload Supabase | Construye el `_supabase_record` (solo si `status === plan_ready`); marca `_skip_supabase` |
 | `09_extraer_record.js` | Extraer Record | Aísla el `_supabase_record` para el nodo de inserción en Supabase |
 | `10_enriquecer_coordenadas.js` | Enriquecer Coordenadas (OpenStreetMap) | Añade 1 coordenada/día al `daily_itinerary` (actividad → geocoding Nominatim del `points_of_interest` del LLM → centro de ciudad) para el mapa del frontend |
+| `11_preparar_payload_titular.js` | Preparar Payload Titular | Construye el registro de la tabla `plan_holders` desde `travel_brief.holder`; emite `[]` si no hay titular (paso opcional omitido). Rama paralela tras validar el formulario |
 
 ## Reaplicar el código al workflow JSON
 
@@ -42,7 +43,7 @@ volumen): reaprovisiona vía el servicio `n8n-import` del compose, o manualmente
 upsert de ID (no duplica):
 
 ```bash
-docker compose cp n8n/workflows/Planificador_de_Viajes_v38.json n8n:/tmp/wf.json
+docker compose cp n8n/workflows/Planificador_de_Viajes_v39.json n8n:/tmp/wf.json
 docker compose exec -T n8n n8n import:workflow --input=/tmp/wf.json
 ```
 

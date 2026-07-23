@@ -54,7 +54,11 @@ const sessionState = {
     special_requirements: tb.special_requirements || 'ninguno',
     flexible_dates: tb.flexible_dates || false,
     hotel_location_preference: tb.hotel_location_preference || 'sin preferencia',
-    car_rental_needed: tb.car_rental_needed || false
+    car_rental_needed: tb.car_rental_needed || false,
+    // Titular/cliente del plan (opcional). No es campo obligatorio: solo se
+    // arrastra como passthrough hasta el nodo que lo guarda en `plan_holders`.
+    // El planificador no lo usa.
+    holder: tb.holder || null
   }
 };
 

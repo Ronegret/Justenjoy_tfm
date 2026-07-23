@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import {
   Compass, ShieldCheck, Check, Sparkles, Luggage,
   MapPin, CheckSquare, Plus, ExternalLink, Calendar,
-  Building, Plane, Landmark, CreditCard, ChevronRight
+  Building, Plane, Landmark, CreditCard, ChevronRight,
+  User, Mail, Phone
 } from 'lucide-react';
 import { useTrips } from '@/context/TripContext';
 import { downloadTripPdf } from '@/lib/tripPdf';
@@ -67,6 +68,12 @@ export default function DynamicTripPage({ params }: TripPageProps) {
   }
 
   const trip = currentTrip!;
+
+  // Titular/cliente del plan (opcional): viaja embebido en user_preferences. Solo
+  // se muestra si el viajero rellenó algo en el paso del wizard.
+  const holder = trip.user_preferences?.holder;
+  const holderName = holder ? [holder.firstName, holder.lastName].filter(Boolean).join(' ').trim() : '';
+  const hasHolder = !!holder && !!(holderName || holder.phone || holder.email);
 
   const handleToggleChecklist = (checkId: string) => {
     setChecklist(prev =>
@@ -160,6 +167,47 @@ export default function DynamicTripPage({ params }: TripPageProps) {
             {/* Info práctica real (visado/clima/transporte) — antes solo estaba
                 en el PDF, no en la página del viaje. */}
             <PracticalInfoCard notes={trip.best_option.why_selected} />
+
+            {/* Titular del plan (opcional) — solo si el viajero dejó sus datos. */}
+            {hasHolder && (
+              <div className="bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-6 shadow-md flex flex-col gap-4">
+                <div>
+                  <h4 className="text-sm font-extrabold text-brand-dark dark:text-brand-white uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-brand-blue" />
+                    <span>Titular del plan</span>
+                  </h4>
+                  <p className="text-[10px] text-text-muted mt-0.5">
+                    Datos de contacto asociados a esta reserva.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2.5 mt-1">
+                  {holderName && (
+                    <div className="flex items-center gap-2.5 text-xs font-semibold text-brand-dark dark:text-brand-white">
+                      <User className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span>{holderName}</span>
+                    </div>
+                  )}
+                  {holder!.phone && (
+                    <a
+                      href={`tel:${holder!.phone}`}
+                      className="flex items-center gap-2.5 text-xs font-semibold text-brand-dark dark:text-brand-white hover:text-brand-blue transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span>{holder!.phone}</span>
+                    </a>
+                  )}
+                  {holder!.email && (
+                    <a
+                      href={`mailto:${holder!.email}`}
+                      className="flex items-center gap-2.5 text-xs font-semibold text-brand-dark dark:text-brand-white hover:text-brand-blue transition-colors break-all"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span>{holder!.email}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Checklist card */}
             <div className="bg-brand-white dark:bg-brand-dark/40 border border-brand-dark/10 dark:border-brand-white/10 rounded-3xl p-6 shadow-md flex flex-col gap-4">

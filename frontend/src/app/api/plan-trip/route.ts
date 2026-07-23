@@ -212,6 +212,26 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
 
   const childrenAges = Array.from({ length: prefs.travelers.children || 0 }, () => 10);
 
+  // Titular/cliente (opcional): solo se envía si el viajero rellenó algo real en
+  // el paso del wizard. Se recorta primero y se decide sobre los valores ya
+  // recortados, para no mandar un `holder` con solo espacios. Se mapea a
+  // snake_case como el resto del contrato de n8n; n8n lo arrastra hasta la tabla
+  // `plan_holders` y el planificador no lo usa.
+  const h = prefs.holder;
+  const holderTrimmed = h
+    ? {
+        first_name: (h.firstName || '').trim(),
+        last_name: (h.lastName || '').trim(),
+        phone: (h.phone || '').trim(),
+        email: (h.email || '').trim()
+      }
+    : null;
+  const holder =
+    holderTrimmed &&
+    (holderTrimmed.first_name || holderTrimmed.last_name || holderTrimmed.phone || holderTrimmed.email)
+      ? holderTrimmed
+      : undefined;
+
   return {
     origin_city: prefs.origin || 'Barcelona',
     destination_city: [prefs.destination || 'Lisboa'],
@@ -235,7 +255,8 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
     special_requirements: prefs.restrictions.length > 0 ? prefs.restrictions.join(', ') : 'ninguno',
     flexible_dates: prefs.dates.flexible || false,
     hotel_location_preference,
-    car_rental_needed: false
+    car_rental_needed: false,
+    ...(holder ? { holder } : {})
   };
 }
 

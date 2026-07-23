@@ -3,7 +3,10 @@
 
 > **Versión:** v38
 > **Plataforma:** n8n 2.23.2 (Self Hosted)
-> **Estado:** Estable — versión activa del proyecto (TFM)
+> **Estado:** Superada por **v39** (mismo id de workflow, ver
+> [`Planificador_Viajes_v39_Arquitectura.md`](Planificador_Viajes_v39_Arquitectura.md)).
+> Este documento describe la base sobre la que se construye v39; el JSON de v38 queda
+> congelado en `../workflows/archive/`.
 > **Workflow:** 1 main workflow (27 nodos)
 > **Modelo Motor Planificador:** GPT-4.1 (maxTokens 4096, temperature 0.1, retry on fail 65s)
 > **Modelo Agente Refinamiento:** GPT-4o-mini (maxTokens 1024, temperature 0.1)
