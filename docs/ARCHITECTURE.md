@@ -70,9 +70,9 @@ La lógica vive en herramientas de orquestación y en LLMs, conectados mediante 
 
 ### 2. n8n — Orquestador (Curación + Transacción)
 - **Rol:** motor del sistema. Gestiona toda la lógica condicional y las llamadas a APIs.
-- **Versión canónica:** v38 (ver `n8n/docs/Planificador_Viajes_v38_Arquitectura.md`).
-  El código de sus 10 nodos Code vive versionado en `n8n/nodes-code/`. Las versiones
-  anteriores (v24–v34) están congeladas en `n8n/workflows/archive/`.
+- **Versión canónica:** v39 (ver `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`).
+  El código de sus 11 nodos Code vive versionado en `n8n/nodes-code/`. Las versiones
+  anteriores (v24–v38) están congeladas en `n8n/workflows/archive/`.
 - **Despliegue:** self-hosted. URL expuesta via ngrok en desarrollo.
 - **Workflow único:** simplifica el testeo (una sola importación en n8n).
 
@@ -126,6 +126,12 @@ Cliente rellena formulario / chat Botpress
 Ver `n8n/examples/input-formulario.json` para el esquema completo.
 Campos obligatorios: `origin_city`, `destination_city[]`, `departure_date`,
 `return_date`, `travelers`, `budget_total_usd`, `accommodation_type`, `activity_interests[]`.
+
+Campo **opcional** `holder` (`{ first_name, last_name, phone, email }`): datos del
+titular/cliente del plan (novedad de **v39**). Si viene informado, se persiste en la tabla
+`plan_holders` de Supabase (rama paralela, no bloqueante; ver §9.1 de
+`n8n/docs/Planificador_Viajes_v39_Arquitectura.md`). Ejemplo:
+`n8n/examples/input-formulario-con-titular.json`. Contiene PII → tratar según `docs/legal/`.
 
 > ⚠️ **Al probar, usa fechas futuras.** SerpAPI (Google Flights/Hotels) rechaza
 > consultas con `outbound_date` en el pasado (`` `outbound_date` cannot be in the

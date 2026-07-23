@@ -81,15 +81,15 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       # publish:workflow activa el workflow (registra el webhook). El id es el del
-      # JSON de v38 (import preserva el id). --all/update:workflow --active están
-      # deprecados en n8n 2.x.
-      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador_de_Viajes_v38.json' && n8n publish:workflow --id=8Kym9GIgNKp7Nrdh"
+      # JSON de v39 (mismo que v34/v38; import preserva el id → upsert, sin duplicar).
+      # --all/update:workflow --active están deprecados en n8n 2.x.
+      - "n8n import:credentials --input=/import/credentials.json && n8n import:workflow --input='/import-workflows/Planificador_de_Viajes_v39.json' && n8n publish:workflow --id=8Kym9GIgNKp7Nrdh"
     volumes:
       # Mismo volumen que n8n: escribe en la misma BD cifrada
       - n8n_n8n_data:/home/node/.n8n
       # Monta el JSON de credenciales versionado (solo lectura)
       - ./n8n/credentials:/import:ro
-      # Monta los workflows versionados (solo lectura) para importar el v38
+      # Monta los workflows versionados (solo lectura) para importar el v39
       - ./n8n/workflows:/import-workflows:ro
     networks:
       - just_enjoy_net

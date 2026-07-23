@@ -1,0 +1,369 @@
+{
+  "session_id": "session_1784808756171_9z0x8jr8v",
+  "status": "plan_ready",
+  "revision_count": 1,
+  "revision_snapshot": 1,
+  "generated_at": "2026-07-23T12:12:57.212Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Barcelona",
+        "destination": "Lisbon",
+        "flights": {
+          "outbound": {
+            "airline": "",
+            "flight_no": "",
+            "origin": "BCN",
+            "destination": "LIS",
+            "departure_datetime": "2025-01-10T09:00:00+01:00",
+            "arrival_datetime": "2025-01-10T10:15:00+00:00",
+            "layovers": [],
+            "price_usd": 120,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202025-01-10%20through%202025-01-13"
+          },
+          "return": {
+            "airline": "",
+            "flight_no": "",
+            "origin": "LIS",
+            "destination": "BCN",
+            "departure_datetime": "2025-01-13T18:00:00+00:00",
+            "arrival_datetime": "2025-01-13T21:10:00+01:00",
+            "layovers": [],
+            "price_usd": 120,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202025-01-10%20through%202025-01-13"
+          }
+        },
+        "hotel": {
+          "name": "Hotel Lisboa Plaza",
+          "address": "Tv. Salitre 7, 1269-066 Lisboa, Portugal",
+          "stars": 4,
+          "rating": 8.7,
+          "check_in": "2025-01-10",
+          "check_out": "2025-01-13",
+          "price_per_night_usd": 140,
+          "total_usd": 420,
+          "booking_url": "https://www.example.com/hotel-lisboa-plaza",
+          "lat": 38.7205,
+          "lng": -9.1467
+        },
+        "activities": [
+          {
+            "name": "Praça do Comércio",
+            "date": "2025-01-11",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Plaza",
+            "source": "google_maps",
+            "lat": 38.7072828,
+            "lng": -9.136361299999999
+          },
+          {
+            "name": "Time Out Market",
+            "date": "2025-01-12",
+            "start_time": "13:00",
+            "duration_hours": 3,
+            "price_usd": 20,
+            "booking_url": "",
+            "category": "Food court",
+            "source": "google_maps",
+            "lat": 38.7070608,
+            "lng": -9.1456691
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 240,
+      "hotel_usd": 420,
+      "activities_usd": 20,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": 25,
+      "local_transport_data_source": "tavily",
+      "total_usd": 705,
+      "budget_total_usd": 1200,
+      "budget_remaining_usd": 495
+    },
+    "trip_summary": "Viaje de 4 días a Lisboa con vuelo directo desde Barcelona y alojamiento en un hotel de 4 estrellas en el centro. El itinerario combina gastronomía local y visitas a monumentos emblemáticos, ideal para descubrir la ciudad a pie.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2025-01-10",
+        "title": "Día de llegada a Lisbon",
+        "summary": "Llegada a Lisboa a las 10:15, traslado y check-in en el hotel. Aprovecha la tarde para pasear por el centro y cenar en algún restaurante típico cercano.",
+        "points_of_interest": [
+          "Lisbon Humberto Delgado Airport"
+        ],
+        "activities": [],
+        "lat": 38.7809981,
+        "lng": -9.1318608,
+        "coordinate_source": "geocoded"
+      },
+      {
+        "day": 2,
+        "date": "2025-01-11",
+        "title": "Descubre la Praça do Comércio",
+        "summary": "Comienza el día explorando la emblemática Praça do Comércio y disfruta de las vistas al río Tajo. Por la tarde, recorre las calles del centro histórico y prueba la gastronomía local.",
+        "points_of_interest": [
+          "Praça do Comércio"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Praça do Comércio",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Plaza",
+            "lat": 38.7072828,
+            "lng": -9.136361299999999
+          }
+        ],
+        "lat": 38.7072828,
+        "lng": -9.136361299999999,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 3,
+        "date": "2025-01-12",
+        "title": "Sabores en Time Out Market",
+        "summary": "Disfruta de una experiencia gastronómica en Time Out Market, donde podrás probar platos típicos portugueses y productos frescos. Resto del día libre para seguir explorando barrios como Chiado o Bairro Alto.",
+        "points_of_interest": [
+          "Time Out Market"
+        ],
+        "activities": [
+          {
+            "time": "13:00",
+            "name": "Time Out Market",
+            "duration_hours": 3,
+            "price_usd": 20,
+            "booking_url": "",
+            "category": "Food court",
+            "lat": 38.7070608,
+            "lng": -9.1456691
+          }
+        ],
+        "lat": 38.7070608,
+        "lng": -9.1456691,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 4,
+        "date": "2025-01-13",
+        "title": "Último día en Lisbon — Regreso a Barcelona",
+        "summary": "Check-out del hotel y tiempo libre hasta el vuelo de regreso a las 18:00. Aprovecha para una última caminata por la ciudad o comprar recuerdos.",
+        "points_of_interest": [
+          "Hotel Lisboa Plaza"
+        ],
+        "activities": [],
+        "lat": 38.7187098,
+        "lng": -9.1455414,
+        "coordinate_source": "geocoded"
+      }
+    ],
+    "plan_notes": [
+      "No se requiere visado para ciudadanos españoles para estancias turísticas de hasta 90 días en Portugal.",
+      "El transporte público en Lisboa es eficiente y económico; un pase diario cuesta aproximadamente 6,80 € y el trayecto en metro desde el aeropuerto al centro es directo.",
+      "El clima en enero es fresco, con temperaturas medias entre 8°C y 15°C. Se recomienda llevar ropa de abrigo y paraguas."
+    ],
+    "revision_snapshot": 1
+  },
+  "error_detail": "",
+  "_debug": {
+    "execution_time_ms": 3183,
+    "plan_metrics": {
+      "activities_found": 2,
+      "itinerary_days": 4,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": false,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_supabase_record": {
+    "session_id": "session_1784808756171_9z0x8jr8v",
+    "status": "plan_ready",
+    "destination": "Lisbon",
+    "origin": "Barcelona",
+    "departure_date": "2025-01-10",
+    "return_date": "2025-01-13",
+    "budget_usd": 1200,
+    "total_cost_usd": 705,
+    "travelers_count": 1,
+    "activity_interests": [
+      "food"
+    ],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Barcelona",
+          "destination": "Lisbon",
+          "flights": {
+            "outbound": {
+              "airline": "",
+              "flight_no": "",
+              "origin": "BCN",
+              "destination": "LIS",
+              "departure_datetime": "2025-01-10T09:00:00+01:00",
+              "arrival_datetime": "2025-01-10T10:15:00+00:00",
+              "layovers": [],
+              "price_usd": 120,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202025-01-10%20through%202025-01-13"
+            },
+            "return": {
+              "airline": "",
+              "flight_no": "",
+              "origin": "LIS",
+              "destination": "BCN",
+              "departure_datetime": "2025-01-13T18:00:00+00:00",
+              "arrival_datetime": "2025-01-13T21:10:00+01:00",
+              "layovers": [],
+              "price_usd": 120,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202025-01-10%20through%202025-01-13"
+            }
+          },
+          "hotel": {
+            "name": "Hotel Lisboa Plaza",
+            "address": "Tv. Salitre 7, 1269-066 Lisboa, Portugal",
+            "stars": 4,
+            "rating": 8.7,
+            "check_in": "2025-01-10",
+            "check_out": "2025-01-13",
+            "price_per_night_usd": 140,
+            "total_usd": 420,
+            "booking_url": "https://www.example.com/hotel-lisboa-plaza",
+            "lat": 38.7205,
+            "lng": -9.1467
+          },
+          "activities": [
+            {
+              "name": "Praça do Comércio",
+              "date": "2025-01-11",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Plaza",
+              "source": "google_maps",
+              "lat": 38.7072828,
+              "lng": -9.136361299999999
+            },
+            {
+              "name": "Time Out Market",
+              "date": "2025-01-12",
+              "start_time": "13:00",
+              "duration_hours": 3,
+              "price_usd": 20,
+              "booking_url": "",
+              "category": "Food court",
+              "source": "google_maps",
+              "lat": 38.7070608,
+              "lng": -9.1456691
+            }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 240,
+        "hotel_usd": 420,
+        "activities_usd": 20,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": 25,
+        "local_transport_data_source": "tavily",
+        "total_usd": 705,
+        "budget_total_usd": 1200,
+        "budget_remaining_usd": 495
+      },
+      "trip_summary": "Viaje de 4 días a Lisboa con vuelo directo desde Barcelona y alojamiento en un hotel de 4 estrellas en el centro. El itinerario combina gastronomía local y visitas a monumentos emblemáticos, ideal para descubrir la ciudad a pie.",
+      "daily_itinerary": [
+        {
+          "day": 1,
+          "date": "2025-01-10",
+          "title": "Día de llegada a Lisbon",
+          "summary": "Llegada a Lisboa a las 10:15, traslado y check-in en el hotel. Aprovecha la tarde para pasear por el centro y cenar en algún restaurante típico cercano.",
+          "points_of_interest": [
+            "Lisbon Humberto Delgado Airport"
+          ],
+          "activities": [],
+          "lat": 38.7809981,
+          "lng": -9.1318608,
+          "coordinate_source": "geocoded"
+        },
+        {
+          "day": 2,
+          "date": "2025-01-11",
+          "title": "Descubre la Praça do Comércio",
+          "summary": "Comienza el día explorando la emblemática Praça do Comércio y disfruta de las vistas al río Tajo. Por la tarde, recorre las calles del centro histórico y prueba la gastronomía local.",
+          "points_of_interest": [
+            "Praça do Comércio"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Praça do Comércio",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Plaza",
+              "lat": 38.7072828,
+              "lng": -9.136361299999999
+            }
+          ],
+          "lat": 38.7072828,
+          "lng": -9.136361299999999,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 3,
+          "date": "2025-01-12",
+          "title": "Sabores en Time Out Market",
+          "summary": "Disfruta de una experiencia gastronómica en Time Out Market, donde podrás probar platos típicos portugueses y productos frescos. Resto del día libre para seguir explorando barrios como Chiado o Bairro Alto.",
+          "points_of_interest": [
+            "Time Out Market"
+          ],
+          "activities": [
+            {
+              "time": "13:00",
+              "name": "Time Out Market",
+              "duration_hours": 3,
+              "price_usd": 20,
+              "booking_url": "",
+              "category": "Food court",
+              "lat": 38.7070608,
+              "lng": -9.1456691
+            }
+          ],
+          "lat": 38.7070608,
+          "lng": -9.1456691,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 4,
+          "date": "2025-01-13",
+          "title": "Último día en Lisbon — Regreso a Barcelona",
+          "summary": "Check-out del hotel y tiempo libre hasta el vuelo de regreso a las 18:00. Aprovecha para una última caminata por la ciudad o comprar recuerdos.",
+          "points_of_interest": [
+            "Hotel Lisboa Plaza"
+          ],
+          "activities": [],
+          "lat": 38.7187098,
+          "lng": -9.1455414,
+          "coordinate_source": "geocoded"
+        }
+      ],
+      "plan_notes": [
+        "No se requiere visado para ciudadanos españoles para estancias turísticas de hasta 90 días en Portugal.",
+        "El transporte público en Lisboa es eficiente y económico; un pase diario cuesta aproximadamente 6,80 € y el trayecto en metro desde el aeropuerto al centro es directo.",
+        "El clima en enero es fresco, con temperaturas medias entre 8°C y 15°C. Se recomienda llevar ropa de abrigo y paraguas."
+      ],
+      "revision_snapshot": 1
+    }
+  },
+  "_skip_supabase": false
+}

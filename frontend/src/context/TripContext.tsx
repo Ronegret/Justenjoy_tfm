@@ -74,6 +74,16 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // El titular (holder) es PII: se conserva en memoria (para mostrarlo durante la
+  // sesión), pero NO se serializa a localStorage — su fuente de verdad es la tabla
+  // plan_holders del lado servidor. Así no queda PII en claro en el navegador.
+  const stripHolderForStorage = (trips: TripData[]) =>
+    trips.map((t) =>
+      t.user_preferences?.holder
+        ? { ...t, user_preferences: { ...t.user_preferences, holder: undefined } }
+        : t
+    );
+
   const saveTrip = (trip: TripData) => {
     setSavedTrips((prev) => {
       const exists = prev.some((t) => t.trip_id === trip.trip_id);
@@ -83,7 +93,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         updated = [trip, ...prev];
       }
-      localStorage.setItem('justenjoy_trips', JSON.stringify(updated));
+      localStorage.setItem('justenjoy_trips', JSON.stringify(stripHolderForStorage(updated)));
       return updated;
     });
   };
@@ -91,7 +101,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteTrip = (id: string) => {
     setSavedTrips((prev) => {
       const updated = prev.filter((t) => t.trip_id !== id);
-      localStorage.setItem('justenjoy_trips', JSON.stringify(updated));
+      localStorage.setItem('justenjoy_trips', JSON.stringify(stripHolderForStorage(updated)));
       return updated;
     });
     if (currentTrip?.trip_id === id) {

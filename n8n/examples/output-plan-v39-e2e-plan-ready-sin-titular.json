@@ -1,0 +1,370 @@
+{
+  "session_id": "session_1784808683332_pqnle2aew",
+  "status": "plan_ready",
+  "revision_count": 0,
+  "revision_snapshot": 0,
+  "generated_at": "2026-07-23T12:11:56.045Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Barcelona",
+        "destination": "Lisbon",
+        "flights": {
+          "outbound": {
+            "airline": "Tap Air Portugal",
+            "flight_no": "TP 1037",
+            "origin": "BCN",
+            "destination": "LIS",
+            "departure_datetime": "2026-09-12T20:20:00",
+            "arrival_datetime": "2026-09-12T21:25:00",
+            "layovers": [],
+            "price_usd": 62,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-12%20through%202026-09-15"
+          },
+          "return": {
+            "airline": "Ryanair",
+            "flight_no": "FR 3079",
+            "origin": "LIS",
+            "destination": "BCN",
+            "departure_datetime": "2026-09-15T20:35:00",
+            "arrival_datetime": "2026-09-15T23:25:00",
+            "layovers": [],
+            "price_usd": 23,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-12%20through%202026-09-15"
+          }
+        },
+        "hotel": {
+          "name": "Lisbon Destination Hostel",
+          "address": "",
+          "stars": 2,
+          "rating": 4.7,
+          "check_in": "2026-09-12",
+          "check_out": "2026-09-15",
+          "price_per_night_usd": 57,
+          "total_usd": 170,
+          "booking_url": "https://www.destinationhostels.com/lisbon-destination-hostel/",
+          "lat": 38.714307,
+          "lng": -9.140892899999999
+        },
+        "activities": [
+          {
+            "name": "Praça do Comércio",
+            "date": "2026-09-13",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Plaza",
+            "source": "google_maps",
+            "lat": 38.7072828,
+            "lng": -9.136361299999999
+          },
+          {
+            "name": "Castelo de São Jorge",
+            "date": "2026-09-14",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 10,
+            "booking_url": "",
+            "category": "Castle",
+            "source": "google_maps",
+            "lat": 38.713909199999996,
+            "lng": -9.133476199999999
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 170,
+      "hotel_usd": 170,
+      "activities_usd": 20,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": 30,
+      "local_transport_data_source": "tavily",
+      "total_usd": 390,
+      "budget_total_usd": 1800,
+      "budget_remaining_usd": 1410
+    },
+    "trip_summary": "Viaje de 3 noches a Lisboa con vuelo directo desde Barcelona y alojamiento céntrico en un hostel de alta valoración. El itinerario combina cultura, gastronomía y paseos por los principales puntos históricos de la ciudad.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-09-12",
+        "title": "Día de llegada a Lisbon",
+        "summary": "Llegada a Lisboa a las 21:25 y traslado al hostel. Tras el check-in, aprovecha la noche para dar un paseo corto por los alrededores y cenar algo ligero cerca del alojamiento.",
+        "points_of_interest": [
+          "Lisbon Humberto Delgado Airport"
+        ],
+        "activities": [],
+        "lat": 38.7809981,
+        "lng": -9.1318608,
+        "coordinate_source": "geocoded"
+      },
+      {
+        "day": 2,
+        "date": "2026-09-13",
+        "title": "Descubre la Praça do Comércio y el centro histórico",
+        "summary": "Comienza el día explorando la emblemática Praça do Comércio y el centro histórico de Lisboa. Disfruta de la arquitectura, las vistas al río y la animada vida local. Por la tarde, puedes pasear por la Baixa y probar la gastronomía local en el Time Out Market.",
+        "points_of_interest": [
+          "Praça do Comércio"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Praça do Comércio",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Plaza",
+            "lat": 38.7072828,
+            "lng": -9.136361299999999
+          }
+        ],
+        "lat": 38.7072828,
+        "lng": -9.136361299999999,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 3,
+        "date": "2026-09-14",
+        "title": "Visita al Castelo de São Jorge",
+        "summary": "Dedica la mañana a visitar el Castelo de São Jorge, uno de los monumentos más icónicos de Lisboa. Disfruta de las vistas panorámicas y sumérgete en la historia de la ciudad. Por la tarde, recorre los miradores cercanos y prueba dulces típicos portugueses.",
+        "points_of_interest": [
+          "Castelo de São Jorge"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Castelo de São Jorge",
+            "duration_hours": 3,
+            "price_usd": 10,
+            "booking_url": "",
+            "category": "Castle",
+            "lat": 38.713909199999996,
+            "lng": -9.133476199999999
+          }
+        ],
+        "lat": 38.713909199999996,
+        "lng": -9.133476199999999,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 4,
+        "date": "2026-09-15",
+        "title": "Último día en Lisbon — Regreso a Barcelona",
+        "summary": "Check-out del hostel y tiempo libre para compras o un último paseo. Vuelo de regreso a Barcelona a las 20:35, llegando a las 23:25.",
+        "points_of_interest": [
+          "Lisbon Destination Hostel"
+        ],
+        "activities": [],
+        "lat": 38.7144796,
+        "lng": -9.1408375,
+        "coordinate_source": "geocoded"
+      }
+    ],
+    "plan_notes": [
+      "No se requiere visado para ciudadanos españoles para viajes turísticos cortos a Portugal. A partir de finales de 2026, podría ser necesario tramitar una autorización ETIAS online.",
+      "El metro desde el aeropuerto al centro cuesta 1,65 EUR por trayecto. Un taxi al centro cuesta entre 10 y 16 EUR.",
+      "El transporte local en Lisboa es eficiente y económico; se recomienda adquirir la tarjeta Navegante para moverse en metro y tranvía."
+    ],
+    "revision_snapshot": 0
+  },
+  "error_detail": "",
+  "_debug": {
+    "execution_time_ms": 2676,
+    "plan_metrics": {
+      "activities_found": 2,
+      "itinerary_days": 4,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_supabase_record": {
+    "session_id": "session_1784808683332_pqnle2aew",
+    "status": "plan_ready",
+    "destination": "Lisbon",
+    "origin": "Barcelona",
+    "departure_date": "2026-09-12",
+    "return_date": "2026-09-15",
+    "budget_usd": 1800,
+    "total_cost_usd": 390,
+    "travelers_count": 2,
+    "activity_interests": [
+      "food",
+      "culture"
+    ],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Barcelona",
+          "destination": "Lisbon",
+          "flights": {
+            "outbound": {
+              "airline": "Tap Air Portugal",
+              "flight_no": "TP 1037",
+              "origin": "BCN",
+              "destination": "LIS",
+              "departure_datetime": "2026-09-12T20:20:00",
+              "arrival_datetime": "2026-09-12T21:25:00",
+              "layovers": [],
+              "price_usd": 62,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-12%20through%202026-09-15"
+            },
+            "return": {
+              "airline": "Ryanair",
+              "flight_no": "FR 3079",
+              "origin": "LIS",
+              "destination": "BCN",
+              "departure_datetime": "2026-09-15T20:35:00",
+              "arrival_datetime": "2026-09-15T23:25:00",
+              "layovers": [],
+              "price_usd": 23,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-12%20through%202026-09-15"
+            }
+          },
+          "hotel": {
+            "name": "Lisbon Destination Hostel",
+            "address": "",
+            "stars": 2,
+            "rating": 4.7,
+            "check_in": "2026-09-12",
+            "check_out": "2026-09-15",
+            "price_per_night_usd": 57,
+            "total_usd": 170,
+            "booking_url": "https://www.destinationhostels.com/lisbon-destination-hostel/",
+            "lat": 38.714307,
+            "lng": -9.140892899999999
+          },
+          "activities": [
+            {
+              "name": "Praça do Comércio",
+              "date": "2026-09-13",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Plaza",
+              "source": "google_maps",
+              "lat": 38.7072828,
+              "lng": -9.136361299999999
+            },
+            {
+              "name": "Castelo de São Jorge",
+              "date": "2026-09-14",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 10,
+              "booking_url": "",
+              "category": "Castle",
+              "source": "google_maps",
+              "lat": 38.713909199999996,
+              "lng": -9.133476199999999
+            }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 170,
+        "hotel_usd": 170,
+        "activities_usd": 20,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": 30,
+        "local_transport_data_source": "tavily",
+        "total_usd": 390,
+        "budget_total_usd": 1800,
+        "budget_remaining_usd": 1410
+      },
+      "trip_summary": "Viaje de 3 noches a Lisboa con vuelo directo desde Barcelona y alojamiento céntrico en un hostel de alta valoración. El itinerario combina cultura, gastronomía y paseos por los principales puntos históricos de la ciudad.",
+      "daily_itinerary": [
+        {
+          "day": 1,
+          "date": "2026-09-12",
+          "title": "Día de llegada a Lisbon",
+          "summary": "Llegada a Lisboa a las 21:25 y traslado al hostel. Tras el check-in, aprovecha la noche para dar un paseo corto por los alrededores y cenar algo ligero cerca del alojamiento.",
+          "points_of_interest": [
+            "Lisbon Humberto Delgado Airport"
+          ],
+          "activities": [],
+          "lat": 38.7809981,
+          "lng": -9.1318608,
+          "coordinate_source": "geocoded"
+        },
+        {
+          "day": 2,
+          "date": "2026-09-13",
+          "title": "Descubre la Praça do Comércio y el centro histórico",
+          "summary": "Comienza el día explorando la emblemática Praça do Comércio y el centro histórico de Lisboa. Disfruta de la arquitectura, las vistas al río y la animada vida local. Por la tarde, puedes pasear por la Baixa y probar la gastronomía local en el Time Out Market.",
+          "points_of_interest": [
+            "Praça do Comércio"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Praça do Comércio",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Plaza",
+              "lat": 38.7072828,
+              "lng": -9.136361299999999
+            }
+          ],
+          "lat": 38.7072828,
+          "lng": -9.136361299999999,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 3,
+          "date": "2026-09-14",
+          "title": "Visita al Castelo de São Jorge",
+          "summary": "Dedica la mañana a visitar el Castelo de São Jorge, uno de los monumentos más icónicos de Lisboa. Disfruta de las vistas panorámicas y sumérgete en la historia de la ciudad. Por la tarde, recorre los miradores cercanos y prueba dulces típicos portugueses.",
+          "points_of_interest": [
+            "Castelo de São Jorge"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Castelo de São Jorge",
+              "duration_hours": 3,
+              "price_usd": 10,
+              "booking_url": "",
+              "category": "Castle",
+              "lat": 38.713909199999996,
+              "lng": -9.133476199999999
+            }
+          ],
+          "lat": 38.713909199999996,
+          "lng": -9.133476199999999,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 4,
+          "date": "2026-09-15",
+          "title": "Último día en Lisbon — Regreso a Barcelona",
+          "summary": "Check-out del hostel y tiempo libre para compras o un último paseo. Vuelo de regreso a Barcelona a las 20:35, llegando a las 23:25.",
+          "points_of_interest": [
+            "Lisbon Destination Hostel"
+          ],
+          "activities": [],
+          "lat": 38.7144796,
+          "lng": -9.1408375,
+          "coordinate_source": "geocoded"
+        }
+      ],
+      "plan_notes": [
+        "No se requiere visado para ciudadanos españoles para viajes turísticos cortos a Portugal. A partir de finales de 2026, podría ser necesario tramitar una autorización ETIAS online.",
+        "El metro desde el aeropuerto al centro cuesta 1,65 EUR por trayecto. Un taxi al centro cuesta entre 10 y 16 EUR.",
+        "El transporte local en Lisboa es eficiente y económico; se recomienda adquirir la tarjeta Navegante para moverse en metro y tranvía."
+      ],
+      "revision_snapshot": 0
+    }
+  },
+  "_skip_supabase": false
+}

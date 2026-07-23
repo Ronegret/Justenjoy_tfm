@@ -54,13 +54,22 @@ const sessionState = {
     special_requirements: tb.special_requirements || 'ninguno',
     flexible_dates: tb.flexible_dates || false,
     hotel_location_preference: tb.hotel_location_preference || 'sin preferencia',
-    car_rental_needed: tb.car_rental_needed || false
+    car_rental_needed: tb.car_rental_needed || false,
+    // Titular/cliente del plan (opcional). No es campo obligatorio: solo se
+    // arrastra como passthrough hasta el nodo que lo guarda en `plan_holders`.
+    // El planificador no lo usa.
+    holder: tb.holder || null
   }
 };
 
-// Guardar en static data
+// Guardar en static data. NO se retiene el titular (PII) aquí: la static data
+// persiste indefinidamente en la BD de n8n y solo la usa el refinamiento (RUTA B),
+// que no necesita el holder. El holder sí viaja en el item devuelto abajo, para la
+// rama de persistencia en plan_holders.
 const staticData = $getWorkflowStaticData('global');
-staticData[sessionId] = sessionState;
+const staticState = { ...sessionState, travel_brief: { ...sessionState.travel_brief } };
+delete staticState.travel_brief.holder;
+staticData[sessionId] = staticState;
 
 return [{ json: {
   session_id: sessionId,

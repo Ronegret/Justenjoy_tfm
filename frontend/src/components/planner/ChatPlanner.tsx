@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, Sparkles, Send, Plane, MapPin,
   Calendar as CalendarIcon, Users, Euro, Heart,
-  ShieldAlert, Check, Plus, ArrowRight, RefreshCw
+  ShieldAlert, Check, Plus, ArrowRight, RefreshCw,
+  User, Mail, Phone
 } from 'lucide-react';
-import { TripPreferences } from '@/types/trip';
+import { TripPreferences, PlanHolder } from '@/types/trip';
+import { holderHasData, holderFullName } from '@/lib/holder';
 import { SmartChip } from '../shared/SmartChip';
 import { CityAutocompleteInput } from './CityAutocompleteInput';
 import { todayISO } from '@/lib/dates';
@@ -198,6 +200,19 @@ const getRestrictionLabel = (restriction: string) => {
   return match?.label || restriction.replaceAll('_', ' ');
 };
 
+// Total de pasos del wizard. Fuente única para no repetir el número mágico en la
+// navegación, el botón de generar y el contador "PASO x DE y". El paso 8 es el
+// titular y el último (TOTAL_STEPS) es la confirmación.
+const TOTAL_STEPS = 9;
+
+const EMPTY_HOLDER: PlanHolder = { firstName: '', lastName: '', phone: '', email: '' };
+
+// Validación mínima y NO bloqueante (los datos del titular son opcionales, ver
+// spec 2026-07-23-registro-titular-plan). No se añade librería de validación:
+// el resto del repo valida a mano. Solo se avisa si el email escrito es inválido.
+// El criterio de "hay datos de titular" se comparte vía @/lib/holder (holderHasData).
+const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
 export const ChatPlanner: React.FC<ChatPlannerProps> = ({
   preferences,
   onUpdatePreferences,
@@ -231,6 +246,16 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
     onUpdatePreferences(newPrefs);
   };
 
+  // Titular del plan (paso 8, opcional). Se guarda dentro de preferences.holder;
+  // si el viajero deja todo en blanco, se limpia a undefined para no enviar un
+  // objeto vacío a n8n.
+  const holder = preferences.holder ?? EMPTY_HOLDER;
+  const updateHolder = (patch: Partial<PlanHolder>) => {
+    const next = { ...holder, ...patch };
+    updatePrefs({ holder: holderHasData(next) ? next : undefined });
+  };
+  const emailInvalid = !!holder.email && !isValidEmail(holder.email);
+
   const handleNext = () => {
     let nextPrefs = preferences;
 
@@ -249,11 +274,17 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
       onUpdatePreferences(nextPrefs);
     }
 
-    if (currentStep < 8) {
+    if (currentStep < TOTAL_STEPS) {
       onStepChange(currentStep + 1);
     } else {
       onComplete(nextPrefs);
     }
+  };
+
+  // "Omitir" en el paso del titular: limpia los datos y avanza a la confirmación.
+  const handleSkipHolder = () => {
+    updatePrefs({ holder: undefined });
+    onStepChange(TOTAL_STEPS);
   };
 
   const handleBack = () => {
@@ -375,8 +406,25 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
       history.push({
         id: 15,
         sender: 'agent',
-        text: '¡De categoría! Ya tengo todo lo que necesito. Voy a ponerme a buscar las mejores combinaciones y a optimizar tu ruta. ¿Le damos caña a ese viaje?',
+        text: 'Ya casi está. ¿A nombre de quién preparo el plan? Si quieres, déjame tus datos de contacto (nombre y apellidos, teléfono y email) para tenerlos a mano. Es opcional: si prefieres, puedes omitir este paso.',
         step: 8
+      });
+    }
+
+    if (currentStep > 8) {
+      history.push({
+        id: 16,
+        sender: 'user',
+        text: holderHasData(preferences.holder)
+          ? `Titular: ${holderFullName(preferences.holder) || '(sin nombre)'}${preferences.holder?.email?.trim() ? `, ${preferences.holder.email.trim()}` : ''}.`
+          : 'Prefiero no dejar datos de titular por ahora.',
+        step: 8
+      });
+      history.push({
+        id: 17,
+        sender: 'agent',
+        text: '¡De categoría! Ya tengo todo lo que necesito. Voy a ponerme a buscar las mejores combinaciones y a optimizar tu ruta. ¿Le damos caña a ese viaje?',
+        step: 9
       });
     }
 
@@ -773,8 +821,83 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
             </div>
           )}
 
-          {/* STEP 8: CONFIRMACION */}
+          {/* STEP 8: DATOS DEL TITULAR (opcional) */}
           {currentStep === 8 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Datos del titular (opcional):</span>
+                <button
+                  type="button"
+                  onClick={handleSkipHolder}
+                  className="text-[10px] font-bold text-brand-blue hover:underline cursor-pointer uppercase tracking-wider"
+                >
+                  Omitir
+                </button>
+              </div>
+              <div className="flex flex-col gap-2.5 bg-brand-white dark:bg-brand-dark/40 p-4 rounded-xl border border-brand-dark/5">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/30">
+                    <User className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                    <input
+                      type="text"
+                      autoComplete="given-name"
+                      placeholder="Nombre"
+                      value={holder.firstName}
+                      onChange={(e) => updateHolder({ firstName: e.target.value })}
+                      className="w-full bg-transparent text-xs text-brand-dark dark:text-brand-white focus:outline-hidden"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/30">
+                    <User className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                    <input
+                      type="text"
+                      autoComplete="family-name"
+                      placeholder="Apellidos"
+                      value={holder.lastName}
+                      onChange={(e) => updateHolder({ lastName: e.target.value })}
+                      className="w-full bg-transparent text-xs text-brand-dark dark:text-brand-white focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark/30">
+                  <Phone className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="Teléfono"
+                    value={holder.phone}
+                    onChange={(e) => updateHolder({ phone: e.target.value })}
+                    className="w-full bg-transparent text-xs text-brand-dark dark:text-brand-white focus:outline-hidden"
+                  />
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border bg-brand-white dark:bg-brand-dark/30 ${
+                  emailInvalid ? 'border-amber-400/70' : 'border-brand-dark/10 dark:border-brand-white/10'
+                }`}>
+                  <Mail className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Email"
+                    value={holder.email}
+                    onChange={(e) => updateHolder({ email: e.target.value })}
+                    className="w-full bg-transparent text-xs text-brand-dark dark:text-brand-white focus:outline-hidden"
+                  />
+                </div>
+                {emailInvalid && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold flex items-start gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>Ese email no parece válido. Puedes corregirlo o seguir igualmente.</span>
+                  </p>
+                )}
+              </div>
+              <p className="text-[10px] text-text-muted leading-relaxed">
+                Guardamos estos datos solo para identificar al titular de este plan. Puedes omitir este paso.
+              </p>
+            </div>
+          )}
+
+          {/* STEP 9: CONFIRMACION (último paso) */}
+          {currentStep === TOTAL_STEPS && (
             <div className="flex flex-col gap-3 text-center py-2">
               <div className="w-10 h-10 rounded-full bg-brand-teal/20 text-brand-teal flex items-center justify-center mx-auto">
                 <Check className="w-5 h-5 stroke-[3px]" />
@@ -788,12 +911,12 @@ export const ChatPlanner: React.FC<ChatPlannerProps> = ({
 
           {/* Actions button footer */}
           <div className="flex items-center justify-between border-t border-brand-dark/5 dark:border-brand-white/5 pt-4">
-            <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE 8</span>
+            <span className="text-[10px] font-semibold text-text-muted">PASO {currentStep} DE {TOTAL_STEPS}</span>
             <button
               onClick={handleNext}
               className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-blue to-brand-coral hover:from-brand-blue/90 hover:to-brand-coral/90 text-brand-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer select-none"
             >
-              {currentStep === 8 ? (
+              {currentStep === TOTAL_STEPS ? (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Generar Ruta Just Enjoy</span>

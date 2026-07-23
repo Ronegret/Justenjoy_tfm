@@ -1,11 +1,11 @@
-# Inyecta el codigo de los 10 nodos Code en el workflow JSON.
+# Inyecta el codigo de los 11 nodos Code en el workflow JSON (canonico: v39).
 # Mapea node id -> fichero .js. Reescribe jsCode preservando el resto del JSON.
 import json, os, sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-WF = os.path.normpath(os.path.join(BASE, "..", "workflows", "Planificador_de_Viajes_v38.json"))
+WF = os.path.normpath(os.path.join(BASE, "..", "workflows", "Planificador_de_Viajes_v39.json"))
 
-# node id -> fichero de codigo (v38: 10 nodos Code, mismos IDs que v34)
+# node id -> fichero de codigo (v39: 11 nodos Code; 1-10 con IDs de v34/v38, 11 nuevo)
 MAPPING = {
     "f3246815-6929-420b-b8d2-517beb73f7b0": "01_validar_formulario.js",         # Validar Formulario
     "e969f06a-89e5-462c-a26c-72e14420db67": "02_cargar_sesion.js",              # Cargar Sesion
@@ -17,6 +17,7 @@ MAPPING = {
     "30860731-1907-48c8-b66e-dcee5ddd7786": "08_preparar_payload_supabase.js", # Preparar Payload Supabase
     "1a188734-fdd0-419d-aefc-af2f34601888": "09_extraer_record.js",            # Extraer Record
     "fc303a17-cf1b-4e57-8c1b-d7b712415a0d": "10_enriquecer_coordenadas.js",    # Enriquecer Coordenadas (OpenStreetMap)
+    "a1c2e3f4-7b8c-4d9e-9f01-2a3b4c5d6e7f": "11_preparar_payload_titular.js",   # Preparar Payload Titular
 }
 
 def load_code(fname):

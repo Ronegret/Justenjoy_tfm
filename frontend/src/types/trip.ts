@@ -1,3 +1,14 @@
+// Datos de contacto del titular/cliente del plan. Opcionales: el viajero puede
+// omitir este paso del wizard y generar el plan igual. Se capturan en blanco (no
+// se prellenan desde la cuenta de Firebase) y se persisten en la tabla
+// `plan_holders` de Supabase (lado n8n), no en `travel_plans`.
+export interface PlanHolder {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+}
+
 export interface TripPreferences {
   origin: string;
   destination: string;
@@ -18,6 +29,11 @@ export interface TripPreferences {
   budgetAmountUsd: number;
   style: string[];
   restrictions: string[];
+  // Titular/cliente del plan (nombre, apellidos, teléfono, email). Opcional: se
+  // omite si el viajero saltó el paso del wizard. Al ir dentro de
+  // `TripPreferences`, viaja embebido en `TripData.user_preferences`, así que
+  // queda disponible para mostrarlo en el detalle del viaje sin duplicar campos.
+  holder?: PlanHolder;
 }
 
 export interface JustGoScore {
