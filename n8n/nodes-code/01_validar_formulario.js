@@ -62,9 +62,14 @@ const sessionState = {
   }
 };
 
-// Guardar en static data
+// Guardar en static data. NO se retiene el titular (PII) aquí: la static data
+// persiste indefinidamente en la BD de n8n y solo la usa el refinamiento (RUTA B),
+// que no necesita el holder. El holder sí viaja en el item devuelto abajo, para la
+// rama de persistencia en plan_holders.
 const staticData = $getWorkflowStaticData('global');
-staticData[sessionId] = sessionState;
+const staticState = { ...sessionState, travel_brief: { ...sessionState.travel_brief } };
+delete staticState.travel_brief.holder;
+staticData[sessionId] = staticState;
 
 return [{ json: {
   session_id: sessionId,
