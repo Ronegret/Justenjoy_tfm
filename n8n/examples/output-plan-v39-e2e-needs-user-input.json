@@ -1,0 +1,318 @@
+{
+  "session_id": "session_1784808824879_igfbofsb8",
+  "status": "needs_user_input",
+  "revision_count": 1,
+  "revision_snapshot": 1,
+  "generated_at": "2026-07-23T12:14:39.170Z",
+  "steps_executed": "all",
+  "warnings": [
+    {
+      "type": "budget_exceeded",
+      "detail": "El coste total (3647.00 USD) supera el presupuesto solicitado (50.00 USD) en 3597.00 USD.",
+      "proposed_change": "Aumenta el presupuesto o ajusta las fechas, tipo de alojamiento o número de viajeros.",
+      "requires_user_approval": true,
+      "amount_over": 3597,
+      "suggested_budget_usd": 3647
+    }
+  ],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Barcelona",
+        "destination": "Tokyo",
+        "flights": {
+          "outbound": {
+            "airline": "LOT",
+            "flight_no": "LO 436 / LO 79",
+            "origin": "BCN",
+            "destination": "NRT",
+            "departure_datetime": "2026-10-05T18:00:00",
+            "arrival_datetime": "2026-10-06T18:25:00",
+            "layovers": [
+              {
+                "name": "Warsaw Frederic Chopin",
+                "id": "WAW",
+                "duration": 110
+              }
+            ],
+            "price_usd": 1108,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20NRT%20from%20BCN%20on%202026-10-05%20through%202026-10-12"
+          },
+          "return": {
+            "airline": "Etihad",
+            "flight_no": "EY 801 / EY 111",
+            "origin": "NRT",
+            "destination": "BCN",
+            "departure_datetime": "2026-10-12T18:00:00",
+            "arrival_datetime": "2026-10-13T07:35:00",
+            "layovers": [
+              {
+                "name": "Zayed International Airport",
+                "id": "AUH",
+                "duration": 130
+              }
+            ],
+            "price_usd": 555,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20NRT%20from%20BCN%20on%202026-10-05%20through%202026-10-12"
+          }
+        },
+        "hotel": {
+          "name": "Tanpopo Inn",
+          "address": "",
+          "stars": null,
+          "rating": 5,
+          "check_in": "2026-10-06",
+          "check_out": "2026-10-12",
+          "price_per_night_usd": 53,
+          "total_usd": 321,
+          "booking_url": "",
+          "lat": 35.787856399999995,
+          "lng": 139.698176
+        },
+        "activities": [
+          {
+            "name": "Tokyo Metropolitan Government Building",
+            "date": "2026-10-07",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 35.6894807,
+            "lng": 139.6916863
+          },
+          {
+            "name": "Yoyogi Park",
+            "date": "2026-10-08",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 35.6700649,
+            "lng": 139.6949656
+          },
+          {
+            "name": "Shibuya Sky",
+            "date": "2026-10-09",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 35.6586719,
+            "lng": 139.7019848
+          },
+          {
+            "name": "Tokyo Tower",
+            "date": "2026-10-10",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 35.6585805,
+            "lng": 139.7454329
+          },
+          {
+            "name": "Sensō-ji",
+            "date": "2026-10-11",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "source": "google_maps",
+            "lat": 35.7147651,
+            "lng": 139.7966553
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 3326,
+      "hotel_usd": 321,
+      "activities_usd": 0,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": null,
+      "local_transport_data_source": "tavily",
+      "total_usd": 3647,
+      "budget_total_usd": 50,
+      "budget_remaining_usd": -3597
+    },
+    "trip_summary": "Viaje de 7 días a Tokyo con vuelos con escala y alojamiento sencillo. El plan supera ampliamente el presupuesto disponible.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-10-06",
+        "title": "Día de llegada a Tokyo",
+        "summary": "Llegada a Narita a las 18:25, traslado y check-in en el hotel. Aprovecha la tarde para descansar tras el largo vuelo.",
+        "points_of_interest": [
+          "Narita International Airport"
+        ],
+        "activities": [],
+        "lat": 35.6762,
+        "lng": 139.6503,
+        "coordinate_source": "city_center"
+      },
+      {
+        "day": 2,
+        "date": "2026-10-07",
+        "title": "Tokyo Metropolitan Government Building",
+        "summary": "Comienza el día visitando el Tokyo Metropolitan Government Building y disfruta de sus miradores con vistas panorámicas de la ciudad.",
+        "points_of_interest": [
+          "Tokyo Metropolitan Government Building"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Tokyo Metropolitan Government Building",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 35.6894807,
+            "lng": 139.6916863
+          }
+        ],
+        "lat": 35.6894807,
+        "lng": 139.6916863,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 3,
+        "date": "2026-10-08",
+        "title": "Yoyogi Park",
+        "summary": "Disfruta de una mañana cultural y relajante paseando por el famoso Yoyogi Park, un pulmón verde en el corazón de Tokyo.",
+        "points_of_interest": [
+          "Yoyogi Park"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Yoyogi Park",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 35.6700649,
+            "lng": 139.6949656
+          }
+        ],
+        "lat": 35.6700649,
+        "lng": 139.6949656,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 4,
+        "date": "2026-10-09",
+        "title": "Shibuya Sky",
+        "summary": "Visita Shibuya Sky y contempla Tokyo desde las alturas, una experiencia imprescindible para los amantes de la cultura urbana.",
+        "points_of_interest": [
+          "Shibuya Sky"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Shibuya Sky",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 35.6586719,
+            "lng": 139.7019848
+          }
+        ],
+        "lat": 35.6586719,
+        "lng": 139.7019848,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 5,
+        "date": "2026-10-10",
+        "title": "Tokyo Tower",
+        "summary": "Explora la icónica Tokyo Tower y sumérgete en la cultura y el paisaje urbano de la ciudad.",
+        "points_of_interest": [
+          "Tokyo Tower"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Tokyo Tower",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 35.6585805,
+            "lng": 139.7454329
+          }
+        ],
+        "lat": 35.6585805,
+        "lng": 139.7454329,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 6,
+        "date": "2026-10-11",
+        "title": "Sensō-ji",
+        "summary": "Descubre el templo Sensō-ji, uno de los lugares más emblemáticos y culturales de Tokyo.",
+        "points_of_interest": [
+          "Sensō-ji"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Sensō-ji",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Tourist attraction",
+            "lat": 35.7147651,
+            "lng": 139.7966553
+          }
+        ],
+        "lat": 35.7147651,
+        "lng": 139.7966553,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 7,
+        "date": "2026-10-12",
+        "title": "Último día en Tokyo — Regreso a Barcelona",
+        "summary": "Check-out del hotel y traslado al aeropuerto para tomar el vuelo de regreso a las 18:00.",
+        "points_of_interest": [
+          "Narita International Airport"
+        ],
+        "activities": [],
+        "lat": 35.6762,
+        "lng": 139.6503,
+        "coordinate_source": "city_center"
+      }
+    ],
+    "plan_notes": [
+      "Ciudadanos españoles no necesitan visado para estancias turísticas de hasta 90 días en Japón.",
+      "El transporte público en Tokyo es eficiente y recomendable; la tarjeta Suica facilita los desplazamientos.",
+      "Los taxis han subido de precio en 2026, por lo que el metro es la opción más económica."
+    ],
+    "revision_snapshot": 1
+  },
+  "error_detail": "",
+  "_debug": {
+    "execution_time_ms": 2630,
+    "plan_metrics": {
+      "activities_found": 5,
+      "itinerary_days": 7,
+      "plan_notes": 3,
+      "warnings": 1,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_skip_supabase": true
+}

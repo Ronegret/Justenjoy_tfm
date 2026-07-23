@@ -1,0 +1,370 @@
+{
+  "session_id": "session_1784808529102_x9p7ycc2c",
+  "status": "plan_ready",
+  "revision_count": 2,
+  "revision_snapshot": 2,
+  "generated_at": "2026-07-23T12:17:21.516Z",
+  "steps_executed": "all",
+  "warnings": [],
+  "plan": {
+    "segments": [
+      {
+        "segment_index": 0,
+        "origin": "Barcelona",
+        "destination": "Lisbon",
+        "flights": {
+          "outbound": {
+            "airline": "easyJet",
+            "flight_no": "U2 7213",
+            "origin": "BCN",
+            "destination": "LIS",
+            "departure_datetime": "2026-09-05T17:25:00",
+            "arrival_datetime": "2026-09-05T18:30:00",
+            "layovers": [],
+            "price_usd": 51,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-05%20through%202026-09-08"
+          },
+          "return": {
+            "airline": "Ryanair",
+            "flight_no": "FR 3079",
+            "origin": "LIS",
+            "destination": "BCN",
+            "departure_datetime": "2026-09-08T20:35:00",
+            "arrival_datetime": "2026-09-08T23:25:00",
+            "layovers": [],
+            "price_usd": 30,
+            "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-05%20through%202026-09-08"
+          }
+        },
+        "hotel": {
+          "name": "White House Lisbon Hostel",
+          "address": "",
+          "stars": 1,
+          "rating": 3.9,
+          "check_in": "2026-09-05",
+          "check_out": "2026-09-08",
+          "price_per_night_usd": 41,
+          "total_usd": 122,
+          "booking_url": "https://www.whitehouselisbon.com/en",
+          "lat": 38.7361066,
+          "lng": -9.1563719
+        },
+        "activities": [
+          {
+            "name": "Praça do Comércio",
+            "date": "2026-09-06",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Plaza",
+            "source": "google_maps",
+            "lat": 38.7072828,
+            "lng": -9.136361299999999
+          },
+          {
+            "name": "Miradouro da Senhora do Monte",
+            "date": "2026-09-07",
+            "start_time": "10:00",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Scenic spot",
+            "source": "google_maps",
+            "lat": 38.7192091,
+            "lng": -9.1327772
+          }
+        ]
+      }
+    ],
+    "cost_summary": {
+      "flights_usd": 162,
+      "hotel_usd": 122,
+      "activities_usd": 0,
+      "inter_city_transport_usd": 0,
+      "estimated_local_transport_usd": 40,
+      "local_transport_data_source": "tavily",
+      "total_usd": 324,
+      "budget_total_usd": 1800,
+      "budget_remaining_usd": 1476
+    },
+    "trip_summary": "Viaje de 4 días a Lisboa con vuelos directos desde Barcelona y alojamiento económico en un hostel céntrico. El itinerario prioriza actividades culturales y paseos gratuitos para disfrutar la ciudad sin exceder el presupuesto.",
+    "daily_itinerary": [
+      {
+        "day": 1,
+        "date": "2026-09-05",
+        "title": "Día de llegada a Lisbon",
+        "summary": "Llegada a Lisboa a las 18:30, traslado al hostel y check-in. Aprovecha la tarde para pasear por los alrededores y cenar en algún restaurante local.",
+        "points_of_interest": [
+          "Humberto Delgado Airport"
+        ],
+        "activities": [],
+        "lat": 38.7809981,
+        "lng": -9.1318608,
+        "coordinate_source": "geocoded"
+      },
+      {
+        "day": 2,
+        "date": "2026-09-06",
+        "title": "Descubre la Praça do Comércio y el centro histórico",
+        "summary": "Comienza el día explorando la emblemática Praça do Comércio y el centro histórico de Lisboa. Disfruta de la arquitectura, los cafés y el ambiente vibrante de la ciudad.",
+        "points_of_interest": [
+          "Praça do Comércio"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Praça do Comércio",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Plaza",
+            "lat": 38.7072828,
+            "lng": -9.136361299999999
+          }
+        ],
+        "lat": 38.7072828,
+        "lng": -9.136361299999999,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 3,
+        "date": "2026-09-07",
+        "title": "Miradores y cultura en Lisboa",
+        "summary": "Visita el Miradouro da Senhora do Monte para disfrutar de las mejores vistas de la ciudad y continúa explorando la cultura lisboeta en sus barrios tradicionales.",
+        "points_of_interest": [
+          "Miradouro da Senhora do Monte"
+        ],
+        "activities": [
+          {
+            "time": "10:00",
+            "name": "Miradouro da Senhora do Monte",
+            "duration_hours": 3,
+            "price_usd": 0,
+            "booking_url": "",
+            "category": "Scenic spot",
+            "lat": 38.7192091,
+            "lng": -9.1327772
+          }
+        ],
+        "lat": 38.7192091,
+        "lng": -9.1327772,
+        "coordinate_source": "activity"
+      },
+      {
+        "day": 4,
+        "date": "2026-09-08",
+        "title": "Último día en Lisbon — Regreso a Barcelona",
+        "summary": "Check-out del hostel y tiempo libre para compras o paseos antes del vuelo de regreso a las 20:35.",
+        "points_of_interest": [
+          "White House Lisbon Hostel"
+        ],
+        "activities": [],
+        "lat": 38.7359783,
+        "lng": -9.1564647,
+        "coordinate_source": "geocoded"
+      }
+    ],
+    "plan_notes": [
+      "A partir de finales de 2026, los viajeros españoles deberán tramitar la autorización ETIAS online para entrar en Portugal.",
+      "El metro desde el aeropuerto al centro cuesta 1,65€ por trayecto. El taxi al centro ronda los 10-16€.",
+      "Lisboa cuenta con una excelente red de transporte público y taxis a precios razonables."
+    ],
+    "revision_snapshot": 2
+  },
+  "error_detail": "",
+  "_debug": {
+    "execution_time_ms": 3135,
+    "plan_metrics": {
+      "activities_found": 2,
+      "itinerary_days": 4,
+      "plan_notes": 3,
+      "warnings": 0,
+      "has_flights": true,
+      "has_hotel": true,
+      "tools_called": "all"
+    }
+  },
+  "_supabase_record": {
+    "session_id": "session_1784808529102_x9p7ycc2c",
+    "status": "plan_ready",
+    "destination": "Lisbon",
+    "origin": "Barcelona",
+    "departure_date": "2026-09-05",
+    "return_date": "2026-09-08",
+    "budget_usd": 1800,
+    "total_cost_usd": 324,
+    "travelers_count": 2,
+    "activity_interests": [
+      "food",
+      "culture"
+    ],
+    "plan": {
+      "segments": [
+        {
+          "segment_index": 0,
+          "origin": "Barcelona",
+          "destination": "Lisbon",
+          "flights": {
+            "outbound": {
+              "airline": "easyJet",
+              "flight_no": "U2 7213",
+              "origin": "BCN",
+              "destination": "LIS",
+              "departure_datetime": "2026-09-05T17:25:00",
+              "arrival_datetime": "2026-09-05T18:30:00",
+              "layovers": [],
+              "price_usd": 51,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-05%20through%202026-09-08"
+            },
+            "return": {
+              "airline": "Ryanair",
+              "flight_no": "FR 3079",
+              "origin": "LIS",
+              "destination": "BCN",
+              "departure_datetime": "2026-09-08T20:35:00",
+              "arrival_datetime": "2026-09-08T23:25:00",
+              "layovers": [],
+              "price_usd": 30,
+              "booking_url": "https://www.google.com/travel/flights?q=Flights%20to%20LIS%20from%20BCN%20on%202026-09-05%20through%202026-09-08"
+            }
+          },
+          "hotel": {
+            "name": "White House Lisbon Hostel",
+            "address": "",
+            "stars": 1,
+            "rating": 3.9,
+            "check_in": "2026-09-05",
+            "check_out": "2026-09-08",
+            "price_per_night_usd": 41,
+            "total_usd": 122,
+            "booking_url": "https://www.whitehouselisbon.com/en",
+            "lat": 38.7361066,
+            "lng": -9.1563719
+          },
+          "activities": [
+            {
+              "name": "Praça do Comércio",
+              "date": "2026-09-06",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Plaza",
+              "source": "google_maps",
+              "lat": 38.7072828,
+              "lng": -9.136361299999999
+            },
+            {
+              "name": "Miradouro da Senhora do Monte",
+              "date": "2026-09-07",
+              "start_time": "10:00",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Scenic spot",
+              "source": "google_maps",
+              "lat": 38.7192091,
+              "lng": -9.1327772
+            }
+          ]
+        }
+      ],
+      "cost_summary": {
+        "flights_usd": 162,
+        "hotel_usd": 122,
+        "activities_usd": 0,
+        "inter_city_transport_usd": 0,
+        "estimated_local_transport_usd": 40,
+        "local_transport_data_source": "tavily",
+        "total_usd": 324,
+        "budget_total_usd": 1800,
+        "budget_remaining_usd": 1476
+      },
+      "trip_summary": "Viaje de 4 días a Lisboa con vuelos directos desde Barcelona y alojamiento económico en un hostel céntrico. El itinerario prioriza actividades culturales y paseos gratuitos para disfrutar la ciudad sin exceder el presupuesto.",
+      "daily_itinerary": [
+        {
+          "day": 1,
+          "date": "2026-09-05",
+          "title": "Día de llegada a Lisbon",
+          "summary": "Llegada a Lisboa a las 18:30, traslado al hostel y check-in. Aprovecha la tarde para pasear por los alrededores y cenar en algún restaurante local.",
+          "points_of_interest": [
+            "Humberto Delgado Airport"
+          ],
+          "activities": [],
+          "lat": 38.7809981,
+          "lng": -9.1318608,
+          "coordinate_source": "geocoded"
+        },
+        {
+          "day": 2,
+          "date": "2026-09-06",
+          "title": "Descubre la Praça do Comércio y el centro histórico",
+          "summary": "Comienza el día explorando la emblemática Praça do Comércio y el centro histórico de Lisboa. Disfruta de la arquitectura, los cafés y el ambiente vibrante de la ciudad.",
+          "points_of_interest": [
+            "Praça do Comércio"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Praça do Comércio",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Plaza",
+              "lat": 38.7072828,
+              "lng": -9.136361299999999
+            }
+          ],
+          "lat": 38.7072828,
+          "lng": -9.136361299999999,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 3,
+          "date": "2026-09-07",
+          "title": "Miradores y cultura en Lisboa",
+          "summary": "Visita el Miradouro da Senhora do Monte para disfrutar de las mejores vistas de la ciudad y continúa explorando la cultura lisboeta en sus barrios tradicionales.",
+          "points_of_interest": [
+            "Miradouro da Senhora do Monte"
+          ],
+          "activities": [
+            {
+              "time": "10:00",
+              "name": "Miradouro da Senhora do Monte",
+              "duration_hours": 3,
+              "price_usd": 0,
+              "booking_url": "",
+              "category": "Scenic spot",
+              "lat": 38.7192091,
+              "lng": -9.1327772
+            }
+          ],
+          "lat": 38.7192091,
+          "lng": -9.1327772,
+          "coordinate_source": "activity"
+        },
+        {
+          "day": 4,
+          "date": "2026-09-08",
+          "title": "Último día en Lisbon — Regreso a Barcelona",
+          "summary": "Check-out del hostel y tiempo libre para compras o paseos antes del vuelo de regreso a las 20:35.",
+          "points_of_interest": [
+            "White House Lisbon Hostel"
+          ],
+          "activities": [],
+          "lat": 38.7359783,
+          "lng": -9.1564647,
+          "coordinate_source": "geocoded"
+        }
+      ],
+      "plan_notes": [
+        "A partir de finales de 2026, los viajeros españoles deberán tramitar la autorización ETIAS online para entrar en Portugal.",
+        "El metro desde el aeropuerto al centro cuesta 1,65€ por trayecto. El taxi al centro ronda los 10-16€.",
+        "Lisboa cuenta con una excelente red de transporte público y taxis a precios razonables."
+      ],
+      "revision_snapshot": 2
+    }
+  },
+  "_skip_supabase": false
+}

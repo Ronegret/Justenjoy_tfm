@@ -1,0 +1,21 @@
+{
+  "status": "error",
+  "session_id": "session_1784808933406_s3vzcd8kb",
+  "revision_count": 0,
+  "error_detail": "Output no-JSON del motor planificador: Unterminated string in JSON at position 15500 (line 451 column 44). Raw (primeros 300 chars): {\n  \"session_id\": \"session_1784808933406_s3vzcd8kb\",\n  \"status\": \"plan_ready\",\n  \"revision_count\": 0,\n  \"revision_snapshot\": 0,\n  \"generated_at\": \"2024-06-13T18:00:00Z\",\n  \"steps_executed\": \"all\",\n  \"warnings\": [],\n  \"plan\": {\n    \"segments\": [\n      {\n        \"segment_index\": 0,\n        \"origin\": \"",
+  "warnings": [],
+  "plan": null,
+  "_debug": {
+    "execution_time_ms": null,
+    "plan_metrics": {
+      "activities_found": 0,
+      "itinerary_days": 0,
+      "plan_notes": 0,
+      "warnings": 0,
+      "has_flights": false,
+      "has_hotel": false,
+      "tools_called": "all"
+    }
+  },
+  "_skip_supabase": true
+}
