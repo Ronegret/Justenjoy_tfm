@@ -153,8 +153,42 @@ Desde v31 cada elemento de `plan.daily_itinerary[]` incluye `lat`, `lng` y
 mapa del portal del viajero (nodo "Enriquecer Coordenadas (OpenStreetMap)").
 
 ### Refinamiento (POST `/webhook/travel-refine`)
-Entrada: `{ session_id, feedback_text }`.
-El sistema re-ejecuta solo los pasos afectados por el feedback.
+Entrada: `{ session_id, feedback_text }` (opcional `current_plan`, forward-compat).
+El sistema re-ejecuta **solo los pasos afectados** por el feedback (no replanifica
+desde cero), y devuelve un plan con el **mismo esquema que la RUTA A** y
+`revision_count` incrementado.
+
+**Consumo desde el frontend (novedad):** la página de detalle del viaje
+`/trip/[id]` monta un control de refinamiento (caja de texto libre + chips de
+sugerencia) **solo para planes reales de n8n** (los que llevan `session_id`; los
+de fallback OpenAI/Claude/mock no son refinables y el control no aparece). El
+endpoint autenticado `/api/refine-trip` (server-side) reenvía
+`{ session_id, feedback_text }` a este webhook y mapea la respuesta con el
+**mismo `mapN8nToTripData`** que `/api/plan-trip` (extraído a
+`frontend/src/lib/n8nPlan.ts` para compartirlo). No envía `current_plan`: n8n lo
+reconstruye desde su memoria. Env `N8N_REFINE_WEBHOOK_URL`.
+
+> ⚠️ **Estado de sesión en memoria.** `Cargar Sesión` reconstruye el `current_plan`
+> desde la memoria interna de n8n (`$getWorkflowStaticData`) indexada por
+> `session_id` — esa memoria es la fuente de verdad, no el body. Si n8n se reinicia
+> o la sesión caduca, la RUTA B responde error y `/api/refine-trip` lo traduce a
+> `session_expired`: el frontend **conserva el plan actual** y avisa, sin fingir un
+> plan nuevo. Para cambiar el plan en ese caso hay que replanificar (RUTA A).
+
+> 🔒 **Guardarraíl de datos sensibles (RGPD art. 9).** El `feedback_text` es texto
+> libre que acabaría en el LLM y en los buscadores (SerpAPI/Tavily, cuya AUP
+> prohíbe datos del art. 9). Antes de reenviar a n8n, `/api/refine-trip` escanea el
+> texto con `frontend/src/lib/sensitiveData.ts`: si detecta señales de categorías
+> especiales (salud, religión, orientación sexual, ideología, afiliación sindical,
+> origen étnico) **no reenvía nada** y responde `blocked_sensitive`, pidiendo al
+> usuario reformular en términos de viaje. La UI (`RefineTripPanel`) además avisa de
+> forma permanente y pre-chequea en cliente (mismo módulo). El `feedback_text` no se
+> registra en logs. Control **best-effort** de minimización, complementario a la base
+> jurídica de la política de privacidad (no la sustituye). Ver hallazgo #4 de
+> `docs/auditoria-cumplimiento-legal-seguridad.md`.
+
+Ejemplos: `n8n/examples/input-refine.json` (entrada desde el frontend) /
+`output-plan-v39-e2e-refinamiento.json` (salida real, `revision_count: 2`).
 
 ### Búsqueda de titulares (POST `/webhook/holders-search`)
 Rama de **lectura** para la búsqueda persistente de clientes en el dashboard (novedad **v39**).

@@ -10,6 +10,7 @@
 > Open-Meteo, OpenStreetMap/Nominatim. Botpress y Stripe están **declarados pero NO implementados**.
 >
 > **Fecha de la auditoría:** 2026-07-22 · **Revisión 2:** 2026-07-22 (tras remediación — ver §0)
+> · **Revisión 2.2:** 2026-07-23 (refinamiento del plan en el frontend — ver §0.3)
 > **Método:** revisión estática del repositorio con cita `fichero:línea` en cada afirmación sobre el código.
 > **Normas evaluadas:** RGPD (arts. 6, 9, 13/14, 22, 25/32, 28, 30, 33/34, 35, Cap. V), LSSI art. 22.2,
 > Reglamento de IA (RIA) arts. 4 y 50, Ley 3/1991 de Competencia Desleal / TRLGDCU, y Ley 1/2019 de Secretos Comerciales.
@@ -82,6 +83,86 @@ Cambios integrados en `develop` desde la Revisión 1:
 > **Prioridad restante:** los 6 en FALTA. Los más críticos para un go-live: **#8** (RLS Supabase) y
 > **#4** (filtrado de categorías especiales antes de LLM/buscadores).
 
+### 0.3 Cambios del 2026-07-23 — refinamiento del plan en el frontend (rama `feature/refinamiento-plan-frontend`)
+
+> ⚠️ **Trabajo en curso, sin fusionar.** Cambios en el árbol de trabajo (aún no en `develop`);
+> spec en `docs/specs/2026-07-23-refinamiento-plan-frontend.md` (estado **PROPUESTA**, pendiente de
+> aprobación de Rodrigo por tocar el contrato de la API — AGENTS.md §3.2). Esta entrada documenta su
+> **impacto de cumplimiento** para que se evalúe **antes** del merge.
+
+**Qué se ha añadido (RUTA B de n8n, ya existente, ahora consumida desde el portal):**
+- **Panel de refinamiento con caja de texto libre** en la página de detalle del viaje:
+  `frontend/src/components/trip/RefineTripPanel.tsx:93-100` (`<textarea>` "¿Qué cambiarías de este
+  plan?") + chips de sugerencia preset (`:15-21`). Se monta solo si el plan tiene `session_id`
+  (`frontend/src/app/trip/[id]/page.tsx:145-149`).
+- **Ruta interna nueva** `frontend/src/app/api/refine-trip/route.ts` → reenvía `{ session_id,
+  feedback_text }` al webhook `travel-refine`; **auth obligatoria** con `requireSession` (`route.ts:32`),
+  mismo gate que `/api/plan-trip`.
+- **Refactor:** `mapN8nToTripData`/`requireSession` extraídos a `frontend/src/lib/n8nPlan.ts` y
+  `frontend/src/lib/requireSession.ts` (compartidos por ambas rutas; `plan-trip/route.ts` −790 líneas).
+- **`session_id` explícito** en `TripData` (`frontend/src/types/trip.ts:174-181`) y en la respuesta
+  mapeada; `refineTrip(...)` en `frontend/src/context/TripContext.tsx:212-268`.
+- **Env nueva** `N8N_REFINE_WEBHOOK_URL` (server-only, documentada en `.env.example` y
+  `frontend/.env.local.example`); ejemplo `n8n/examples/input-refine.json`; doc `docs/ARCHITECTURE.md`.
+
+**Impacto de cumplimiento:**
+
+| # | Efecto del cambio | Estado |
+|---|---|---|
+| **4** | **MATERIALIZADO y luego MITIGADO (mismo día).** La Rev1/2.1 anotaba que el contrato `feedback_text` existía en n8n **pero "el portal nunca lo invoca"**. Este cambio lo expuso en la UI (`RefineTripPanel.tsx`, texto libre → `/api/refine-trip` → LLM + SerpAPI/Tavily). **Mitigación aplicada el 2026-07-23** (ver §0.4): (a) **aviso permanente** de reencuadre funcional en el panel; (b) **guardarraíl server-side** en `/api/refine-trip` (`frontend/src/lib/sensitiveData.ts`) que **no reenvía** el texto si detecta categorías especiales (responde `blocked_sensitive`), respetando la AUP de Tavily; (c) pre-chequeo en cliente y **no-logging** del `feedback_text`. **Pendiente** (no de código): base jurídica/consentimiento en la política de privacidad (Artefacto 1) y el vector estructurado de accesibilidad del wizard (RUTA A). | 🟡 **PARCIAL** (control técnico del texto libre en vigor; base jurídica pendiente) |
+| **13** | El nuevo webhook `travel-refine` comparte el patrón de respuesta cruda de la RUTA A → **misma fuga potencial** de campos internos (`_debug`/`_supabase_record`/`session_state`) para quien llame **directo** al webhook. El frontend sí limpia (usa el mismo `mapN8nToTripData`), pero la superficie expuesta por ngrok crece de 1 a 2 webhooks. | **FALTA** (sin cambio de estado; superficie ampliada) |
+| — | **Positivos del diseño:** ruta interna **autenticada** (`requireSession`, `route.ts:32`); env **server-only** y documentada; **no** se envía `current_plan` (minimización — n8n reconstruye desde memoria); la **PII del titular no se reenvía** a n8n en el refinamiento, se conserva en cliente (`TripContext.tsx:255-258`). | ✅ buenas prácticas |
+| — | **Nuevo dato en cliente:** `session_id` (identificador interno de n8n) pasa a `TripData` y a `localStorage`. Riesgo bajo (ya coincidía con `trip_id`), pero documentar en la política/ROPA como identificador técnico. | 🟡 documentar |
+
+> **Recomendación previa al merge (mitigación de #4):** añadir en `RefineTripPanel.tsx` un **aviso
+> visible** antes de la caja ("no incluyas datos de salud, religión u otros datos sensibles") y/o un
+> **filtro server-side en `/api/refine-trip`** que detecte/pseudonimice categorías especiales antes de
+> reenviar a n8n. Es el momento óptimo: el contrato aún no está aprobado ni fusionado.
+> ✅ **HECHO el 2026-07-23 — ver §0.4.**
+
+### 0.4 Mitigación de #4 aplicada (2026-07-23) — guardarraíl de categorías especiales
+
+Implementada en la misma rama, como parte de resolver el hallazgo #4 sobre el texto libre de
+refinamiento. **Defensa en profundidad** en tres capas:
+
+1. **Reencuadre funcional en la UI** — aviso permanente bajo la caja de texto en
+   `frontend/src/components/trip/RefineTripPanel.tsx`: *"Usa este espacio solo para preferencias de
+   viaje… no incluyas datos de salud, religión, ideología u otros datos personales sensibles"*. Es la
+   defensa principal: el campo se acota explícitamente a datos funcionales.
+2. **Guardarraíl server-side (autoritativo)** — `frontend/src/lib/sensitiveData.ts`
+   (`scanForSpecialCategoryData`) detecta señales de las 6 categorías del art. 9 (salud, religión,
+   orientación sexual, ideología, afiliación sindical, origen étnico). `frontend/src/app/api/refine-trip/route.ts`
+   lo invoca **antes** de contactar con n8n: si hay coincidencia, responde `blocked_sensitive` y **no
+   reenvía nada** al LLM ni a los buscadores → respeta la AUP de **Tavily** (§7.2) y minimiza. El
+   `feedback_text` **no se registra** en logs.
+3. **Pre-chequeo en cliente + UX** — `TripContext.refineTrip` corre el mismo módulo antes de la
+   llamada de red (evita la ida y vuelta) y `RefineTripPanel` muestra un mensaje claro pidiendo
+   reformular en términos de viaje; el plan actual se conserva intacto.
+
+**Diseño consciente:** el detector es **best-effort** y **no bloquea preferencias funcionales
+legítimas** (hotel accesible, zona "gay-friendly", menú vegetariano) para no incurrir en sobrebloqueo
+—solo marca la revelación de un atributo personal sensible ("soy diabético", "soy musulmán", "comida
+halal")—. Documentado como control complementario, **no sustituto de la base jurídica**.
+
+**Qué NO cubre esta mitigación (queda abierto):**
+- **Base jurídica / consentimiento (9.2.a) e información previa** en la política de privacidad →
+  **Artefacto 1** (sigue PARCIAL).
+- **Vector estructurado de accesibilidad** del wizard (`accessibility`/`accessible`/`pet_friendly`,
+  RUTA A) → tratamiento intencional de datos funcionales que requiere base/aviso en la política, no un
+  filtro (un toggle de accesibilidad no se puede "bloquear"). Recomendado: microaviso + base en la
+  política (Artefacto 1).
+- **Pseudonimización aguas abajo en n8n** (lo que el agente de refinamiento envíe a Tavily) →
+  backend/Rodrigo, fuera del alcance del frontend.
+
+> Con la capa (2) el texto libre sensible **ya no sale del servidor del portal** hacia LLM/buscadores.
+> Por eso #4 pasa de FALTA a **PARCIAL**: el riesgo técnico principal está contenido; resta la
+> formalización jurídica (Artefacto 1) y el vector estructurado.
+
+Ficheros de la mitigación: `frontend/src/lib/sensitiveData.ts` (nuevo),
+`frontend/src/app/api/refine-trip/route.ts`, `frontend/src/context/TripContext.tsx`,
+`frontend/src/components/trip/RefineTripPanel.tsx`, `frontend/src/types/planResult.ts`,
+`docs/ARCHITECTURE.md`.
+
 ---
 
 ## 1. Detalle de hallazgos (evidencia y acción)
@@ -97,7 +178,7 @@ Cambios integrados en `develop` desde la Revisión 1:
 | 1 | **RGPD 6.1.b (contrato)** | `frontend/src/app/privacy/page.tsx:70-77` — describe la finalidad pero **no nombra base jurídica alguna** | **FALTA** | No se declara ninguna base del art. 6. Añadir sección "Base jurídica" en `privacy/page.tsx`: generación del plan y cuenta = 6.1.b; ver ROPA (Artefacto 2). |
 | 2 | **RGPD 6.1.f (interés legítimo + test 3 pasos)** | Sin evidencia en repo | **FALTA** | No hay test de ponderación (LIA) documentado para ningún tratamiento (p. ej. logging, antifraude/rate-limit citado en `frontend/src/app/terms/page.tsx:46-53`). Documentar LIA en `docs/legal/` si se invoca 6.1.f. |
 | 3 | **RGPD 6.1.a (consentimiento)** | `frontend/src/components/shared/CookieNotice.tsx:9-13`; no hay recogida de consentimiento para IA | **PARCIAL / N/A** | Cookie técnica no requiere consentimiento (correcto). Pero el envío de datos a LLM (§4 de la política) no tiene base declarada. Ver #6. |
-| 4 | **RGPD 9 (categorías especiales – feedback libre / dieta)** | **SÍ existe campo de texto libre**: el backend acepta `body.feedback_text` y lo procesa un agente de refinamiento vía LLM → `n8n/nodes-code/02_cargar_sesion.js:3` y `:15-26`. Vectores estructurados del art. 9: `accessibility`/"Necesito accesibilidad" (`frontend/src/components/planner/PreferenceWizard.tsx:57`, `ChatPlanner.tsx:192`) y `accessible`/`pet_friendly`/`kids_friendly`. Todo va a `special_requirements`/`feedback_text` → LLM (`route.ts:235`, `route.ts:1128`) y a buscadores (SerpAPI/Tavily) | **FALTA** | **[CORREGIDO tras contraste con anexo oficial]** Mi dictamen previo ("no existe texto libre") era erróneo: el wizard inicial es estructurado, pero el **contrato de refinamiento sí expone `feedback_text`** (texto libre, ~350 car. según memoria/`frontend_funcionalidades.md`) que puede revelar salud/religión/convicciones (art. 9). No hay doble cerrojo, ni consentimiento explícito (9.2.a), ni aviso previo, ni minimización/filtrado. **Refuerzo verificado (anexo §5):** la AUP de **Tavily prohíbe enviar datos del art. 9** — mandar el texto libre sin filtrar a Tavily/SerpAPI incumpliría además su propia AUP. Corrección: (a) advertir antes de marcar "accesibilidad" y antes del campo de feedback; (b) consentimiento explícito 9.2.a o reencuadre funcional; (c) **filtrar/pseudonimizar el texto libre antes de enviarlo a LLM Y a buscadores**. |
+| 4 | **RGPD 9 (categorías especiales – feedback libre / dieta)** | **[ACTUALIZADO 2026-07-23 — ver §0.3]** El campo de texto libre `feedback_text` **ya se expone en la UI**: `frontend/src/components/trip/RefineTripPanel.tsx:93-100` (`<textarea>` en `/trip/[id]`) → `/api/refine-trip` → webhook `travel-refine`. Antes solo existía en el contrato n8n. El backend lo procesa un agente de refinamiento vía LLM → `n8n/nodes-code/02_cargar_sesion.js:3` y `:15-26`. Vectores estructurados del art. 9: `accessibility`/"Necesito accesibilidad" (`frontend/src/components/planner/PreferenceWizard.tsx:57`, `ChatPlanner.tsx:192`) y `accessible`/`pet_friendly`/`kids_friendly`. Todo va a `special_requirements`/`feedback_text` → LLM (`route.ts:235`, `route.ts:1128`) y a buscadores (SerpAPI/Tavily) | **FALTA** | **[CORREGIDO tras contraste con anexo oficial]** Mi dictamen previo ("no existe texto libre") era erróneo: el wizard inicial es estructurado, pero el **contrato de refinamiento sí expone `feedback_text`** (texto libre, ~350 car. según memoria/`frontend_funcionalidades.md`) que puede revelar salud/religión/convicciones (art. 9). No hay doble cerrojo, ni consentimiento explícito (9.2.a), ni aviso previo, ni minimización/filtrado. **Refuerzo verificado (anexo §5):** la AUP de **Tavily prohíbe enviar datos del art. 9** — mandar el texto libre sin filtrar a Tavily/SerpAPI incumpliría además su propia AUP. Corrección: (a) advertir antes de marcar "accesibilidad" y antes del campo de feedback; (b) consentimiento explícito 9.2.a o reencuadre funcional; (c) **filtrar/pseudonimizar el texto libre antes de enviarlo a LLM Y a buscadores**. **[MITIGADO 2026-07-23 — §0.4]** Aplicado (a) aviso permanente en el panel, (b) reencuadre funcional del campo y (c) guardarraíl server-side (`lib/sensitiveData.ts`) que **no reenvía** el texto si detecta categorías especiales. Estado vigente → **PARCIAL** (resta base jurídica en la política, Artefacto 1, y el vector estructurado de accesibilidad). |
 | 5 | **RGPD 13/14 (política de privacidad)** | `frontend/src/app/privacy/page.tsx:19-127` | **PARCIAL** | Existe y es legible; cubre datos, finalidad, encargados (§4), plazos (§5), derechos (§6). **Faltan**: base jurídica (art. 13.1.c), transferencias internacionales y garantías (art. 13.1.f → ver #19), identidad/NIF del responsable y vía de reclamación ante la AEPD, plazo concreto de conservación. Completar según Artefacto 1. |
 | 6 | **RGPD 22 (decisión automatizada – Tarjeta de Decisión)** | `frontend/src/components/results/RouteDecisionCard.tsx:12-92`; cálculo del score en `frontend/src/app/api/plan-trip/route.ts:883-937` | **CUMPLE (no aplica 22.1) — sin documentar** | La "Ruta Óptima Justificada" es una **recomendación de viaje**: no produce efectos jurídicos ni significativos similares (no deniega crédito, empleo, etc.). No aplica art. 22.1. **Acción**: dejar constancia de la no-aplicación en la ROPA/EIPD; la explicación de la lógica (`RouteDecisionCard.tsx:44-88`) favorece la transparencia. |
 | 7 | **RGPD 25/32 – pin de imagen n8n** | `docker-compose.yml:15` y `docker-compose.yml:79` → `n8nio/n8n:latest` | **FALTA** | `:latest` no es reproducible ni auditable (arranques distintos = versiones distintas). Fijar `n8nio/n8n:2.x.y` (idealmente digest `@sha256:`) en ambos servicios (`n8n` y `n8n-import`). |
@@ -106,7 +187,7 @@ Cambios integrados en `develop` desde la Revisión 1:
 | 10 | **RGPD 25/32 – cifrado en reposo** | Supabase = Postgres gestionado (cifrado por defecto, **A VERIFICAR** región/plan); n8n cifra credenciales con `N8N_ENCRYPTION_KEY` (`.env.example:71-74`) | **PARCIAL** | El cifrado de la BD de planes no está documentado. Confirmar cifrado en reposo del proyecto Supabase y región (ver #17). |
 | 11 | **RGPD 25/32 – persistencia no volátil de sesión** | Volumen Docker `docker-compose.yml:60-62` (persiste la BD); **pero** el estado de sesión de refinamiento se guarda en `$getWorkflowStaticData('global')` → `n8n/nodes-code/02_cargar_sesion.js:4-5` | **PARCIAL** | **[MATIZADO tras contraste con anexo §3/§5.1]** El volumen persiste la BD de n8n (correcto). El estado de sesión, en cambio, vive en *workflow static data*, que es frágil: no fiable en ejecuciones manuales/modo cola y **puede resetearse en el re-import del workflow que hace `n8n-import` en cada arranque** (`docker-compose.yml:78-86`). Mover la sesión a un almacén duradero (p. ej. la propia tabla Supabase) o documentar la limitación. |
 | 12 | **RGPD 25/32 – protección de `/results` por middleware** | Matcher del proxy = `['/dashboard','/planner','/trip']` en `frontend/src/proxy.ts:30-32` → **`/results` NO está protegido** | **PARCIAL** | `/results` no pasa por el proxy. Mitigante: `/results` no lee datos de servidor, se hidrata desde `TripContext`/localStorage cliente (`frontend/src/app/results/page.tsx:20-31`) y `/api/plan-trip` sí exige sesión (`route.ts:994-1013`). Aun así, añadir `/results` al matcher por coherencia. |
-| 13 | **RGPD 32 – fuga de `_debug`/`_supabase_record`** | Responder n8n: `responseBody = JSON.stringify($json)` en `n8n/workflows/Planificador_de_Viajes_v38.json:342-343`; el nodo previo "Preparar Payload Supabase" alimenta **a la vez** al Responder y a Supabase (`…v38.json:769-783`); añade `_supabase_record`/`_skip_supabase` (`n8n/nodes-code/08_preparar_payload_supabase.js:42-46`) y `_debug` (`n8n/nodes-code/07_logger_metricas.js:24-35`) | **FALTA** | La respuesta del webhook devuelve campos internos: `_debug` (métricas), `_supabase_record` (copia exacta del registro persistido), `_skip_supabase`, y `session_state`/`travel_brief`. El frontend remapea a `TripData` limpio (`route.ts:504-991`), pero **quien llame directo al webhook (expuesto por ngrok) recibe todo**. Corrección: en `…v38.json:343` serializar solo los campos públicos del plan, o insertar un nodo "sanitize" que borre `_*`, `session_state`, `travel_brief` antes de responder. |
+| 13 | **RGPD 32 – fuga de `_debug`/`_supabase_record`** | Responder n8n: `responseBody = JSON.stringify($json)` en `n8n/workflows/Planificador_de_Viajes_v38.json:342-343`; el nodo previo "Preparar Payload Supabase" alimenta **a la vez** al Responder y a Supabase (`…v38.json:769-783`); añade `_supabase_record`/`_skip_supabase` (`n8n/nodes-code/08_preparar_payload_supabase.js:42-46`) y `_debug` (`n8n/nodes-code/07_logger_metricas.js:24-35`) | **FALTA** | La respuesta del webhook devuelve campos internos: `_debug` (métricas), `_supabase_record` (copia exacta del registro persistido), `_skip_supabase`, y `session_state`/`travel_brief`. El frontend remapea a `TripData` limpio (`route.ts:504-991`), pero **quien llame directo al webhook (expuesto por ngrok) recibe todo**. Corrección: en `…v38.json:343` serializar solo los campos públicos del plan, o insertar un nodo "sanitize" que borre `_*`, `session_state`, `travel_brief` antes de responder. **[2026-07-23]** El nuevo webhook `travel-refine` (RUTA B, §0.3) comparte este patrón → aplicar el saneo a **ambos** webhooks. |
 | 14 | **RGPD 25/32 – tests** | No hay suite automatizada; solo `n8n/nodes-code/_smoketest.js` y `frontend/test-frontend.ps1` (scripts manuales); `verify.ps1` hace tsc+lint | **PARCIAL** | Sin tests de la lógica de mapeo/auth/sanitización, un cambio puede reintroducir la fuga (#13). Añadir tests unitarios de `/api/plan-trip` (auth, sanitize) y de los nodos code. |
 | 15 | **RGPD 25/32 – migraciones/DDL versionadas** | `git ls-files` no devuelve ningún `.sql`/migración; el esquema solo se describe en prosa (`n8n/docs/Planificador_Viajes_v38_Arquitectura.md:392`) | **FALTA** | El esquema de `travel_plans` (incl. RLS) no está versionado. Crear `supabase/migrations/*.sql` con la DDL y las políticas RLS. |
 | 16 | **RGPD 28 – DPA con encargados** | `frontend/src/app/privacy/page.tsx:79-92` los llama "encargados"; **ningún DPA en el repo** | **FALTA** | No hay contrato/registro de DPA con OpenAI, Anthropic, Supabase, SerpAPI, Tavily, Google. Recopilar y registrar (Artefacto 4). |
@@ -149,7 +230,10 @@ Cambios integrados en `develop` desde la Revisión 1:
 1. ⏳ **#13 (ABIERTO de nuevo)** — fuga de `_debug`/`_supabase_record`/`session_state` en la respuesta del webhook. Se saneó en Rev2 pero **el revert (PR #70) lo deshizo**: `n8n/workflows/Planificador_de_Viajes_v38.json:343` vuelve a `JSON.stringify($json)`. **Máxima prioridad.**
 2. ⏳ **#8 / #9 (ABIERTO)** — RLS desactivado + service_role → activar RLS y versionar DDL (#15). **Máxima prioridad.**
 3. ⏳ **#29 (ABIERTO de nuevo)** — botones `alert()` que fingen éxito → el revert restauró los `alert()`; volver a deshabilitarlos/etiquetarlos.
-4. ⏳ **#4 (ABIERTO)** — texto libre `feedback_text` / accesibilidad enviados a LLM y buscadores sin base ni filtrado → reencuadrar o consentimiento explícito + filtrar.
+4. ✅ **#4 (MITIGADO 2026-07-23 — §0.4)** — el texto libre `feedback_text` expuesto en la UI
+   (`RefineTripPanel.tsx`) ya cuenta con **aviso permanente + guardarraíl server-side** que no
+   reenvía categorías especiales a LLM/buscadores (`lib/sensitiveData.ts`). Pasa a **PARCIAL**;
+   resta la base jurídica en la política (Artefacto 1) y el vector estructurado de accesibilidad.
 5. ⏳ **#7 (ABIERTO de nuevo)** — pin de imagen → el revert devolvió `n8nio/n8n:latest`; volver a fijar versión/digest.
 
 > **Nota operativa:** el código vigente es v38 (sin saneo). La instancia n8n local puede seguir
