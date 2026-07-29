@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TripData, TripPreferences } from '../types/trip';
-import { GenerateTripResult } from '../types/planResult';
+import { GenerateTripResult, RefineTripResult } from '../types/planResult';
+import { scanForSpecialCategoryData } from '../lib/sensitiveData';
 import { mockTrips } from '../data/mockTripData';
 
 interface TripContextType {
@@ -13,6 +14,7 @@ interface TripContextType {
   loadingMessage: string;
   activeLoadingStep: number;
   generateTrip: (prefs: TripPreferences) => Promise<GenerateTripResult>;
+  refineTrip: (feedbackText: string) => Promise<RefineTripResult>;
   saveTrip: (trip: TripData) => void;
   deleteTrip: (id: string) => void;
   setCurrentTripById: (id: string) => boolean;
@@ -205,6 +207,86 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { status: 'ok', tripId: generatedId };
   };
 
+  // Refina el plan ACTUAL (RUTA B de n8n) a partir de una instrucción en texto
+  // libre, en vez de replanificar desde cero. Solo es posible para planes reales
+  // de n8n (los que tienen `session_id`); el resto no son refinables. El estado
+  // de carga lo gestiona el propio panel de refinamiento (no toca `isLoading`
+  // global, que dispara el overlay a pantalla completa del planner).
+  const refineTrip = async (feedbackText: string): Promise<RefineTripResult> => {
+    const trip = currentTrip;
+    if (!trip || !trip.session_id) {
+      // No refinable (plan de fallback o sin sesión de n8n): el control no
+      // debería haberse mostrado. Se conserva el plan actual.
+      return { status: 'session_expired' };
+    }
+
+    // Pre-chequeo de categorías especiales (RGPD art. 9 — hallazgo #4) en cliente:
+    // evita la ida y vuelta a la red cuando el texto revela datos sensibles. La
+    // ruta /api/refine-trip lo vuelve a comprobar de forma autoritativa (mismo
+    // `lib/sensitiveData`), así que esto es solo UX; el control real es server-side.
+    const scan = scanForSpecialCategoryData(feedbackText);
+    if (scan.hit) {
+      return { status: 'blocked_sensitive', categories: scan.categories };
+    }
+
+    try {
+      // El titular (holder) es PII de contacto que NO interviene en el
+      // refinamiento (solo se usan origen/destino/fechas/viajeros para mapear).
+      // Se recorta antes de enviar, igual que bodyForLlm en /api/plan-trip.
+      const prefsForRefine = { ...trip.user_preferences };
+      delete prefsForRefine.holder;
+
+      const response = await fetch('/api/refine-trip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: trip.session_id,
+          feedback_text: feedbackText,
+          user_preferences: prefsForRefine
+        })
+      });
+
+      const data = await response.json();
+
+      // La ruta usa un discriminador `status` explícito para todas las respuestas:
+      // 'ok' (con `trip`), 'needs_user_input', 'session_expired', 'blocked_sensitive'
+      // o 'error'.
+      if (data?.status === 'session_expired') {
+        return { status: 'session_expired' };
+      }
+      if (data?.status === 'blocked_sensitive') {
+        return { status: 'blocked_sensitive', categories: Array.isArray(data.categories) ? data.categories : [] };
+      }
+      if (data?.status === 'needs_user_input') {
+        return { status: 'needs_user_input', warnings: Array.isArray(data.warnings) ? data.warnings : [] };
+      }
+      if (data?.status !== 'ok' || !data.trip || !response.ok) {
+        return { status: 'error', message: data?.message || 'No se pudo refinar el plan.' };
+      }
+
+      // Éxito: reemplaza el viaje mostrado EN SITIO (mismo trip_id/session_id) en
+      // vez de crear uno nuevo.
+      const refined: TripData = {
+        ...(data.trip as TripData),
+        trip_id: trip.trip_id,
+        session_id: trip.session_id,
+        share: { ...(data.trip as TripData).share, private_url: `/trip/${trip.trip_id}` }
+      };
+      // El titular (PII) no se serializa ni lo devuelve n8n: se conserva el del
+      // plan actual para no perderlo al refinar.
+      if (trip.user_preferences?.holder && refined.user_preferences) {
+        refined.user_preferences = { ...refined.user_preferences, holder: trip.user_preferences.holder };
+      }
+
+      saveTrip(refined);
+      setCurrentTrip(refined);
+      return { status: 'ok', tripId: refined.trip_id };
+    } catch (error) {
+      console.warn('refineTrip failed:', error);
+      return { status: 'error', message: 'No se pudo contactar con el servicio de refinamiento. Inténtalo de nuevo.' };
+    }
+  };
+
   return (
     <TripContext.Provider
       value={{
@@ -215,6 +297,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadingMessage,
         activeLoadingStep,
         generateTrip,
+        refineTrip,
         saveTrip,
         deleteTrip,
         setCurrentTripById

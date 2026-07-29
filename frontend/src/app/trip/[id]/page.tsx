@@ -13,6 +13,7 @@ import { useTrips } from '@/context/TripContext';
 import { downloadTripPdf } from '@/lib/tripPdf';
 import { PrivateTripHero } from '@/components/trip/PrivateTripHero';
 import { ItineraryTimeline } from '@/components/trip/ItineraryTimeline';
+import { RefineTripPanel } from '@/components/trip/RefineTripPanel';
 import { TripMapOverview } from '@/components/trip/TripMapOverview';
 import { FlightCard } from '@/components/trip/FlightCard';
 import { HotelCard } from '@/components/trip/HotelCard';
@@ -137,6 +138,15 @@ export default function DynamicTripPage({ params }: TripPageProps) {
                 fallbackImageUrl={trip.best_option.imageUrl || getFallbackDestinationImage(trip.best_option.destination)}
               />
             </div>
+
+            {/* Refinamiento del plan (RUTA B de n8n): solo para planes reales de
+                n8n, que llevan session_id. Los planes de fallback (mock/OpenAI)
+                no son refinables, así que el control no se muestra. */}
+            {trip.session_id && (
+              <div className="mt-2">
+                <RefineTripPanel />
+              </div>
+            )}
 
             {/* Transport & Lodging recommended */}
             <div className="flex flex-col gap-6 mt-4">
