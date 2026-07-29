@@ -171,6 +171,14 @@ export interface AlternativeOption {
 
 export interface TripData {
   trip_id: string;
+  // Identificador de sesión de n8n. Presente SOLO en planes reales de n8n
+  // (los generados por la RUTA A/B del workflow); ausente en planes de
+  // fallback (OpenAI/Claude/mock). Su presencia habilita el refinamiento: es
+  // la clave con la que la RUTA B (`travel-refine`) carga la sesión en memoria
+  // para re-ejecutar solo los pasos afectados. Ver src/context/TripContext
+  // (refineTrip) y src/app/api/refine-trip. Para planes de n8n coincide con
+  // `trip_id`, pero se guarda explícito para no depender de esa coincidencia.
+  session_id?: string;
   user_preferences: TripPreferences;
   justgo_score: JustGoScore;
   best_option: TripOption;
