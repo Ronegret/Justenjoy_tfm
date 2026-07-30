@@ -31,8 +31,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -608,
-        368
+        -688,
+        464
       ],
       "webhookId": "travel-planner-refine-submit",
       "notes": "RUTA B — Caja de feedback en la página de resultados. Recibe: { session_id, feedback_text, current_plan }. URL: POST /webhook/travel-refine"
@@ -59,8 +59,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -400,
-        368
+        -464,
+        464
       ]
     },
     {
@@ -92,7 +92,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -256,
+        -240,
         96
       ]
     },
@@ -126,7 +126,7 @@
       "typeVersion": 2.2,
       "position": [
         -240,
-        368
+        464
       ]
     },
     {
@@ -142,8 +142,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        -32,
-        384
+        32,
+        464
       ]
     },
     {
@@ -164,8 +164,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -112,
-        560
+        32,
+        656
       ],
       "credentials": {
         "openAiApi": {
@@ -183,8 +183,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        256,
-        384
+        304,
+        464
       ]
     },
     {
@@ -197,7 +197,7 @@
       "typeVersion": 2,
       "position": [
         480,
-        112
+        96
       ]
     },
     {
@@ -213,8 +213,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        848,
-        112
+        864,
+        96
       ]
     },
     {
@@ -235,8 +235,8 @@
       "type": "n8n-nodes-serpapi.serpApiTool",
       "typeVersion": 1,
       "position": [
-        816,
-        400
+        848,
+        288
       ],
       "id": "e9720e56-262a-4e8d-b0a4-75dd47ac6f2c",
       "name": "Tool: SerpApi Google Flights",
@@ -266,8 +266,8 @@
       "type": "n8n-nodes-serpapi.serpApiTool",
       "typeVersion": 1,
       "position": [
-        960,
-        432
+        992,
+        288
       ],
       "id": "099ddbe8-4f1f-4b48-b2d2-fc1d1170a983",
       "name": "Tool: SerpApi Google Hotels",
@@ -291,8 +291,8 @@
       "type": "n8n-nodes-serpapi.serpApiTool",
       "typeVersion": 1,
       "position": [
-        1120,
-        416
+        1136,
+        288
       ],
       "id": "66f9b744-88f8-474e-9ebe-d4382bc2fcb4",
       "name": "Tool: Google Maps (Actividades)",
@@ -312,8 +312,8 @@
       "type": "@tavily/n8n-nodes-tavily.tavilyTool",
       "typeVersion": 1,
       "position": [
-        1232,
-        352
+        1280,
+        288
       ],
       "id": "e2752b48-f5d3-4838-a02b-29b219d78af0",
       "name": "Tool: Tavily",
@@ -334,7 +334,7 @@
       "typeVersion": 2,
       "position": [
         1168,
-        112
+        96
       ]
     },
     {
@@ -351,7 +351,7 @@
       "typeVersion": 1.1,
       "position": [
         1968,
-        112
+        96
       ],
       "notes": "Devuelve el plan completo como JSON al frontend. El frontend renderiza la página de resultados."
     },
@@ -368,8 +368,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        0
+        -16,
+        -64
       ]
     },
     {
@@ -386,7 +386,7 @@
       "typeVersion": 1.1,
       "position": [
         32,
-        224
+        368
       ]
     },
     {
@@ -398,8 +398,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        656,
-        112
+        672,
+        96
       ],
       "notes": "Convierte ciudad→IATA, añade coordenadas GPS (destination_city_ll) para Google Maps y nombre del aeropuerto para Google Maps Directions."
     },
@@ -413,7 +413,7 @@
       "typeVersion": 2,
       "position": [
         1552,
-        112
+        96
       ],
       "notes": "Añade _debug al JSON de respuesta con token_usage del agente y métricas del plan. Visible en Postman para documentar consumo en el TFM."
     },
@@ -437,8 +437,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        672,
-        320
+        704,
+        288
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -459,8 +459,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1728,
-        112
+        1744,
+        96
       ],
       "notes": "Extrae metadatos del plan y construye el registro para la tabla travel_plans. Solo si status=plan_ready."
     },
@@ -493,8 +493,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1552,
-        336
+        1744,
+        288
       ],
       "notes": "Solo guarda planes con status=plan_ready. needs_user_input y error se saltan Supabase."
     },
@@ -510,8 +510,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1920,
-        320
+        2128,
+        288
       ],
       "credentials": {
         "supabaseApi": {
@@ -530,8 +530,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
-        320
+        1936,
+        288
       ],
       "notes": "Aísla los campos de la tabla travel_plans para el nodo Supabase."
     },
@@ -545,7 +545,7 @@
       "typeVersion": 2,
       "position": [
         1360,
-        112
+        96
       ],
       "onError": "continueRegularOutput",
       "notes": "Añade una coordenada (lat/lng) por día del itinerario para el mapa del frontend. Prioridad: gps de actividad > geocoding Nominatim del POI > centro de ciudad."
@@ -559,8 +559,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        540
+        32,
+        256
       ],
       "notes": "Construye el registro para plan_holders desde session_state.travel_brief.holder. Si no hay titular emite [] (no inserta). Corre en paralelo a la planificación tras validar el formulario."
     },
@@ -576,8 +576,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        880,
-        540
+        224,
+        256
       ],
       "credentials": {
         "supabaseApi": {
@@ -600,7 +600,7 @@
       "typeVersion": 2,
       "position": [
         -688,
-        720
+        800
       ],
       "webhookId": "holders-search-lookup",
       "notes": "RAMA DE LECTURA — búsqueda de titulares por datos de cliente para el dashboard. URL: POST /webhook/holders-search. In: {session_ids[],query}. Out: {matching_session_ids[]} (sin PII)."
@@ -620,8 +620,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -400,
-        720
+        -464,
+        800
       ],
       "credentials": {
         "supabaseApi": {
@@ -641,8 +641,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -120,
-        720
+        -240,
+        800
       ],
       "notes": "Filtra las filas de plan_holders por los session_id que aporta el cliente y por la query (normalización laxa, igual que el frontend). Devuelve SOLO session_ids (sin PII)."
     },
@@ -659,8 +659,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        160,
-        720
+        -16,
+        800
       ],
       "notes": "Devuelve { matching_session_ids } al frontend. Sin PII."
     }
