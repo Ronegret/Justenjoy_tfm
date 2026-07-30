@@ -142,18 +142,19 @@ export const RefineTripPanel: React.FC = () => {
         </span>
       </p>
 
-      {/* Divergencia con la sesión de n8n tras deshacer. El deshacer es local: n8n
-          conserva en su sesión el plan que aquí se descartó y el refinamiento parte
-          SIEMPRE de esa copia (la webhook no acepta un plan del cliente), así que el
-          siguiente ajuste reaplicaría lo deshecho. Se avisa antes de enviar en vez de
-          dejar que ocurra en silencio. */}
+      {/* Divergencia con la sesión de n8n. Ocurre por DOS vías —deshacer un ajuste o
+          que el guardarraíl descarte uno incompleto— y en las dos es lo mismo: n8n ya
+          había guardado en su sesión la versión que aquí no se aplicó, y el
+          refinamiento parte SIEMPRE de esa copia (la webhook no acepta un plan del
+          cliente). Por eso el texto no menciona cuál de las dos fue: si el siguiente
+          ajuste partiera de esa versión sin avisar, sería una sorpresa silenciosa. */}
       {refineBaseOutOfSync && (
         <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-brand-dark dark:text-brand-white">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <span>
-            Has deshecho un ajuste, pero <strong>nuestro motor sigue trabajando sobre la versión que
-            descartaste</strong>: si pides otro cambio ahora, partirá de ella y volverá a aplicar lo
-            deshecho. Si quieres continuar desde el plan que ves, créalo de nuevo en el planificador.
+            El plan que ves es el bueno, pero <strong>nuestro motor se quedó con la versión que no
+            aplicamos</strong>: si pides otro cambio ahora, partirá de ella. Para seguir ajustando
+            desde este plan, créalo de nuevo en el planificador.
           </span>
         </div>
       )}

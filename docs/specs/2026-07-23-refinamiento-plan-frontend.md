@@ -105,9 +105,12 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
   >   el frontend no puede corregirlo (tampoco guarda el plan crudo de n8n — ver D3). Efecto:
   >   tras deshacer, el **siguiente** refinamiento parte de la versión descartada y reaplica
   >   lo deshecho. Mitigación implementada: el panel **avisa** de esa divergencia mientras
-  >   dura (`refineBaseOutOfSync`), en vez de dejar que ocurra en silencio. El arreglo de
-  >   fondo es de backend (que `Cargar Sesión` acepte un `current_plan` del cliente, o una
-  >   forma de revertir la sesión) → cambio de contrato, pendiente de Rodrigo.
+  >   dura (`refineBaseOutOfSync`, por viaje), en vez de dejar que ocurra en silencio. El
+  >   arreglo de fondo es de backend (que `Cargar Sesión` acepte un `current_plan` del
+  >   cliente, o una forma de revertir la sesión) → cambio de contrato, pendiente de Rodrigo.
+  >   **El mismo aviso cubre el descarte del guardarraíl**, que es el mismo caso visto desde
+  >   otro lado: n8n ya guardó el plan incompleto antes de responder, así que rechazarlo aquí
+  >   deja la sesión igual de desalineada que deshacerlo.
 
   > ⚠️ **Corregido tras el E2E del 2026-07-30:** este documento afirmaba que "el historial
   > vive en Supabase del lado n8n (un registro por `plan_ready`, mismo `session_id`)".

@@ -24,9 +24,11 @@ interface TripContextType {
    */
   undoRefine: () => boolean;
   /**
-   * Tras deshacer, el plan mostrado y la sesión de n8n **dejan de coincidir**: n8n
-   * guarda el plan refinado que aquí se ha descartado, así que el siguiente
-   * refinamiento partirá de ese. La UI lo avisa (ver `RefineTripPanel`).
+   * ¿El plan mostrado y la sesión de n8n **dejan de coincidir**? Pasa por dos vías,
+   * y en ambas n8n ya guardó una versión que aquí no se aplicó, así que el siguiente
+   * refinamiento partirá de ella: (a) el usuario deshace un ajuste; (b) el
+   * guardarraíl descarta un refinamiento incompleto. Solo aplica al viaje afectado,
+   * y la UI lo avisa (ver `RefineTripPanel`).
    */
   refineBaseOutOfSync: boolean;
   saveTrip: (trip: TripData) => void;
@@ -57,12 +59,13 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // guarda en el navegador (ver `stripHolderForStorage`), y deshacer solo tiene
   // sentido dentro de la misma sesión, justo después de ver el resultado.
   const [previousTrip, setPreviousTrip] = useState<TripData | null>(null);
-  // ¿El plan mostrado diverge de lo que n8n tiene en la sesión? Solo pasa tras
-  // deshacer un ajuste: n8n conserva el plan refinado en su `staticData` (lo escribe
-  // `Validar Output del Planificador`) y el refinamiento SIEMPRE parte de ahí — la
-  // webhook `travel-refine` no acepta un `current_plan` del cliente, así que el
-  // frontend no puede corregirlo. Se avisa en la UI en vez de fingir que el deshacer
-  // llegó también al backend.
+  // ¿El plan mostrado diverge de lo que n8n tiene en la sesión? Pasa cuando aquí NO
+  // se aplica un plan que n8n ya guardó en su `staticData` (lo escribe `Validar Output
+  // del Planificador` antes de responder): al deshacer un ajuste y al descartarlo por
+  // el guardarraíl. El refinamiento SIEMPRE parte de ese `staticData` —la webhook
+  // `travel-refine` no acepta un `current_plan` del cliente—, así que el frontend no
+  // puede corregirlo: se avisa en la UI en vez de fingir que la marcha atrás llegó
+  // también al backend.
   // Guarda el `trip_id` del viaje afectado, no un booleano: la divergencia es de UNA
   // sesión de n8n concreta, así que un booleano global sacaba el aviso también en los
   // demás viajes, donde además no había forma de quitarlo.
@@ -230,12 +233,18 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Save customized trip
     if (customizedTrip) {
-      saveTrip(customizedTrip);
-      setCurrentTrip(customizedTrip);
-      // Plan nuevo: el "deshacer el ajuste" del plan anterior ya no aplica, y su
-      // sesión de n8n nace sincronizada con lo que se muestra.
+      const nuevo = customizedTrip;
+      saveTrip(nuevo);
+      setCurrentTrip(nuevo);
+      // El plan nuevo nace sincronizado con su propia sesión de n8n, así que si
+      // arrastraba marca de divergencia (mismo `trip_id` reutilizado) se limpia. NO
+      // se limpia en global: el marcador es POR VIAJE y borrarlo entero se llevaría
+      // por delante la divergencia de otro viaje, que sigue siendo real.
+      setOutOfSyncTripId((id) => (id === nuevo.trip_id ? null : id));
+      // El snapshot de deshacer sí se descarta entero: solo se ofrece dentro del
+      // mensaje de éxito del panel, que muere al salir de la pantalla, así que
+      // mantenerlo vivo no aportaría nada.
       setPreviousTrip(null);
-      setOutOfSyncTripId(null);
     }
     setIsLoading(false);
     return { status: 'ok', tripId: generatedId };
@@ -366,10 +375,20 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (lost.length > 0) {
         console.warn('refineTrip: respuesta incompleta, se conserva el plan actual. Faltan:', lost.join(', '));
+        // Descartar aquí es EXACTAMENTE el mismo caso que deshacer: n8n ya escribió
+        // el plan incompleto en su `staticData` (lo hace `Validar Output del
+        // Planificador` antes de responder), así que lo que se muestra y lo que el
+        // motor tiene por vigente dejan de coincidir, y el siguiente ajuste partiría
+        // del plan que acabamos de rechazar. Se marca la divergencia igual que en
+        // `undoRefine`; sin esto, el mensaje de abajo prometería un "sigue intacto"
+        // que solo es verdad en el navegador.
+        setOutOfSyncTripId(trip.trip_id);
+        // El detalle de la divergencia no se repite aquí: lo cuenta el aviso
+        // permanente del panel que dispara `refineBaseOutOfSync`, justo al lado.
         return {
           status: 'error',
           message:
-            'El ajuste llegó incompleto y habría empeorado tu plan, así que lo hemos descartado. Tu plan sigue intacto: prueba a pedir el cambio de otra forma.'
+            'El ajuste llegó incompleto y habría empeorado tu plan, así que lo hemos descartado: el plan que ves sigue siendo el bueno.'
         };
       }
 
@@ -395,7 +414,12 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // memoria intacto (incluido el `holder`), así que no hay que releer nada.
       setPreviousTrip(trip);
       saveTrip(refined);
-      setCurrentTrip(refined);
+      // El refinamiento tarda varios segundos y el usuario puede haberse ido a otro
+      // viaje mientras tanto. `saveTrip` va indexado por `trip_id`, así que persistir
+      // siempre es correcto; pintar, no: sustituir `currentTrip` a ciegas haría que
+      // /trip/B mostrase el contenido del viaje A. Se comprueba con la forma
+      // funcional porque `currentTrip` del closure es el de antes del `await`.
+      setCurrentTrip((prev) => (prev?.trip_id === refined.trip_id ? refined : prev));
       // Lo que se muestra vuelve a ser lo último que n8n tiene en esta sesión.
       setOutOfSyncTripId((id) => (id === refined.trip_id ? null : id));
       return { status: 'ok', tripId: refined.trip_id };

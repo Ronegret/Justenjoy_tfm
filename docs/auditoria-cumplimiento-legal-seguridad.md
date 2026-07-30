@@ -17,6 +17,9 @@
 > · **Revisión 2.4:** 2026-07-30 (cuarta ronda, sobre los propios arreglos → **§0.8**: #38 el lead
 > del titular se perdía al fallar el guardado del plan, #39 invariante de orden de ejecución
 > documentada al revés, #40 y #41 en el frontend)
+> · **Revisión 2.5:** 2026-07-30 (quinta ronda, pila completa contra `develop` → **§0.9**: #42-#44
+> sobre el estado de divergencia con la sesión de n8n y #45 una contradicción interna en la
+> Actividad 6 del ROPA)
 > **Método:** revisión estática del repositorio con cita `fichero:línea` en cada afirmación sobre el código.
 > **Normas evaluadas:** RGPD (arts. 6, 9, 13/14, 22, 25/32, 28, 30, 33/34, 35, Cap. V), LSSI art. 22.2,
 > Reglamento de IA (RIA) arts. 4 y 50, Ley 3/1991 de Competencia Desleal / TRLGDCU, y Ley 1/2019 de Secretos Comerciales.
@@ -265,7 +268,26 @@ corregidos**. Los dos primeros son de n8n y salieron de leer el motor de ejecuci
 | **40** | **El aviso de divergencia con n8n (#33) aparecía en el viaje equivocado.** `refineBaseOutOfSync` era un booleano global y `setCurrentTripById` no lo limpiaba: tras deshacer en el viaje A, el aviso salía también en el B, sin forma de quitarlo. | El estado pasa a guardar el `trip_id` afectado; el aviso solo se muestra en ese viaje. | ✅ **RESUELTO** |
 | **41** | **El guardarraíl recortado dejó de detectar un `itinerary` vacío.** Al eliminar la comparación de longitudes, `isPlaceholderItinerary` (que exige `length === 1`) no cubre el array vacío, que antes caía por longitud. | Comprobación explícita de "vacío o ausente" —no de "menos días que antes"—, con la misma justificación que la de vuelos: el mapper nunca lo devuelve vacío y la vista accede a `itinerary[0]` sin guarda. | ✅ **RESUELTO** |
 
-> **Revisado y sin hallazgo** en esta cuarta ronda: la comprobación de propiedad de
+### 0.9 Quinta ronda de `/code-review` (2026-07-30) — pila completa contra `develop`
+
+Revisión de los 16 commits de la pila (~4,7k líneas). Cuatro hallazgos, los cuatro corregidos;
+tres son del estado de divergencia introducido en §0.8 y uno es de coherencia documental.
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| **42** | **El descarte del guardarraíl no marcaba la divergencia.** Cuando se rechaza un refinamiento incompleto, n8n **ya** lo había escrito en su `staticData` (lo hace `Validar Output del Planificador` antes de responder), pero no se marcaba `outOfSyncTripId`: se le decía al usuario "tu plan sigue intacto" —cierto solo en el navegador— y el siguiente ajuste partía del plan rechazado. Es el mismo escenario del que `undoRefine` sí avisaba. | Se marca la divergencia también al descartar, y el aviso del panel se reescribe para cubrir **las dos** vías sin mencionar cuál fue (antes decía "has deshecho un ajuste", falso en este caso). El mensaje de error deja de prometer intacto sin matices. | ✅ **RESUELTO** |
+| **43** | **Carrera al navegar durante un refinamiento.** `setCurrentTrip(refined)` corría tras un `await` de varios segundos sin comprobar que el usuario siguiera en ese viaje: cambiando de viaje a media petición, `/trip/B` pintaba el contenido del viaje A. | `setCurrentTrip` pasa a la forma funcional y solo sustituye si el viaje mostrado sigue siendo el refinado. `saveTrip` se mantiene siempre (va indexado por `trip_id`, así que persistir es correcto en cualquier caso). | ✅ **RESUELTO** |
+| **44** | **`generateTrip` borraba la divergencia de otros viajes.** Limpiaba `outOfSyncTripId` en global, deshaciendo en parte el arreglo por-viaje de #40. | Se limpia solo si el marcador es del viaje nuevo. El snapshot de deshacer sí se sigue descartando entero, y queda anotado por qué: solo se ofrece dentro del mensaje de éxito del panel, que muere al salir de la pantalla. | ✅ **RESUELTO** |
+| **45** | **Dos celdas de la Actividad 6 del ROPA se contradecían**: una daba el job `purge_plan_holders_24m` por activo y **verificado en `cron.job`** (lo que exige acceso SQL) y la de al lado seguía diciendo que la migración que crea la RLS estaba **pendiente de aplicar por infra**. En un artefacto de cumplimiento, una de las dos sobra. | Se elimina la contradicción con lo que **sí** consta (tabla en uso, escritura por `service_role` verificada el 2026-07-30, dedup de la 0003 en vigor, job verificado por SQL ese día) y se deja explícito lo que **no** se puede verificar desde el repo: el flag de RLS no es legible por REST y el `.env` local no tiene clave `anon`. Queda como **A VERIFICAR** con la consulta concreta a `pg_class`. | ✅ **RESUELTO** (con un A VERIFICAR honesto en lugar de una afirmación sin prueba) |
+
+> **Revisado y sin hallazgo** en esta quinta ronda: el diseño de la prueba de propiedad, el
+> contrato nuevo de `holders/search`, `withRefreshedDates` y la topología de la sub-ejecución del
+> titular. Verificado además que la extracción de `lib/n8nPlan.ts` es un movimiento fiel (las
+> únicas adiciones de comportamiento son `session_id` en el viaje mapeado, las constantes de
+> relleno compartidas y `ensureWarnings`), que `requireSession` es equivalente a los chequeos que
+> sustituye, y que los 12 Code nodes coinciden byte a byte con el `jsCode` incrustado en la v40.
+
+> **Revisado y sin hallazgo** en la cuarta ronda (§0.8): la comprobación de propiedad de
 > `/api/holders/search` (incluido el filtro final contra los ids acreditados), los type guards y el
 > rechazo de `changeme` en `verifyRefineToken`, la guarda de fechas incoherentes de
 > `withRefreshedDates`, el strip de PII de `04_preparar_motor.js` (ningún prompt vuelve a ver el
