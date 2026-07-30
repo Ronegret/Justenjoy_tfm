@@ -74,8 +74,11 @@ Ambas son idempotentes; se pueden reejecutar sin efecto.
 
 ## 3. Verificar el esquema por REST (antes de tocar n8n)
 ```bash
-HOST="tu-proyecto.supabase.co"          # = SUPABASE_HOST sin https://
-SR="$SUPABASE_SERVICE_ROLE_KEY"
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
 
 # (a) Prueba del UNIQUE: insertar DOS filas con el mismo session_id de prueba.
 #     Ambas deben devolver 201. Si la segunda da 409 → la migración 0002 no se aplicó.
@@ -107,6 +110,12 @@ los **3 webhooks**: `travel-planner`, `travel-refine`, `holders-search`.
 
 ## 5. Humo de #30 — el refinamiento se guarda
 ```bash
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+
 # 1) Plan corto (usa fechas FUTURAS) y quédate con el session_id
 curl -s -X POST http://localhost:5678/webhook/travel-planner \
   -H 'Content-Type: application/json' -d @n8n/examples/input-formulario-con-titular.json \
@@ -125,6 +134,12 @@ curl -sS --ssl-no-revoke \
 ## 6. Humo de #31 — el cliente recurrente es localizable
 Lanzar **dos** planes con el **mismo** `holder.email` (fechas o destino distintos) y comprobar:
 ```bash
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+
 # (a) 2 filas en plan_holders para ese email
 curl -sS --ssl-no-revoke "https://$HOST/rest/v1/plan_holders?select=session_id,created_at&email=eq.<EMAIL>" \
   -H "apikey: $SR" -H "Authorization: Bearer $SR"

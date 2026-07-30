@@ -57,9 +57,13 @@ No se puede por REST (es DDL). En el **SQL Editor de Supabase** (o `psql`) ejecu
 
 ## 3. Verificar RLS por REST
 ```bash
-HOST="tu-proyecto.supabase.co"          # = SUPABASE_HOST sin https://
-SR="$SUPABASE_SERVICE_ROLE_KEY"
-ANON="<clave anon del panel Supabase>"  # Project Settings -> API
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+# La anon NO esta en el .env: copiarla del panel (Project Settings -> API).
+ANON="<clave anon del panel Supabase>"
 
 # (a) service_role DEBE devolver filas (o [] si tabla vacía, pero SIN error 401):
 curl -sS --ssl-no-revoke "https://$HOST/rest/v1/plan_holders?select=id&limit=1" \
@@ -86,6 +90,12 @@ N8N_HOLDERS_SEARCH_WEBHOOK_URL=https://<tu-host-n8n>/webhook/holders-search
 ## 5. Prueba de humo — frente 2 (consentimiento)
 Generar un plan **con** titular y casilla **marcada** (frontend, usar `localhost:3000`). Luego:
 ```bash
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+
 curl -sS --ssl-no-revoke "https://$HOST/rest/v1/plan_holders?email=eq.<email-de-prueba>&select=*" \
   -H "apikey: $SR" -H "Authorization: Bearer $SR"
 ```
