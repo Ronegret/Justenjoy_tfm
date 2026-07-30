@@ -85,10 +85,11 @@ Cambios integrados en `develop` desde la Revisión 1:
 
 ### 0.3 Cambios del 2026-07-23 — refinamiento del plan en el frontend (rama `feature/refinamiento-plan-frontend`)
 
-> ⚠️ **Trabajo en curso, sin fusionar.** Cambios en el árbol de trabajo (aún no en `develop`);
-> spec en `docs/specs/2026-07-23-refinamiento-plan-frontend.md` (estado **PROPUESTA**, pendiente de
-> aprobación de Rodrigo por tocar el contrato de la API — AGENTS.md §3.2). Esta entrada documenta su
-> **impacto de cumplimiento** para que se evalúe **antes** del merge.
+> ⚠️ **Sin fusionar.** Los cambios están commiteados en la rama, aún no en `develop` ni en el
+> remoto. La spec (`docs/specs/2026-07-23-refinamiento-plan-frontend.md`) quedó **APROBADA el
+> 2026-07-30**, con el cambio de contrato de la API que exige AGENTS.md §3.2 (incluida la
+> decisión D7: `refine_token` + `REFINE_TOKEN_SECRET`). Esta entrada documenta su **impacto de
+> cumplimiento** para que se evalúe **antes** del merge.
 
 **Qué se ha añadido (RUTA B de n8n, ya existente, ahora consumida desde el portal):**
 - **Panel de refinamiento con caja de texto libre** en la página de detalle del viaje:

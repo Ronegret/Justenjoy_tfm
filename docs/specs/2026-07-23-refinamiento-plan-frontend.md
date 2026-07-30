@@ -2,9 +2,14 @@
 
 - **Fecha:** 2026-07-23
 - **Tipo:** funcionalidad nueva (UI nueva + nuevo consumo de webhook n8n)
-- **Estado:** PROPUESTA — pendiente de validación humana. Toca el contrato de la API
-  (nueva webhook + propagación de `session_id`) → requiere aprobación previa de Rodrigo
-  (AGENTS.md §3.2). No se codifica nada hasta aprobar.
+- **Estado:** **APROBADA** el 2026-07-30 por Enrique, que confirma tener autoridad para
+  aprobarla. Cubre el cambio de contrato de la API que exige AGENTS.md §3.2: nueva webhook
+  consumida, `session_id` explícito en `TripData` y, añadido en implementación, el
+  `refine_token` + la env `REFINE_TOKEN_SECRET` de la decisión **D7**.
+- **Salvedad de proceso (para el registro):** AGENTS.md §4 pide la aprobación **antes** de
+  codificar y aquí llegó **después** — la implementación ya estaba escrita, revisada y
+  commiteada en local cuando se aprobó. Queda constancia para no dar por buena la secuencia
+  en futuras funcionalidades.
 - **Rama (prevista):** `feature/refinamiento-plan-frontend`
 
 ## Contexto
