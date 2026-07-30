@@ -73,8 +73,8 @@ services:
   # Corre ANTES que n8n (depends_on). Deja el stack REPRODUCIBLE en un equipo
   # nuevo: importa la estructura de credenciales (sin secretos; las claves salen
   # de las variables de entorno del .env de cada dev), importa el workflow
-  # activo (v38) y lo marca como activo para que n8n registre el webhook al
-  # arrancar. Termina; n8n solo arranca si este servicio finaliza con exito.
+  # activo (v40, ver el command) y lo publica para que n8n registre los webhooks
+  # al arrancar. Termina; n8n solo arranca si este servicio finaliza con exito.
   n8n-import:
     image: n8nio/n8n:latest
     user: node
@@ -96,7 +96,7 @@ services:
 
 volumes:
   # Volumen gestionado por compose: se crea vacío en cada equipo nuevo y el
-  # servicio n8n-import lo rellena (credenciales + workflow v38). Reproducible.
+  # servicio n8n-import lo rellena (credenciales + workflow v40). Reproducible.
   # (Antes era external: reutilizaba el volumen de un equipo concreto.)
   n8n_n8n_data:
 
