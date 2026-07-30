@@ -16,6 +16,7 @@ import {
   BudgetBreakdown
 } from '@/types/trip';
 import { N8nWarning } from '@/types/planResult';
+import { HOTEL_PLACEHOLDER_PREFIX, ITINERARY_PLACEHOLDER_SUMMARY } from '@/lib/planPlaceholders';
 import { todayISO } from '@/lib/dates';
 
 /**
@@ -384,7 +385,7 @@ export async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[],
     // no hay datos confirmados, sin fingir una valoración ni un precio.
     mappedHotels.push({
       provider: 'Booking.com',
-      name: `Alojamiento pendiente de confirmar en ${destination}`,
+      name: `${HOTEL_PLACEHOLDER_PREFIX} en ${destination}`,
       area: `Centro de ${destination}`,
       rating: 0,
       price_per_night: 0,
@@ -577,7 +578,7 @@ export async function mapN8nToTripData(n8nResponse: N8nResponse | N8nResponse[],
       day: 1,
       date: originalPrefs.dates?.start || '',
       title: `Día libre en ${destination}`,
-      summary: 'Itinerario aún por detallar; explora el destino a tu ritmo.',
+      summary: ITINERARY_PLACEHOLDER_SUMMARY,
       blocks: [
         {
           time: '10:00',

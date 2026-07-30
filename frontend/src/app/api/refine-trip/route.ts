@@ -69,14 +69,22 @@ function withRefreshedDates(prefs: TripPreferences, rawData: N8nResponse): TripP
     segment?.flights?.return?.departure_datetime?.split('T')[0]
   );
   if (!start && !end) return prefs;
-  return {
-    ...prefs,
-    dates: {
-      ...prefs.dates,
-      start: start || prefs.dates.start,
-      end: end || prefs.dates.end
-    }
-  };
+
+  const nuevoStart = start || prefs.dates.start;
+  const nuevoEnd = end || prefs.dates.end;
+
+  // Cada fecha cae por separado a la del cliente, así que la mezcla puede salir
+  // INCOHERENTE: si solo se pudo leer la salida y el refinamiento la movió más
+  // allá del regreso viejo, quedaría `start > end`. Eso hace que `computeTripDays`
+  // devuelva 0 (el presupuesto de comida se calcularía por otra vía) y que la
+  // cabecera pinte un rango al revés. Ante la duda, las del cliente: desfasadas
+  // son peores que invertidas, pero al menos son coherentes entre sí.
+  if (nuevoStart > nuevoEnd) {
+    console.warn('[refine-trip] Fechas del plan refinado incoherentes; se conservan las del cliente.');
+    return prefs;
+  }
+
+  return { ...prefs, dates: { ...prefs.dates, start: nuevoStart, end: nuevoEnd } };
 }
 
 export async function POST(req: NextRequest) {

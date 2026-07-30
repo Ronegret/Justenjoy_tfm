@@ -21,8 +21,16 @@ import type { TripData } from '@/types/trip';
 // deshabilitado (falla cerrado) — ver `isRefineTokenConfigured`.
 
 function getSecret(): string | undefined {
-  const secret = process.env.REFINE_TOKEN_SECRET;
-  return secret && secret.trim() ? secret : undefined;
+  const secret = process.env.REFINE_TOKEN_SECRET?.trim();
+  // `changeme` es el valor que traen `.env.example` y `frontend/.env.local.example`,
+  // así que es PÚBLICO. Cuenta como NO configurado: firmar con un secreto conocido
+  // equivale a no firmar —cualquiera podría forjar un token para su uid y el
+  // `session_id` de otra persona—, que es justo el agujero que este módulo cierra.
+  // Un despliegue que copie la plantilla se queda sin refinamiento (503, falla
+  // cerrado) en vez de con una comprobación de propiedad falsa.
+  // Mismo criterio que `isUsableKey` en `lib/n8nPlan.ts` para la clave de Places.
+  if (!secret || secret === 'changeme') return undefined;
+  return secret;
 }
 
 export function isRefineTokenConfigured(): boolean {

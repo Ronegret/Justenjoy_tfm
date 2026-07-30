@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TripData, TripPreferences } from '../types/trip';
 import { GenerateTripResult, RefineTripResult } from '../types/planResult';
 import { scanForSpecialCategoryData } from '../lib/sensitiveData';
+import { isPlaceholderHotel, isPlaceholderItinerary } from '../lib/planPlaceholders';
 import { mockTrips } from '../data/mockTripData';
 
 interface TripContextType {
@@ -280,10 +281,27 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // tenía (p. ej. vuelve solo con hoteles y sin vuelos), no es un plan mejor:
       // es una respuesta incompleta. Como `saveTrip` sobrescribe en sitio y no hay
       // deshacer, se descarta y se conserva el plan bueno.
+      // OJO: no basta con mirar `length`. El mapper NUNCA devuelve `hotels` ni
+      // `itinerary` vacíos: cuando n8n no trae hotel o días, mete un RELLENO
+      // (hotel "pendiente de confirmar", un día genérico) para que la vista no
+      // reviente. Comparar longitudes solo detectaría la pérdida de vuelos, y un
+      // refinamiento que perdiera el hotel sobrescribiría uno real con el
+      // placeholder de 0 €/0★ sin que nadie lo notase. Por eso se compara contra
+      // los marcadores compartidos (`lib/planPlaceholders`).
       const refinedTrip = data.trip as TripData;
-      const lost = (['flights', 'hotels', 'itinerary'] as const).filter(
-        (block) => (trip[block]?.length ?? 0) > 0 && (refinedTrip[block]?.length ?? 0) === 0
-      );
+      const teniaHotelReal = trip.hotels?.some((h) => !isPlaceholderHotel(h)) ?? false;
+      const conservaHotelReal = refinedTrip.hotels?.some((h) => !isPlaceholderHotel(h)) ?? false;
+
+      const lost: string[] = [];
+      if ((trip.flights?.length ?? 0) > 0 && (refinedTrip.flights?.length ?? 0) === 0) {
+        lost.push('vuelos');
+      }
+      if (teniaHotelReal && !conservaHotelReal) {
+        lost.push('hotel');
+      }
+      if (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) {
+        lost.push('itinerario');
+      }
       if (lost.length > 0) {
         console.warn('refineTrip: respuesta incompleta, se conserva el plan actual. Faltan:', lost.join(', '));
         return {
