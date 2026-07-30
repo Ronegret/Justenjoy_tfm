@@ -150,29 +150,71 @@ curl -s -X POST http://localhost:5678/webhook/holders-search -H 'Content-Type: a
 ```
 Antes de v40, (a) devolvía 1 fila y (b) solo el primer `session_id`.
 
-## 7. Comprobar que los errores ya NO se silencian
-Con la v40 publicada, poner temporalmente un `SUPABASE_HOST` inválido en el entorno de n8n,
-lanzar un plan y comprobar que:
-- el webhook **sigue devolviendo el plan** al usuario (200), y
-- la ejecución aparece **fallida** en la lista de ejecuciones de n8n.
+## 7. Comprobar que los errores ya NO se silencian (y que el lead sobrevive)
+Con la v40 publicada, poner temporalmente un `SUPABASE_HOST` inválido en el entorno de n8n
+(`.env` de la raíz + `docker compose down && up -d`, **sin `-v`**), lanzar un plan **con titular**
+y comprobar **tres** cosas:
+- el webhook **sigue devolviendo el plan** al usuario (200, `plan_ready`);
+- la ejecución del plan aparece **fallida** en la lista de n8n; y
+- la **sub-ejecución del titular** aparece **por separado**, también fallida — no basta con que
+  falle la del plan: lo que se valida aquí es que la del titular **llegó a ejecutarse**.
 
-Restaurar la variable al terminar. Este paso es el que valida el cambio de operativa: a partir
-de ahora un fallo de persistencia es visible en vez de desaparecer.
+Restaurar la variable al terminar (y **repetir el plan con Supabase real**, para no validar solo
+el camino de fallo). Este paso valida el cambio de operativa —un fallo de persistencia es visible
+en vez de desaparecer— y el aislamiento del hallazgo **#38**.
 
-> ✅ **Ya ejecutado el 2026-07-30** contra la instancia local, con titular incluido: el usuario
-> recibió su plan completo (200, `plan_ready`) y la ejecución salió `error`.
->
-> ⚠️ **Corrección (misma fecha, tercera lectura).** Este párrafo decía que habían fallado "los dos
-> nodos de escritura" y que la prueba confirmaba que un fallo del titular no cuesta el plan.
-> **Ninguna de las dos cosas era cierta:** `Supabase — Guardar Titular` no llegó a ejecutarse. En
-> la ejecución 78 de la BD de n8n, `runData` no contiene ni `Preparar Payload Titular` ni
+> **Cómo mirarlo sin UI**, si hace falta (n8n 2.25.7 trae `node:sqlite`):
+> ```bash
+> docker exec <contenedor> node -e "
+> const {DatabaseSync}=require('node:sqlite');
+> const flatted=require('/usr/local/lib/node_modules/n8n/node_modules/flatted');
+> const db=new DatabaseSync('/home/node/.n8n/database.sqlite',{readOnly:true});
+> for(const r of db.prepare('SELECT id,status,mode FROM execution_entity ORDER BY id DESC LIMIT 4').all()){
+>   const d=flatted.parse(db.prepare('SELECT data FROM execution_data WHERE executionId=?').get(r.id).data);
+>   console.log(r.id, r.status, r.mode, Object.keys(d.resultData.runData).length+' nodos');
+> }"
+> ```
+> `mode: webhook` es la ejecución del plan; `mode: integrated`, la sub-ejecución del titular.
+
+> ⚠️ **La primera ejecución de este paso (2026-07-30) se interpretó mal.** Decía que habían
+> fallado "los dos nodos de escritura" y que eso probaba que un fallo del titular no cuesta el
+> plan. **Ninguna de las dos cosas era cierta:** `Supabase — Guardar Titular` no llegó a
+> ejecutarse. En la **ejecución 78**, `runData` no contiene ni `Preparar Payload Titular` ni
 > `Supabase — Guardar Titular`, y la pila pendiente al abortar era
 > `['Supabase — Guardar Plan', 'Preparar Payload Titular']`: el fallo del insert del plan
-> **descartó la rama del titular** y el lead se perdió (hallazgo #38). Corregido moviendo esa
-> persistencia a una **sub-ejecución** (§7.3 del doc de arquitectura), lo que **sí** da el
-> aislamiento en los dos sentidos. Al repetir este paso, comprobar ahora **dos** cosas: que el plan
-> llega al usuario y que la **sub-ejecución** del titular aparece por separado en la lista (fallida
-> si Supabase está caído, correcta si no).
+> **descartó la rama del titular** y el lead se perdió (hallazgo **#38**, corregido con la
+> sub-ejecución de §7.3 del doc de arquitectura).
+
+> ✅ **REEJECUTADO el 2026-07-30 con la topología nueva (35 nodos), los dos caminos.**
+>
+> **Camino de fallo** (`SUPABASE_HOST=host-inexistente-paso7.invalid`), plan Ámsterdam→París
+> 2026-09-01/04 con titular:
+> - respuesta **HTTP 200 en 39 s**, `plan_ready`, 4 días de itinerario, hotel real
+>   (*JO&JOE Paris Gentilly*), ida y vuelta, 909 USD → **el usuario recibe su plan completo**;
+> - **ejecución 83** (`mode: webhook`, `error`): 20 nodos. `Lanzar Guardado del Titular` corre
+>   **4.º, antes del motor**, y tarda **23 ms** (no espera). Falla `Supabase — Guardar Plan`
+>   (*Invalid URL*) y la pila pendiente al abortar es **solo ese nodo** — ya no arrastra al
+>   titular, que es exactamente el arreglo del #38;
+> - **ejecución 84** (`mode: integrated`, `error`): la sub-ejecución del titular **sí se ejecuta**,
+>   con sus 3 nodos (`Trigger — Guardar Titular > Preparar Payload Titular > Supabase — Guardar
+>   Titular`), y falla en el insert. Guarda `parentExecution.executionId = "83"`;
+> - Supabase: **0 filas** en `travel_plans` y **0** en `plan_holders` para esa sesión (nada se
+>   guardó a medias), y **dos ejecuciones en rojo** visibles en la lista.
+>
+> **Camino feliz** (host restaurado), mismo plan con otro titular:
+> - **HTTP 200 en 26 s**, `plan_ready`, 4 días;
+> - **ejecución 85** (`webhook`, `success`) + **ejecución 86** (`integrated`, `success`);
+> - Supabase: **1 fila** en `travel_plans` (`total_cost_usd` 909, `travelers_count` **2** — el
+>   bug de `travelers_count=0` sigue cerrado) y **1 fila** en `plan_holders` con
+>   `consent_version`.
+>
+> **De paso queda verificado en vivo el #32** (PII del titular al LLM): el email del titular **no
+> aparece** ni en la salida de `Preparar Motor Planificador` ni en el nodo del agente de OpenAI.
+>
+> ℹ️ **Operativa:** con `mode: once` el nodo despachador **no** escribe `metadata.subExecution`, así
+> que en la UI la ejecución del plan no enlaza a la del titular. La traza existe al revés: la
+> sub-ejecución guarda su `parentExecution`. Para encontrarlas juntas, ordenar por fecha y
+> distinguir `webhook` (plan) de `integrated` (titular).
 
 ---
 
