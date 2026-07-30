@@ -133,7 +133,11 @@ const cityToGps = {
   'dubai': '@25.2048,55.2708,15z',
   'bangkok': '@13.7563,100.5018,15z',
   'mumbai': '@19.0760,72.8777,15z', 'bombay': '@19.0760,72.8777,15z',
+  // 'new delhi' es el valor que manda el chip de India del planificador. Estaba en
+  // cityToIata pero no aquí, así que el ll salía null y la búsqueda de actividades
+  // perdía el ancla que el prompt marca como CRÍTICA.
   'delhi': '@28.6139,77.2090,15z', 'nueva delhi': '@28.6139,77.2090,15z',
+  'new delhi': '@28.6139,77.2090,15z',
   'seoul': '@37.5665,126.9780,15z', 'seúl': '@37.5665,126.9780,15z',
   'sydney': '@-33.8688,151.2093,15z',
   'melbourne': '@-37.8136,144.9631,15z',

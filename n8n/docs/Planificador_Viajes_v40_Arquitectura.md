@@ -18,9 +18,10 @@ UUIDs**. v39 queda congelado en
 y toda su arquitectura sigue descrita en
 [`Planificador_Viajes_v39_Arquitectura.md`](Planificador_Viajes_v39_Arquitectura.md).
 
-**No hay nodos nuevos, ni conexiones nuevas, ni cambios en los Code nodes ni en el contrato
-de los webhooks.** v40 corrige exclusivamente **cómo persiste** lo que ya calculaba, y va
-acompañada de dos migraciones de esquema que son la mitad del arreglo.
+**No hay nodos nuevos, ni conexiones nuevas, ni cambios en el contrato de los webhooks.** v40
+corrige **cómo persiste** lo que ya calculaba (con dos migraciones de esquema que son la mitad
+del arreglo) y, en la segunda ronda de revisión, el cuerpo de dos Code nodes: la PII del
+titular ya no entra al motor y `New Delhi` resuelve coordenadas (§7).
 
 ### Cambios en v40
 
@@ -28,8 +29,10 @@ acompañada de dos migraciones de esquema que son la mitad del arreglo.
 |---|---|---|
 | `Supabase — Guardar Plan` | Se elimina `onError: continueRegularOutput`; nota corregida | Hallazgo **#30** |
 | `Supabase — Guardar Titular` | Se elimina `onError: continueRegularOutput`; nota corregida | Hallazgo **#31** |
+| `Preparar Motor Planificador` | Quita `travel_brief.holder` del `session_state` que reenvía | §7 — PII del titular al LLM |
+| `Convertir Ciudades a IATA` | Añade `'new delhi'` a `cityToGps` | §7 — `ll` nulo en India |
 
-Diff completo frente a v39: **8 líneas**.
+Diff frente a v39: **8 líneas** de persistencia + los dos Code nodes de §7.
 
 ## §1 — #30: el plan refinado ya se persiste
 
@@ -133,6 +136,41 @@ como `session_expired` y conserva el plan intacto. El único matiz es que el men
 
 ## §6 — Lo que NO cambia
 
-Contrato de los webhooks (entradas y salidas), Code nodes, motor planificador, rutas A/B,
-validaciones, enriquecimiento de coordenadas y el frontend. `travel_plans` **sigue sin RLS**
-por decisión del equipo (gaps #8/#9 de la auditoría, abiertos a propósito); v40 no lo cambia.
+Contrato de los webhooks (entradas y salidas), motor planificador, rutas A/B, validaciones,
+enriquecimiento de coordenadas y el frontend. `travel_plans` **sigue sin RLS** por decisión del
+equipo (gaps #8/#9 de la auditoría, abiertos a propósito); v40 no lo cambia.
+
+## §7 — Segunda ronda de revisión: dos Code nodes
+
+Dos hallazgos del `/code-review` de la rama, ambos dentro del `jsCode` (sin nodos ni conexiones
+nuevas, sin cambio de contrato). Editados en `n8n/nodes-code/*.js` y reinyectados con
+`_inject.py`; cubiertos por asserts nuevos en `n8n/nodes-code/_smoketest.js`.
+
+### 7.1 — La PII del titular ya no entra al motor planificador
+
+`Validar Formulario` arrastra `travel_brief.holder` (nombre, teléfono y email del cliente) como
+passthrough para la rama que lo guarda en `plan_holders`. Pero el `session_state` seguía viaje
+hasta el prompt del agente, que lo serializa **entero**
+(`{{ JSON.stringify($json.session_state) }}`), así que **el contacto del cliente se enviaba a
+OpenAI en cada planificación**. Contradecía la nota del propio nodo ("el planificador no lo
+usa"), el recorte que el frontend ya hace en `bodyForLlm` y la Actividad 6 del ROPA, que
+declara Supabase como único destinatario.
+
+`Preparar Motor Planificador` —única entrada al motor, común a las rutas A y B— ahora reenvía
+una **copia** del `session_state` sin `holder`:
+
+- La rama de `plan_holders` **no se ve afectada**: `Preparar Payload Titular` lee la salida de
+  `Validar Formulario`, no la de este nodo (por eso se copia en vez de mutar el input).
+- La RUTA B ya estaba limpia: su `session_state` viene del `staticData`, donde `Validar
+  Formulario` nunca guardó el `holder`.
+- `travel_plans` tampoco lo recibía ni lo recibe: `Preparar Payload Supabase` solo toma del
+  `travel_brief` metadatos escalares (origen, destino, fechas, presupuesto, intereses).
+
+### 7.2 — `New Delhi` resuelve coordenadas
+
+`Convertir Ciudades a IATA` mantiene dos tablas, `cityToIata` y `cityToGps`. El chip de India
+del planificador manda `New Delhi`, que estaba en la primera (`DEL`) pero **no** en la segunda,
+así que `destination_city_ll` salía `null` y la búsqueda de actividades perdía el ancla que el
+system prompt marca como CRÍTICA (los resultados aparecen en otra ubicación). Añadido
+`'new delhi'` a `cityToGps`. Verificado que **los 67 valores de chip de ciudad** resuelven ahora
+en las dos tablas; era el único asimétrico.

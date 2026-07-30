@@ -98,6 +98,16 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
   >   comparación de nº de días y de fechas.
   > - **No es el historial de Supabase.** Son cosas distintas y no están conectadas: el
   >   deshacer es local y de un paso.
+  > - **No revierte la sesión de n8n** (limitación conocida, detectada en la tercera ronda de
+  >   revisión). `Validar Output del Planificador` escribe el plan refinado en el `staticData`
+  >   de la sesión, y la RUTA B parte **siempre** de ahí: `Cargar Sesión` toma
+  >   `current_plan` del `staticData` e ignora cualquier plan que venga en el cuerpo, así que
+  >   el frontend no puede corregirlo (tampoco guarda el plan crudo de n8n — ver D3). Efecto:
+  >   tras deshacer, el **siguiente** refinamiento parte de la versión descartada y reaplica
+  >   lo deshecho. Mitigación implementada: el panel **avisa** de esa divergencia mientras
+  >   dura (`refineBaseOutOfSync`), en vez de dejar que ocurra en silencio. El arreglo de
+  >   fondo es de backend (que `Cargar Sesión` acepte un `current_plan` del cliente, o una
+  >   forma de revertir la sesión) → cambio de contrato, pendiente de Rodrigo.
 
   > ⚠️ **Corregido tras el E2E del 2026-07-30:** este documento afirmaba que "el historial
   > vive en Supabase del lado n8n (un registro por `plan_ready`, mismo `session_id`)".

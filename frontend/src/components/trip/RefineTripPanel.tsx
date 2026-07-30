@@ -35,7 +35,7 @@ type FeedbackState =
   | { kind: 'error'; message: string };
 
 export const RefineTripPanel: React.FC = () => {
-  const { refineTrip, canUndoRefine, undoRefine } = useTrips();
+  const { refineTrip, canUndoRefine, undoRefine, refineBaseOutOfSync } = useTrips();
   const [text, setText] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>({ kind: 'idle' });
@@ -142,6 +142,22 @@ export const RefineTripPanel: React.FC = () => {
         </span>
       </p>
 
+      {/* Divergencia con la sesión de n8n tras deshacer. El deshacer es local: n8n
+          conserva en su sesión el plan que aquí se descartó y el refinamiento parte
+          SIEMPRE de esa copia (la webhook no acepta un plan del cliente), así que el
+          siguiente ajuste reaplicaría lo deshecho. Se avisa antes de enviar en vez de
+          dejar que ocurra en silencio. */}
+      {refineBaseOutOfSync && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-brand-dark dark:text-brand-white">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <span>
+            Has deshecho un ajuste, pero <strong>nuestro motor sigue trabajando sobre la versión que
+            descartaste</strong>: si pides otro cambio ahora, partirá de ella y volverá a aplicar lo
+            deshecho. Si quieres continuar desde el plan que ves, créalo de nuevo en el planificador.
+          </span>
+        </div>
+      )}
+
       <button
         onClick={handleSubmit}
         disabled={!canSubmit}
@@ -196,10 +212,7 @@ export const RefineTripPanel: React.FC = () => {
       {feedback.kind === 'undone' && (
         <div className="flex items-start gap-2 rounded-xl bg-brand-teal/10 border border-brand-teal/20 p-3 text-xs text-brand-dark dark:text-brand-white">
           <Undo2 className="w-4 h-4 text-brand-teal shrink-0 mt-0.5" />
-          <span>
-            Ajuste deshecho: has recuperado el plan que tenías antes. Puedes pedir el cambio de otra
-            forma cuando quieras.
-          </span>
+          <span>Ajuste deshecho: has recuperado el plan que tenías antes.</span>
         </div>
       )}
 

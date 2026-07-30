@@ -57,8 +57,15 @@ export default function DashboardPage() {
   // por titular en memoria (misma sesión) sigue funcionando en cliente.
   useEffect(() => {
     const q = query.trim();
-    const ids = savedTrips.map((t) => t.trip_id);
-    if (!q || ids.length === 0) {
+    // Cada plan viaja con su firma de propiedad: el endpoint solo consulta los que
+    // acredita el `refine_token` emitido para este usuario (ver lib/refineToken). Los
+    // planes de fallback y los guardados antes del token no la llevan y quedan fuera de
+    // la búsqueda persistente; siguen encontrándose por destino y, en la misma sesión,
+    // por titular en memoria.
+    const sessions = savedTrips
+      .filter((t) => t.session_id && t.refine_token)
+      .map((t) => ({ session_id: t.session_id, refine_token: t.refine_token }));
+    if (!q || sessions.length === 0) {
       // Limpiar las coincidencias del servidor al vaciar la búsqueda es intencional
       // (evita falsos positivos de una query anterior). El memo de filtrado ignora
       // serverMatchIds cuando la query está vacía, así que no cascadea render útil.
@@ -72,10 +79,16 @@ export default function DashboardPage() {
         const res = await fetch('/api/holders/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_ids: ids, query: q }),
+          body: JSON.stringify({ sessions, query: q }),
           signal: controller.signal,
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          // Hay que LIMPIAR, no solo salir: si no, las coincidencias de la consulta
+          // anterior siguen mostrándose (y contando en las estadísticas) para la
+          // consulta nueva, que es un falso positivo silencioso.
+          setServerMatchIds(null);
+          return;
+        }
         const data = await res.json();
         setServerMatchIds(new Set(Array.isArray(data?.matching_session_ids) ? data.matching_session_ids : []));
       } catch {
@@ -102,8 +115,10 @@ export default function DashboardPage() {
     return savedTrips.filter((trip) => {
       // Coincidencia persistente por cliente resuelta en el servidor (sobre
       // `plan_holders`): funciona tras recargar, cuando el `holder` ya no está en
-      // memoria. Se une (OR) con el filtro en cliente de abajo.
-      if (serverMatchIds?.has(trip.trip_id)) return true;
+      // memoria. Se une (OR) con el filtro en cliente de abajo. El conjunto viene
+      // indexado por `session_id` (que en los planes de n8n coincide con `trip_id`,
+      // pero se compara por el campo explícito).
+      if (trip.session_id && serverMatchIds?.has(trip.session_id)) return true;
       const holder = trip.user_preferences.holder;
       // `holderFullName` cubre nombre y apellidos: con matching laxo, cualquier
       // consulta que casaría uno de ellos casa también el nombre completo (los

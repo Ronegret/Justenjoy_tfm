@@ -11,6 +11,9 @@
 >
 > **Fecha de la auditoría:** 2026-07-22 · **Revisión 2:** 2026-07-22 (tras remediación — ver §0)
 > · **Revisión 2.2:** 2026-07-23 (refinamiento del plan en el frontend — ver §0.3)
+> · **Revisión 2.3:** 2026-07-30 (E2E del workflow → §0.6; tercera ronda de `/code-review` sobre
+> el diff completo de la rama → **§0.7**, con dos hallazgos de cumplimiento: #32 PII del titular
+> al LLM y #34 oráculo de subcadenas en la búsqueda de clientes)
 > **Método:** revisión estática del repositorio con cita `fichero:línea` en cada afirmación sobre el código.
 > **Normas evaluadas:** RGPD (arts. 6, 9, 13/14, 22, 25/32, 28, 30, 33/34, 35, Cap. V), LSSI art. 22.2,
 > Reglamento de IA (RIA) arts. 4 y 50, Ley 3/1991 de Competencia Desleal / TRLGDCU, y Ley 1/2019 de Secretos Comerciales.
@@ -231,6 +234,28 @@ largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo*
 > **Confirmado en vivo el #13:** la respuesta cruda del webhook sigue devolviendo `_debug`,
 > `_supabase_record` y `_skip_supabase` a quien llame directo. El frontend los descarta al
 > mapear, pero la superficie expuesta por ngrok es real y ahora son dos webhooks.
+
+### 0.7 Tercera ronda de `/code-review` (2026-07-30) — diff completo de la rama
+
+Revisión del diff `master...HEAD` (80 ficheros) antes del PR, ya con la v40 publicada y las
+cuatro migraciones aplicadas. **Seis hallazgos, los seis corregidos en la misma rama**; dos son
+de cumplimiento (#32 y #34), el resto de correción funcional. Ninguno estaba en la tabla de la §1.
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| **32** | **PII del titular enviada a OpenAI en cada plan (RGPD 5.1.c / 28 / ROPA Act. 6).** `Validar Formulario` arrastra `travel_brief.holder` —nombre, teléfono y email del cliente— como passthrough para `plan_holders`, pero el `session_state` seguía hasta el prompt del planificador, que lo serializa entero (`{{ JSON.stringify($json.session_state) }}`). Contradecía la nota del propio nodo ("el planificador no lo usa"), el recorte que el frontend ya hace en `bodyForLlm` y la Actividad 6 del ROPA, que declara **Supabase como único destinatario** del titular. Sin base jurídica para esa comunicación y sin DPA que la cubra (#16). | `04_preparar_motor.js` reenvía una **copia** del `session_state` sin `holder`. Es la única entrada al motor, común a las rutas A y B. La rama de `plan_holders` no se ve afectada (lee la salida de `Validar Formulario`) y `travel_plans` nunca recibió el titular. Cubierto por asserts en `_smoketest.js`. Ver `n8n/docs/Planificador_Viajes_v40_Arquitectura.md` §7.1. | ✅ **RESUELTO** |
+| **33** | **El "Deshacer el ajuste" no revierte la sesión de n8n.** El deshacer recién añadido restaura el plan en el frontend, pero `Validar Output del Planificador` ya escribió el plan refinado en el `staticData` y `Cargar Sesión` parte **siempre** de ahí (ignora cualquier `current_plan` del cuerpo), así que el siguiente ajuste reaplicaba en silencio lo deshecho. | No hay arreglo posible desde el frontend (no guarda el plan crudo — D3 de la spec). Se hace **visible**: el panel avisa de la divergencia mientras dura (`refineBaseOutOfSync`) y sugiere crear un plan nuevo para partir del que se ve. El arreglo de fondo es de backend (contrato de `travel-refine`) → Rodrigo. | 🟡 **MITIGADO** (avisado, no revertido) |
+| **34** | **`/api/holders/search` era un oráculo de subcadenas sobre `plan_holders` (RGPD 32).** El endpoint autenticaba pero **no** comprobaba que los `session_id` fueran del solicitante, al contrario que `/api/refine-trip` en esta misma rama. Con prefijos crecientes ("a", "ab", "abc"…) contra un `session_id` ajeno, el booleano casa/no-casa **reconstruye el email o el teléfono del titular carácter a carácter**, aunque la respuesta solo devuelva `session_id`. Invalida el riesgo que la spec del buscador había documentado como *aceptado*. | El endpoint exige `refine_token` **por plan** y verifica cada uno contra el `uid` de la cookie (misma prueba que el refinamiento, `lib/refineToken`); descarta el resto antes de llamar a n8n, y filtra la respuesta contra los ids acreditados. Sin `REFINE_TOKEN_SECRET` responde 503 (falla cerrado). Cambio de contrato del endpoint interno (`sessions[]`), enmendado en la spec del buscador. | ✅ **RESUELTO** |
+| **35** | **El chip de India rompía el ancla geográfica de las actividades.** `New Delhi` estaba en `cityToIata` pero no en `cityToGps`, así que `destination_city_ll` salía `null` y los resultados de Maps aparecían en otra ubicación (el system prompt marca ese campo como CRÍTICO). | `'new delhi'` añadido a `cityToGps`. Verificado que **los 67 valores de chip de ciudad** resuelven ahora en las dos tablas; era el único asimétrico. Assert en `_smoketest.js`. | ✅ **RESUELTO** |
+| **36** | **Resultados de búsqueda obsoletos en el dashboard.** Si `/api/holders/search` respondía distinto de 200, el efecto salía sin limpiar `serverMatchIds`: las coincidencias de la consulta **anterior** seguían mostrándose —y contando en la fila de estadísticas— para la consulta nueva. Falso positivo silencioso. | Se limpia el conjunto también en la rama de error. | ✅ **RESUELTO** |
+| **37** | **`N8N_HOLDERS_SEARCH_WEBHOOK_URL` solo en la plantilla de la raíz.** La lee el frontend, y Next **no** lee el `.env` de la raíz: quien montara el entorno desde `frontend/.env.local.example` se quedaba sin búsqueda persistente (503) sin pista de por qué. | Añadida a `frontend/.env.local.example` con su explicación; nota en `.env.example` de que también hace falta en el frontend. | ✅ **RESUELTO** |
+
+> **Revisado y sin hallazgo** en la misma ronda: el HMAC de `refineToken` (falla cerrado con
+> `changeme`, comparación en tiempo constante, con type guards), la guarda de fechas incoherentes
+> de `withRefreshedDates`, el guardarraíl de no-regresión ya recortado del refinamiento, las
+> ventanas de negación de `sensitiveData`, el round-trip de los 12 Code nodes y la eliminación del
+> `onError` en los dos nodos de Supabase (respaldada por la prueba en vivo de §3 del doc de
+> arquitectura: la respuesta sale antes de la rama de persistencia).
 
 ---
 

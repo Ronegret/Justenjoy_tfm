@@ -23,6 +23,12 @@ interface TripContextType {
    * `false` si no hay nada que deshacer. Un solo paso: no es un historial.
    */
   undoRefine: () => boolean;
+  /**
+   * Tras deshacer, el plan mostrado y la sesión de n8n **dejan de coincidir**: n8n
+   * guarda el plan refinado que aquí se ha descartado, así que el siguiente
+   * refinamiento partirá de ese. La UI lo avisa (ver `RefineTripPanel`).
+   */
+  refineBaseOutOfSync: boolean;
   saveTrip: (trip: TripData) => void;
   deleteTrip: (id: string) => void;
   setCurrentTripById: (id: string) => boolean;
@@ -51,6 +57,13 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // guarda en el navegador (ver `stripHolderForStorage`), y deshacer solo tiene
   // sentido dentro de la misma sesión, justo después de ver el resultado.
   const [previousTrip, setPreviousTrip] = useState<TripData | null>(null);
+  // ¿El plan mostrado diverge de lo que n8n tiene en la sesión? Solo pasa tras
+  // deshacer un ajuste: n8n conserva el plan refinado en su `staticData` (lo escribe
+  // `Validar Output del Planificador`) y el refinamiento SIEMPRE parte de ahí — la
+  // webhook `travel-refine` no acepta un `current_plan` del cliente, así que el
+  // frontend no puede corregirlo. Se avisa en la UI en vez de fingir que el deshacer
+  // llegó también al backend.
+  const [refineBaseOutOfSync, setRefineBaseOutOfSync] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -216,8 +229,10 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (customizedTrip) {
       saveTrip(customizedTrip);
       setCurrentTrip(customizedTrip);
-      // Plan nuevo: el "deshacer el ajuste" del plan anterior ya no aplica.
+      // Plan nuevo: el "deshacer el ajuste" del plan anterior ya no aplica, y su
+      // sesión de n8n nace sincronizada con lo que se muestra.
       setPreviousTrip(null);
+      setRefineBaseOutOfSync(false);
     }
     setIsLoading(false);
     return { status: 'ok', tripId: generatedId };
@@ -365,6 +380,8 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPreviousTrip(trip);
       saveTrip(refined);
       setCurrentTrip(refined);
+      // Lo que se muestra vuelve a ser lo último que n8n tiene en la sesión.
+      setRefineBaseOutOfSync(false);
       return { status: 'ok', tripId: refined.trip_id };
     } catch (error) {
       console.warn('refineTrip failed:', error);
@@ -385,6 +402,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveTrip(previousTrip);
     setCurrentTrip(previousTrip);
     setPreviousTrip(null);
+    // El deshacer NO llega a n8n: su sesión sigue con el plan refinado, así que el
+    // próximo ajuste partirá de la versión descartada. Se marca para avisarlo.
+    setRefineBaseOutOfSync(true);
     return true;
   };
 
@@ -401,6 +421,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refineTrip,
         canUndoRefine,
         undoRefine,
+        refineBaseOutOfSync,
         saveTrip,
         deleteTrip,
         setCurrentTripById
