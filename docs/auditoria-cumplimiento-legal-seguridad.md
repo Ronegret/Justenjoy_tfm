@@ -170,8 +170,10 @@ Detectado en la revisión de la propia rama, **antes de fusionar**: `/api/refine
 autenticaba la petición pero **no comprobaba que el `session_id` fuera del usuario que lo
 enviaba**. Como el identificador lo aporta el cliente y la ruta devuelve el plan completo
 mapeado, cualquier usuario con cuenta que conociera un `session_id` ajeno podía **leer el
-itinerario de otra persona** (destino, fechas, hotel, vuelos, presupuesto) y además provocar
-una revisión nueva en Supabase bajo esa sesión. Agravante: el `session_id` se genera con
+itinerario de otra persona** (destino, fechas, hotel, vuelos, presupuesto) y además mutar su
+sesión en la memoria de n8n. *(Matiz verificado en el E2E del 2026-07-30: **no** llegaba a
+escribir en Supabase, porque el refinamiento no se persiste — ver §0.6; el acceso indebido a
+los datos del plan sí era real.)* Agravante: el `session_id` se genera con
 `Math.random()` (`n8n/nodes-code/01_validar_formulario.js:9`), no con un CSPRNG.
 
 **Corregido en la misma rama:** `/api/plan-trip` firma el par (`uid` de Firebase,
@@ -186,6 +188,22 @@ registrarse en logs. Ficheros: `frontend/src/lib/refineToken.ts` (nuevo),
 > en el nodo de n8n — es del backend (Rodrigo). Con la firma en vigor ya no es explotable
 > desde el portal, pero sigue siendo un identificador débil para quien llame al webhook directo
 > (ver #13).
+
+### 0.6 E2E del workflow v39 (2026-07-30) — hallazgos nuevos
+
+Ejecutados **todos los comportamientos de los tres webhooks** contra la instancia local
+(9 casos; ver el detalle en el informe de la sesión). Resultado: el flujo funciona de punta a
+punta y se **cierran dos bugs** que seguían anotados como abiertos (truncamiento en viajes
+largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo**:
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| **30** | **El refinamiento no se persiste y el fallo se silencia.** `Supabase — Guardar Plan` es un `create`; el segundo guardado de una sesión ya existente se rechaza y `onError: continueRegularOutput` se lo traga, así que el webhook responde 200 con el plan refinado que **nunca se guardó**. Verificado: tras refinar, `travel_plans` mantiene 1 fila con `created_at == updated_at`. Viola AGENTS.md §5 (no silenciar errores) y deja el plan refinado sin copia server-side. Corrección: `upsert` por `session_id` (o insertar una revisión nueva) y **dejar de tragarse el error**. | **FALTA** |
+| **31** | **La dedup de `plan_holders` por email oculta los viajes posteriores del mismo cliente.** El segundo plan de un titular ya registrado no crea fila, así que `plan_holders` conserva el `session_id` del **primero** y la búsqueda del dashboard solo encuentra ese. Verificado con dos planes del mismo email: la búsqueda por nombre, email y teléfono devuelve siempre la primera sesión. Corrección: relación 1:N titular→sesiones, o actualizar la fila con la sesión más reciente. | **FALTA** |
+
+> **Confirmado en vivo el #13:** la respuesta cruda del webhook sigue devolviendo `_debug`,
+> `_supabase_record` y `_skip_supabase` a quien llame directo. El frontend los descarta al
+> mapear, pero la superficie expuesta por ngrok es real y ahora son dos webhooks.
 
 ---
 

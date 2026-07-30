@@ -65,8 +65,15 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
 - **No** toca la barra "Ajustar y Regenerar" de `/results` en esta spec (sigue como está,
   por la RUTA A). Si se decide unificar, va en spec aparte.
 - **No** implementa historial de revisiones ni "deshacer" (volver a una revisión anterior).
-  Cada refinamiento reemplaza el plan visible; el historial vive en Supabase del lado n8n
-  (un registro por `plan_ready`, mismo `session_id`), no en el frontend.
+  Cada refinamiento reemplaza el plan visible.
+  > ⚠️ **Corregido tras el E2E del 2026-07-30:** este documento afirmaba que "el historial
+  > vive en Supabase del lado n8n (un registro por `plan_ready`, mismo `session_id`)".
+  > **Es falso.** El refinamiento **no se persiste en absoluto**: `Supabase — Guardar Plan`
+  > es un `create` y el segundo guardado de la misma sesión se rechaza, con
+  > `onError: continueRegularOutput` tragándose el fallo. Verificado: tras refinar, la
+  > tabla sigue con **una sola fila** y `created_at == updated_at`. Consecuencia real: si el
+  > usuario pierde el `localStorage`, recupera el plan **anterior** al refinamiento, no el
+  > refinado. No hay historial ni copia server-side de las revisiones.
 - **No** resuelve la caducidad del estado de sesión en memoria de n8n (ver riesgos): eso es
   del backend/Rodrigo. El frontend solo lo maneja con gracia si falla.
 
