@@ -1,7 +1,12 @@
 # Planificador de Viajes — v39
 ## Documentación de Arquitectura
 
-> **Versión:** v39 (canónica y activa del proyecto)
+> **Estado:** **Superada por v40** (mismo id de workflow, ver
+> [`Planificador_Viajes_v40_Arquitectura.md`](Planificador_Viajes_v40_Arquitectura.md)).
+> Este documento describe la base sobre la que se construye v40; el JSON de v39 queda
+> congelado en `../workflows/archive/`. v40 solo cambia la persistencia (hallazgos #30 y #31).
+>
+> **Versión:** v39 (superada; fue canónica hasta el 2026-07-30)
 > **Plataforma:** n8n 2.23.2 (Self Hosted)
 > **Estado:** Estable — versión activa del proyecto (TFM)
 > **Workflow:** 1 main workflow, id `8Kym9GIgNKp7Nrdh` (reutiliza el id de v34/v38: al

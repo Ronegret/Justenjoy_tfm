@@ -70,7 +70,7 @@ La lógica vive en herramientas de orquestación y en LLMs, conectados mediante 
 
 ### 2. n8n — Orquestador (Curación + Transacción)
 - **Rol:** motor del sistema. Gestiona toda la lógica condicional y las llamadas a APIs.
-- **Versión canónica:** v39 (ver `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`).
+- **Versión canónica:** v40 (ver `n8n/docs/Planificador_Viajes_v40_Arquitectura.md`).
   El código de sus 11 nodos Code vive versionado en `n8n/nodes-code/`. Las versiones
   anteriores (v24–v38) están congeladas en `n8n/workflows/archive/`.
 - **Despliegue:** self-hosted. URL expuesta via ngrok en desarrollo.
@@ -131,9 +131,15 @@ Campo **opcional** `holder` (`{ first_name, last_name, phone, email, consent_at,
 datos del titular/cliente del plan (novedad de **v39**). Solo se envía con **consentimiento
 explícito** (RGPD 6.1.a): `consent_at` (ISO) y `consent_version` son la evidencia; sin ellos el
 frontend no manda el `holder` y n8n no lo persiste. Si viene informado, se persiste en la tabla
-`plan_holders` de Supabase (rama paralela, no bloqueante; ver §9.1 de
-`n8n/docs/Planificador_Viajes_v39_Arquitectura.md`). Ejemplo:
+`plan_holders` de Supabase. Desde v40 eso ocurre en una **sub-ejecución propia** del workflow
+(`Lanzar Guardado del Titular` → `Trigger — Guardar Titular` → …), no en una rama paralela: así ni
+un fallo al guardar el plan tumba el lead ni un fallo al guardar el lead tumba el plan del usuario
+(§7.3 de `n8n/docs/Planificador_Viajes_v40_Arquitectura.md`). Ejemplo:
 `n8n/examples/input-formulario-con-titular.json`. Contiene PII → tratar según `docs/legal/`.
+**No entra al motor planificador:** desde v40, `Preparar Motor Planificador` lo quita del
+`session_state` que reenvía, porque el prompt del agente lo serializa entero y el titular acabaría
+en OpenAI (hallazgo #32; ver §7.1 de `n8n/docs/Planificador_Viajes_v40_Arquitectura.md`). Su único
+destinatario es Supabase, como declara la Actividad 6 del ROPA.
 
 > ⚠️ **Al probar, usa fechas futuras.** SerpAPI (Google Flights/Hotels) rechaza
 > consultas con `outbound_date` en el pasado (`` `outbound_date` cannot be in the
@@ -212,7 +218,11 @@ Rama de **lectura** para la búsqueda persistente de clientes en el dashboard (n
 Entrada `{ session_ids[], query }`; salida `{ matching_session_ids[] }` — **solo `session_id`,
 sin PII**. El endpoint autenticado `/api/holders/search` (frontend) reenvía aquí los
 `session_id` que el cliente posee + la query; n8n consulta `plan_holders` con `service_role`
-(que no sale de n8n) y filtra por posesión + query en un code node. Env
+(que no sale de n8n) y filtra por posesión + query en un code node. **El contrato del webhook no
+cambia**, pero desde el 2026-07-30 el endpoint del frontend recibe
+`{ sessions: [{ session_id, refine_token }], query }` y solo reenvía los planes cuya firma
+acredita el `uid` de la cookie: sin eso era un oráculo de subcadenas sobre `plan_holders`
+(hallazgo #34 de la auditoría). Env
 `N8N_HOLDERS_SEARCH_WEBHOOK_URL`. Ejemplos: `n8n/examples/input-holders-search.json` /
 `output-holders-search.json`. Ver §9.2 de `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`.
 

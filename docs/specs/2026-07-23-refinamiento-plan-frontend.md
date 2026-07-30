@@ -57,6 +57,9 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
   explícita ni fiable para fallbacks. Se guarda el `session_id` como campo propio.
 - Reutiliza el manejo de `needs_user_input` ya existente: si el refinamiento no puede
   completarse, muestra los `warnings` en vez de fingir un plan.
+- Ofrece **«Deshacer el ajuste»** junto al mensaje de éxito: devuelve el plan al estado
+  inmediatamente anterior al último refinamiento (un solo paso, en memoria). Añadido el
+  2026-07-30 como ampliación de alcance — ver la nota en *Qué NO hace*.
 
 ## Qué NO hace (fuera de alcance)
 
@@ -64,8 +67,51 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
   existe y funciona).
 - **No** toca la barra "Ajustar y Regenerar" de `/results` en esta spec (sigue como está,
   por la RUTA A). Si se decide unificar, va en spec aparte.
-- **No** implementa historial de revisiones ni "deshacer" (volver a una revisión anterior).
+- **No** implementa historial de revisiones (volver a una revisión cualquiera del plan).
   Cada refinamiento reemplaza el plan visible.
+  > ✏️ **Ampliación de alcance — 2026-07-30, aprobada por Enrique.** Este documento decía
+  > *"No implementa historial de revisiones **ni «deshacer»**"*. El **«deshacer» pasa a estar
+  > dentro de alcance**: `TripContext` conserva el plan previo al último refinamiento y
+  > `RefineTripPanel` ofrece un botón **«Deshacer el ajuste»** junto al mensaje de éxito. El
+  > historial completo sigue fuera de alcance.
+  >
+  > **Por qué.** El guardarraíl de no-regresión de `refineTrip` intentaba distinguir un
+  > ajuste legítimo que devuelve menos días ("junta el día 3 y el 4") de un truncamiento de
+  > n8n (2 días de 10). Dos revisiones de código demostraron que era **a la vez demasiado
+  > laxo y demasiado estricto**, y que no tiene arreglo: ambos casos llegan al frontend con
+  > la misma forma —menos días— y ningún dato los distingue; el truncamiento real también
+  > reescribe las fechas, así que usarlas de árbitro tampoco funciona. En la práctica
+  > rechazaba ajustes válidos con un "El ajuste llegó incompleto" que reintentar no
+  > resolvía, y aun así dejaba pasar el truncamiento de verdad, machacando el plan bueno
+  > **sin vuelta atrás**. Se deja de adivinar: el ajuste se aplica y decide el usuario, que
+  > ahora puede revertirlo.
+  >
+  > **Límites de lo que se implementa**, para no leer más de lo que hay:
+  > - **Un solo paso**: recupera el plan inmediatamente anterior. No hay "rehacer".
+  > - **Solo en memoria y en la misma sesión**: el snapshot no se persiste (conserva el
+  >   `holder`, que es PII y por diseño no va a `localStorage`), así que al recargar la
+  >   página el botón ya no aparece.
+  > - **Solo sobre el mismo viaje**: si el usuario navega a otro plan, deja de ofrecerse.
+  > - **El guardarraíl no desaparece**, se reduce a los casos inequívocos: que vuelva el
+  >   relleno de `lib/planPlaceholders` donde había dato real, o cero vuelos (la vista de
+  >   `/trip/[id]` accede a `flights[0]` sin guarda y reventaría). Se elimina toda
+  >   comparación de nº de días y de fechas.
+  > - **No es el historial de Supabase.** Son cosas distintas y no están conectadas: el
+  >   deshacer es local y de un paso.
+  > - **No revierte la sesión de n8n** (limitación conocida, detectada en la tercera ronda de
+  >   revisión). `Validar Output del Planificador` escribe el plan refinado en el `staticData`
+  >   de la sesión, y la RUTA B parte **siempre** de ahí: `Cargar Sesión` toma
+  >   `current_plan` del `staticData` e ignora cualquier plan que venga en el cuerpo, así que
+  >   el frontend no puede corregirlo (tampoco guarda el plan crudo de n8n — ver D3). Efecto:
+  >   tras deshacer, el **siguiente** refinamiento parte de la versión descartada y reaplica
+  >   lo deshecho. Mitigación implementada: el panel **avisa** de esa divergencia mientras
+  >   dura (`refineBaseOutOfSync`, por viaje), en vez de dejar que ocurra en silencio. El
+  >   arreglo de fondo es de backend (que `Cargar Sesión` acepte un `current_plan` del
+  >   cliente, o una forma de revertir la sesión) → cambio de contrato, pendiente de Rodrigo.
+  >   **El mismo aviso cubre el descarte del guardarraíl**, que es el mismo caso visto desde
+  >   otro lado: n8n ya guardó el plan incompleto antes de responder, así que rechazarlo aquí
+  >   deja la sesión igual de desalineada que deshacerlo.
+
   > ⚠️ **Corregido tras el E2E del 2026-07-30:** este documento afirmaba que "el historial
   > vive en Supabase del lado n8n (un registro por `plan_ready`, mismo `session_id`)".
   > **Es falso.** El refinamiento **no se persiste en absoluto**: `Supabase — Guardar Plan`
@@ -74,6 +120,14 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
   > tabla sigue con **una sola fila** y `created_at == updated_at`. Consecuencia real: si el
   > usuario pierde el `localStorage`, recupera el plan **anterior** al refinamiento, no el
   > refinado. No hay historial ni copia server-side de las revisiones.
+  >
+  > **Actualización (mismo 2026-07-30, ya resuelto):** el párrafo anterior describe el estado
+  > con la v38/v39. La v40 y la migración
+  > [`0002_travel_plans_revisiones.sql`](../../supabase/migrations/2026-07-30_0002_travel_plans_revisiones.sql)
+  > quitan el `UNIQUE (session_id)` y dejan de silenciar el error, así que **cada revisión sí
+  > deja su fila** (ver la spec de persistencia del 2026-07-30). Eso **no** cambia el alcance
+  > de esta spec: el frontend no lee esas filas, y el "deshacer" descrito arriba es local y de
+  > un paso.
 - **No** resuelve la caducidad del estado de sesión en memoria de n8n (ver riesgos): eso es
   del backend/Rodrigo. El frontend solo lo maneja con gracia si falla.
 
@@ -151,6 +205,10 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
     `revision_count` incrementado y coste menor; el viaje mostrado se actualiza.
   - Sesión inexistente/caducada → aviso claro, el plan actual se conserva.
   - Plan de fallback (sin `session_id` n8n) → el control no aparece (D6).
+  - Refinar y pulsar **«Deshacer el ajuste»** → vuelve el plan anterior (itinerario, hotel y
+    presupuesto de antes) y el botón desaparece; al recargar la página tampoco está.
+  - Pedir un cambio que **reduce días** ("junta el día 3 y el 4") → se aplica, ya **no** se
+    rechaza con "El ajuste llegó incompleto"; si no convence, se deshace.
 - Ejemplo nuevo en `n8n/examples/` que documente entrada/salida del refinamiento vía
   frontend.
 - `/code-review` obligatorio antes del PR (AGENTS.md §10).

@@ -23,3 +23,10 @@ siguiendo el runbook de la spec correspondiente. Acceso admin al proyecto requer
 | Fichero | Qué hace | Spec |
 |---|---|---|
 | `2026-07-23_0001_plan_holders.sql` | Esquema de `plan_holders` + consentimiento (6.1.a) + activar RLS | `docs/specs/2026-07-23-rgpd-plan-holders-rls.md` |
+| `2026-07-30_0002_travel_plans_revisiones.sql` | DDL de `travel_plans` + quita el `UNIQUE` de `session_id` para guardar las revisiones del plan (#30) | `docs/specs/2026-07-30-persistencia-revisiones-y-titular-por-sesion.md` |
+| `2026-07-30_0003_plan_holders_por_sesion.sql` | Dedup de `plan_holders` por `(email, session_id)` en vez de por email (#31) | `docs/specs/2026-07-30-persistencia-revisiones-y-titular-por-sesion.md` |
+| `2026-07-30_0004_travel_plans_retencion_24m.sql` | Conservación de `travel_plans`: 24 meses por `created_at` + job pg_cron mensual | `docs/specs/2026-07-30-persistencia-revisiones-y-titular-por-sesion.md` |
+
+> Orden de aplicación: 0002 y 0003 van **antes** de publicar el workflow v40 (ver
+> `docs/runbooks/2026-07-30-activacion-v40-revisiones.md`). Ninguna de las dos rompe al
+> workflow v38 que sigue en `master`.

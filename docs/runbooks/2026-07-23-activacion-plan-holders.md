@@ -23,10 +23,33 @@ tenga la rama de lectura `holders-search` y el nodo 11 con `consent_*`).
 
 ## 1. Verificar que la credencial de n8n es `service_role` (NO `anon`)
 ```bash
-# Debe imprimir exactamente: service_role
-node -e "console.log(JSON.parse(Buffer.from((process.env.SUPABASE_SERVICE_ROLE_KEY||'').split('.')[1]||'','base64').toString()||'{}').role)"
+# La clave vive en .env, NO exportada en el shell. Soporta los DOS formatos que
+# usa Supabase: el nuevo (`sb_secret_...`, sin puntos) y el JWT legacy (3 partes).
+KEY=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+case "$KEY" in
+  sb_secret_*)      echo "OK — clave SECRETA (formato nuevo)";;
+  sb_publishable_*) echo "PARA — es la clave PUBLICABLE, no la secreta";;
+  *.*.*)            node -e "const r=JSON.parse(Buffer.from(process.argv[1].split('.')[1],'base64').toString()).role; console.log(r==='service_role' ? 'OK — service_role (JWT legacy)' : 'PARA — rol '+r)" "$KEY";;
+  '')               echo "PARA — SUPABASE_SERVICE_ROLE_KEY no definida en .env";;
+  *)                echo "PARA — formato de clave no reconocido";;
+esac
 ```
-Si imprime `anon` o vacío → **PARA**: activar RLS rompería el guardado. Corrige la env antes de seguir.
+
+> ⚠️ **No imprimas la clave.** El bloque de arriba solo evalúa el prefijo; evita
+> `echo "$KEY"` o cualquier variante que muestre el valor: es una credencial que
+> **salta RLS** y acaba en el historial del terminal.
+
+Comprobación funcional (la que de verdad importa): la clave debe poder leer una tabla
+con RLS activa. `plan_holders` tiene RLS **sin políticas**, así que solo una clave con
+bypass devuelve algo distinto de un 401:
+
+```bash
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+curl -sS --ssl-no-revoke -o /dev/null -w "service_role -> %{http_code} (debe ser 200)\n" \
+  "https://$HOST/rest/v1/plan_holders?select=id&limit=1" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY"
+```
+Si sale cualquier `PARA` → detente: activar RLS rompería el guardado. Corrige la env antes de seguir.
 
 ## 2. Aplicar la migración (DDL + `consent_*` + RLS)
 No se puede por REST (es DDL). En el **SQL Editor de Supabase** (o `psql`) ejecutar el contenido de:
@@ -34,9 +57,13 @@ No se puede por REST (es DDL). En el **SQL Editor de Supabase** (o `psql`) ejecu
 
 ## 3. Verificar RLS por REST
 ```bash
-HOST="tu-proyecto.supabase.co"          # = SUPABASE_HOST sin https://
-SR="$SUPABASE_SERVICE_ROLE_KEY"
-ANON="<clave anon del panel Supabase>"  # Project Settings -> API
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+# La anon NO esta en el .env: copiarla del panel (Project Settings -> API).
+ANON="<clave anon del panel Supabase>"
 
 # (a) service_role DEBE devolver filas (o [] si tabla vacía, pero SIN error 401):
 curl -sS --ssl-no-revoke "https://$HOST/rest/v1/plan_holders?select=id&limit=1" \
@@ -63,6 +90,12 @@ N8N_HOLDERS_SEARCH_WEBHOOK_URL=https://<tu-host-n8n>/webhook/holders-search
 ## 5. Prueba de humo — frente 2 (consentimiento)
 Generar un plan **con** titular y casilla **marcada** (frontend, usar `localhost:3000`). Luego:
 ```bash
+# HOST y SR salen del .env: NO estan exportados en el shell (lo dice el paso 1).
+# Copiar estas dos lineas en cada terminal nueva; sin ellas los curl dan 401 y se
+# confunden con "la migracion no se aplico".
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+SR=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+
 curl -sS --ssl-no-revoke "https://$HOST/rest/v1/plan_holders?email=eq.<email-de-prueba>&select=*" \
   -H "apikey: $SR" -H "Authorization: Bearer $SR"
 ```

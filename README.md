@@ -39,8 +39,8 @@ El sistema cubre el ciclo completo de una agencia de viajes digital:
 ```
 TFM_G7_Just_Enjoy/
 ├── n8n/                  Motor del sistema (workflow orquestador)
-│   ├── workflows/        Workflow canónico (v39); archive/ guarda versiones antiguas (incl. v38)
-│   ├── nodes-code/       Código Code de v39 versionado (fuente de verdad) + _inject.py
+│   ├── workflows/        Workflow canónico (v40); archive/ guarda versiones antiguas (incl. v39)
+│   ├── nodes-code/       Código Code de v40 versionado (fuente de verdad) + _inject.py
 │   ├── docs/             Documentación de arquitectura de cada workflow
 │   └── examples/         Ejemplos de entrada/salida para testing
 ├── frontend/             Portal del viajero (en desarrollo)
@@ -108,7 +108,7 @@ n8n estará disponible en: **http://localhost:5678**
 
 No necesitas importar nada a mano. Al arrancar el stack, el servicio efímero
 `n8n-import` (corre antes que n8n) importa y **activa** la versión canónica
-`n8n/workflows/Planificador_de_Viajes_v39.json`, por lo que el webhook queda
+`n8n/workflows/Planificador_de_Viajes_v40.json`, por lo que el webhook queda
 registrado en cuanto n8n arranca. Basta con abrir http://localhost:5678.
 
 > **No uses el toggle Publish/Unpublish en caliente** para (re)aprovisionar: corrompe
@@ -164,7 +164,7 @@ docker compose down && docker compose up -d
 pre-commit run --all-files
 
 # Validar JSON de workflow
-Get-Content n8n/workflows/Planificador_de_Viajes_v39.json | ConvertFrom-Json
+Get-Content n8n/workflows/Planificador_de_Viajes_v40.json | ConvertFrom-Json
 ```
 
 ---

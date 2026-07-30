@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Wand2, RefreshCw, ArrowRight, AlertTriangle, CheckCircle2, Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Wand2, RefreshCw, ArrowRight, AlertTriangle, CheckCircle2, Clock, ShieldCheck, ShieldAlert, Undo2 } from 'lucide-react';
 import { useTrips } from '@/context/TripContext';
 import { N8nWarning } from '@/types/planResult';
 
@@ -27,6 +27,7 @@ const QUICK_SUGGESTIONS = [
 type FeedbackState =
   | { kind: 'idle' }
   | { kind: 'success' }
+  | { kind: 'undone' }
   | { kind: 'warnings'; warnings: N8nWarning[] }
   | { kind: 'session_expired' }
   | { kind: 'not_refinable' }
@@ -34,7 +35,7 @@ type FeedbackState =
   | { kind: 'error'; message: string };
 
 export const RefineTripPanel: React.FC = () => {
-  const { refineTrip } = useTrips();
+  const { refineTrip, canUndoRefine, undoRefine, refineBaseOutOfSync } = useTrips();
   const [text, setText] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>({ kind: 'idle' });
@@ -64,6 +65,15 @@ export const RefineTripPanel: React.FC = () => {
     } else {
       setFeedback({ kind: 'error', message: result.message });
     }
+  };
+
+  // Deshacer el ajuste. Sustituye a la heurística que intentaba adivinar si un
+  // refinamiento "había llegado incompleto": ahora el plan refinado se aplica
+  // siempre y quien juzga si mejora el viaje es el usuario, que puede volver al
+  // plan anterior mientras siga en esta pantalla.
+  const handleUndo = () => {
+    if (!undoRefine()) return;
+    setFeedback({ kind: 'undone' });
   };
 
   return (
@@ -132,6 +142,23 @@ export const RefineTripPanel: React.FC = () => {
         </span>
       </p>
 
+      {/* Divergencia con la sesión de n8n. Ocurre por DOS vías —deshacer un ajuste o
+          que el guardarraíl descarte uno incompleto— y en las dos es lo mismo: n8n ya
+          había guardado en su sesión la versión que aquí no se aplicó, y el
+          refinamiento parte SIEMPRE de esa copia (la webhook no acepta un plan del
+          cliente). Por eso el texto no menciona cuál de las dos fue: si el siguiente
+          ajuste partiera de esa versión sin avisar, sería una sorpresa silenciosa. */}
+      {refineBaseOutOfSync && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-brand-dark dark:text-brand-white">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <span>
+            El plan que ves es el bueno, pero <strong>nuestro motor se quedó con la versión que no
+            aplicamos</strong>: si pides otro cambio ahora, partirá de ella. Para seguir ajustando
+            desde este plan, créalo de nuevo en el planificador.
+          </span>
+        </div>
+      )}
+
       <button
         onClick={handleSubmit}
         disabled={!canSubmit}
@@ -156,9 +183,37 @@ export const RefineTripPanel: React.FC = () => {
 
       {/* Resultado */}
       {feedback.kind === 'success' && (
+        <div className="flex flex-col gap-2.5 rounded-xl bg-brand-teal/10 border border-brand-teal/20 p-3 text-xs text-brand-dark dark:text-brand-white">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-brand-teal shrink-0 mt-0.5" />
+            <span>¡Plan actualizado! Hemos aplicado tu ajuste; revisa el itinerario y el presupuesto arriba.</span>
+          </div>
+          {/* Vuelta atrás si el ajuste no convence. Solo mientras el plan previo
+              siga en memoria (esta sesión y este mismo viaje): al recargar la
+              página desaparece, porque no se persiste. */}
+          {canUndoRefine && (
+            <div className="flex flex-col gap-1 pl-6">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={isRefining}
+                className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-dark/15 dark:border-brand-white/20 text-[11px] font-bold text-brand-dark dark:text-brand-white bg-brand-white/70 dark:bg-brand-dark/60 hover:border-brand-blue/50 hover:text-brand-blue transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+                Deshacer el ajuste
+              </button>
+              <span className="text-[10px] text-text-muted">
+                ¿No era lo que buscabas? Recupera el plan que tenías antes de este ajuste.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {feedback.kind === 'undone' && (
         <div className="flex items-start gap-2 rounded-xl bg-brand-teal/10 border border-brand-teal/20 p-3 text-xs text-brand-dark dark:text-brand-white">
-          <CheckCircle2 className="w-4 h-4 text-brand-teal shrink-0 mt-0.5" />
-          <span>¡Plan actualizado! Hemos aplicado tu ajuste; revisa el itinerario y el presupuesto arriba.</span>
+          <Undo2 className="w-4 h-4 text-brand-teal shrink-0 mt-0.5" />
+          <span>Ajuste deshecho: has recuperado el plan que tenías antes.</span>
         </div>
       )}
 

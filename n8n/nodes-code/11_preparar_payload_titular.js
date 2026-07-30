@@ -1,15 +1,34 @@
 // Preparar el registro del titular/cliente para Supabase (tabla plan_holders).
-// Corre justo tras validar el formulario, en RAMA PARALELA a la planificación,
-// para que el lead se guarde aunque la planificación posterior no llegue a
-// plan_ready (captación). Los datos del titular son OPCIONALES: si el viajero
-// omitió el paso en el frontend, este nodo no emite ítems (return []).
+// Corre en una SUB-EJECUCIÓN propia (entra por `Trigger — Guardar Titular`, que
+// lanza `Lanzar Guardado del Titular` justo tras validar el formulario), para que
+// el lead se guarde aunque la planificación posterior no llegue a plan_ready
+// (captación). Los datos del titular son OPCIONALES: si el viajero omitió el paso
+// en el frontend, este nodo no emite ítems (return []).
 //
-// DEDUP POR EMAIL (decisión de producto, opción 2): un lead por persona. NO se
-// hace aquí con una consulta HTTP (frágil en el sandbox del code node), sino a
-// nivel de BD: un índice UNIQUE parcial sobre plan_holders(email). El nodo Supabase
-// usa operation=create con onError=continueRegularOutput, así que un segundo insert
-// con el mismo email choca con el UNIQUE y se ignora (first-wins), sin duplicar y
-// a prueba de carreras. Ver n8n/docs/Planificador_Viajes_v39_Arquitectura.md §9.1.
+// POR QUÉ UNA SUB-EJECUCIÓN Y NO UNA RAMA PARALELA (hallazgo #38): en la misma
+// ejecución, n8n recorre las ramas en PROFUNDIDAD y un nodo que falla sin onError
+// hace `break`, descartando la pila pendiente. Con el titular como rama paralela,
+// un fallo del insert del PLAN —que ocurre al final de la cadena— dejaba este nodo
+// sin ejecutar y el lead se perdía. Verificado en la ejecución 78 de la BD de n8n:
+// `Preparar Payload Titular` no aparecía en `runData` y seguía en la pila al
+// abortar. Aislado en su propia ejecución, ni el plan puede matar al lead ni el
+// lead al plan. Ver n8n/docs/Planificador_Viajes_v40_Arquitectura.md §7.3.
+//
+// DEDUP POR (EMAIL, SESSION_ID) desde v40. NO se hace aquí con una consulta HTTP
+// (frágil en el sandbox del code node), sino a nivel de BD: índice UNIQUE parcial
+// sobre plan_holders(email, session_id) — migración 2026-07-30_0003.
+//
+// ANTES (v39) el índice era solo sobre (email), con semántica "un lead por persona,
+// first-wins". Se cambió porque ocultaba los viajes POSTERIORES del mismo cliente:
+// su segundo plan no creaba fila y el buscador del dashboard solo encontraba el
+// primero (hallazgo #31 de la auditoría). Ahora hay una fila POR VIAJE, y sigue sin
+// duplicarse el mismo viaje si el nodo se reintenta.
+//
+// OJO: el nodo Supabase ya NO lleva onError=continueRegularOutput (v40). Un choque
+// contra el UNIQUE deja la ejecución en FALLIDA en vez de ignorarse en silencio;
+// es deliberado (AGENTS.md §5), pero en operación normal no puede ocurrir: el
+// session_id es distinto en cada ejecución.
+// Ver n8n/docs/Planificador_Viajes_v40_Arquitectura.md §2.
 const input = $input.first().json;
 const holderRaw = input.session_state?.travel_brief?.holder || null;
 const sessionId = input.session_id || null;

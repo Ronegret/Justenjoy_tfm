@@ -79,12 +79,21 @@ el match por cliente en el servidor.
 **Endpoint Next.js (interno del frontend):**
 ```jsonc
 // POST /api/holders/search   (requiere cookie justenjoy-session)
-// Request
-{ "session_ids": ["8Kym…", "justenjoy-…"], "query": "jose perez" }
+// Request  ← cada plan va con su firma de propiedad (ver enmienda del 2026-07-30)
+{ "sessions": [{ "session_id": "8Kym…", "refine_token": "…" }], "query": "jose perez" }
 // Response 200
 { "matching_session_ids": ["8Kym…"] }        // subconjunto; SIN datos personales
 // 401 sin sesión · 400 cuerpo inválido · 502/503 si n8n no responde
+// 503 además si falta REFINE_TOKEN_SECRET (sin secreto no se puede acreditar propiedad)
 ```
+
+> ✏️ **Enmienda del 2026-07-30 (tercera ronda de revisión).** La primera implementación
+> aceptaba `{ "session_ids": [...] }` a secas. Se sustituye por `sessions` con
+> `refine_token` por plan: los `session_id` los aporta el cliente y sin firma el endpoint
+> era un **oráculo de subcadenas** sobre el `plan_holders` de cualquiera (ver el riesgo
+> reevaluado más abajo). Los planes sin token —de fallback o guardados antes de que
+> existiera— quedan fuera de la búsqueda persistente; siguen buscándose por destino y, en
+> la misma sesión, por titular en memoria.
 
 **Webhook n8n nuevo (cambio de contrato del workflow — requiere aprobación §3.2 + ejemplo):**
 ```jsonc
@@ -117,10 +126,20 @@ el match por cliente en el servidor.
   [[v31-activo-y-provision-n8n]]. Más latencia por el salto extra Next→n8n→Supabase.
 - **Filtrado fiable en n8n:** usar el **nodo Supabase** para filtrar por `session_id`; **no**
   `httpRequest`+`qs` (devolvió todas las filas en el sandbox — [[n8n-code-node-httprequest-qs]]).
-- **Autorización por posesión de `session_id` (D3):** un usuario autenticado podría pedir el
+- ~~**Autorización por posesión de `session_id` (D3):** un usuario autenticado podría pedir el
   match de cualquier `session_id` que conozca; los `session_id` reales no son adivinables y la
   respuesta **no** incluye PII (solo `session_id`), así que la fuga máxima es "este id casa/《no
-  casa》esta query". Coherente con el modelo actual (sin `user_id`). Se documenta como aceptada.
+  casa》esta query". Coherente con el modelo actual (sin `user_id`). Se documenta como
+  aceptada.~~
+  > ⛔ **Riesgo REEVALUADO y CORREGIDO el 2026-07-30.** El párrafo tachado estaba mal: la fuga
+  > **no** se queda en "casa / no casa". Repitiendo la consulta con prefijos crecientes ("a",
+  > "ab", "abc"…) contra un `session_id` ajeno, ese booleano **reconstruye el email o el
+  > teléfono del titular carácter a carácter** — un oráculo de subcadenas, aunque la respuesta
+  > nunca contenga PII. Y era el único endpoint de la rama sin prueba de propiedad, teniendo
+  > `refine_token` disponible desde D7 de la spec de refinamiento. Corregido: el endpoint
+  > verifica el `refine_token` de **cada** plan contra el `uid` de la cookie y descarta el
+  > resto antes de consultar a n8n; si falta el secreto, responde 503 (falla cerrado). Sigue
+  > sin haber `user_id` en `plan_holders`, así que la firma **es** el control de acceso.
 - **Dependencia de la RLS:** funciona igual antes o después de activar RLS (n8n usa
   `service_role`); coordinar con la spec RGPD para cerrar `anon`.
 - **Rehidratación de mocks:** los `trip_id` de `mockTrips` no existen en `plan_holders`; el
@@ -134,8 +153,9 @@ el match por cliente en el servidor.
   - Generar un plan **con** titular, **recargar** `/dashboard`, buscar por nombre/email/teléfono
     → **encuentra** el plan (corrige la regresión).
   - Buscar por destino/título → sigue funcionando (ruta cliente).
-  - `session_ids` ajenos/inventados → el endpoint/n8n no filtran fuera de los aportados.
-  - Sin cookie de sesión → 401.
+  - `session_id` ajeno o inventado (con o sin token falso) → se descarta antes de llamar a
+    n8n y la respuesta sale vacía; en el log queda el recuento de descartados, no los ids.
+  - Sin cookie de sesión → 401. Sin `REFINE_TOKEN_SECRET` → 503.
 - Confirmar por inspección de red que la respuesta **no** contiene PII (solo `session_id`s).
 - Ejemplo nuevo en `n8n/examples/` del webhook de lectura.
 - `/code-review` obligatorio sobre el diff antes del PR (AGENTS.md §10).

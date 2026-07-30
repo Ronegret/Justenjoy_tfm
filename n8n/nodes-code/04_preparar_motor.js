@@ -2,8 +2,22 @@
 // Unifica ambas rutas (formulario inicial y refinamiento)
 const input = $input.first().json;
 
-const sessionState = input.session_state;
-const tb = sessionState.travel_brief || {};
+// AQUÍ SE QUITA LA PII DEL TITULAR. Este nodo es la única entrada al motor
+// planificador, y el prompt del agente serializa entero lo que salga de aquí
+// (`JSON.stringify($json.session_state)`): si el `holder` (nombre, teléfono y email
+// del cliente) siguiera dentro, el contacto viajaría a OpenAI en CADA plan, sin base
+// jurídica y contra la Actividad 6 del ROPA (Supabase como único destinatario). El
+// planificador no lo necesita: solo lo usa la rama paralela que lo guarda en
+// `plan_holders`, que lee la salida de `Validar Formulario`, no la de este nodo.
+// Se copia en vez de mutar el input, para no vaciar de paso esa otra rama.
+const rawSessionState = input.session_state;
+const sessionState = {
+  ...rawSessionState,
+  travel_brief: { ...(rawSessionState.travel_brief || {}) }
+};
+delete sessionState.travel_brief.holder;
+
+const tb = sessionState.travel_brief;
 const revisionCount = sessionState.revision_count || 0;
 const stepsToRun = sessionState.steps_to_run || 'all';
 

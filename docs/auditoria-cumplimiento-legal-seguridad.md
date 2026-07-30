@@ -11,6 +11,15 @@
 >
 > **Fecha de la auditoría:** 2026-07-22 · **Revisión 2:** 2026-07-22 (tras remediación — ver §0)
 > · **Revisión 2.2:** 2026-07-23 (refinamiento del plan en el frontend — ver §0.3)
+> · **Revisión 2.3:** 2026-07-30 (E2E del workflow → §0.6; tercera ronda de `/code-review` sobre
+> el diff completo de la rama → **§0.7**, con dos hallazgos de cumplimiento: #32 PII del titular
+> al LLM y #34 oráculo de subcadenas en la búsqueda de clientes)
+> · **Revisión 2.4:** 2026-07-30 (cuarta ronda, sobre los propios arreglos → **§0.8**: #38 el lead
+> del titular se perdía al fallar el guardado del plan, #39 invariante de orden de ejecución
+> documentada al revés, #40 y #41 en el frontend)
+> · **Revisión 2.5:** 2026-07-30 (quinta ronda, pila completa contra `develop` → **§0.9**: #42-#44
+> sobre el estado de divergencia con la sesión de n8n y #45 una contradicción interna en la
+> Actividad 6 del ROPA)
 > **Método:** revisión estática del repositorio con cita `fichero:línea` en cada afirmación sobre el código.
 > **Normas evaluadas:** RGPD (arts. 6, 9, 13/14, 22, 25/32, 28, 30, 33/34, 35, Cap. V), LSSI art. 22.2,
 > Reglamento de IA (RIA) arts. 4 y 50, Ley 3/1991 de Competencia Desleal / TRLGDCU, y Ley 1/2019 de Secretos Comerciales.
@@ -196,14 +205,102 @@ Ejecutados **todos los comportamientos de los tres webhooks** contra la instanci
 punta y se **cierran dos bugs** que seguían anotados como abiertos (truncamiento en viajes
 largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo**:
 
+> ✅ **RESUELTOS Y VERIFICADOS EN VIVO el 2026-07-30** (rama `bugfix/persistencia-revisiones-y-titular`,
+> workflow v40 publicado y las dos migraciones aplicadas en Supabase).
+>
+> **Evidencia #30:** plan + refinamiento sobre la misma sesión → **2 filas** en `travel_plans`,
+> con `plan.revision_snapshot` 0 y 2, y coste 1165 → 289 USD. Antes: 1 fila.
+> **Evidencia #31:** dos viajes del mismo titular (`marta.lopez.v40@example.com`, Lisboa y Oporto)
+> → **2 filas** en `plan_holders`, y `holders-search` devuelve **ambos** `session_id` buscando por
+> nombre y por email. Antes: 1 fila y solo la primera sesión.
+>
+> _(Redacción previa, ya superada: corregidos en la rama, pendientes de aplicar por infra.)_ El arreglo son dos migraciones SQL +
+> quitar el `onError` de los dos nodos de escritura; ver
+> [spec](specs/2026-07-30-persistencia-revisiones-y-titular-por-sesion.md) y
+> [runbook](runbooks/2026-07-30-activacion-v40-revisiones.md). El DDL **no se puede aplicar por
+> REST**, así que #30 y #31 siguen vivos en la instancia hasta que infra ejecute las migraciones
+> en el SQL Editor de Supabase. Ambos constraints causantes quedaron **confirmados
+> empíricamente** el 2026-07-30 (violación `23505` en los dos casos).
+
 | # | Hallazgo | Estado |
 |---|---|---|
-| **30** | **El refinamiento no se persiste y el fallo se silencia.** `Supabase — Guardar Plan` es un `create`; el segundo guardado de una sesión ya existente se rechaza y `onError: continueRegularOutput` se lo traga, así que el webhook responde 200 con el plan refinado que **nunca se guardó**. Verificado: tras refinar, `travel_plans` mantiene 1 fila con `created_at == updated_at`. Viola AGENTS.md §5 (no silenciar errores) y deja el plan refinado sin copia server-side. Corrección: `upsert` por `session_id` (o insertar una revisión nueva) y **dejar de tragarse el error**. | **FALTA** |
-| **31** | **La dedup de `plan_holders` por email oculta los viajes posteriores del mismo cliente.** El segundo plan de un titular ya registrado no crea fila, así que `plan_holders` conserva el `session_id` del **primero** y la búsqueda del dashboard solo encuentra ese. Verificado con dos planes del mismo email: la búsqueda por nombre, email y teléfono devuelve siempre la primera sesión. Corrección: relación 1:N titular→sesiones, o actualizar la fila con la sesión más reciente. | **FALTA** |
+| **30** | **El refinamiento no se persiste y el fallo se silencia.** `Supabase — Guardar Plan` es un `create`; el segundo guardado de una sesión ya existente se rechaza y `onError: continueRegularOutput` se lo traga, así que el webhook responde 200 con el plan refinado que **nunca se guardó**. Verificado: tras refinar, `travel_plans` mantiene 1 fila con `created_at == updated_at`. Viola AGENTS.md §5 (no silenciar errores) y deja el plan refinado sin copia server-side. Corrección: `upsert` por `session_id` (o insertar una revisión nueva) y **dejar de tragarse el error**. **[2026-07-30] CORREGIDO EN CÓDIGO (v40):** migración `2026-07-30_0002_travel_plans_revisiones.sql` quita el `UNIQUE` de `session_id` (cada `plan_ready` deja su fila; el nº de revisión ya viaja en `plan.revision_snapshot`) y se elimina el `onError` del nodo. **Pendiente de que infra aplique la migración.** | ✅ **RESUELTO** (verificado en vivo 2026-07-30) |
+| **31** | **La dedup de `plan_holders` por email oculta los viajes posteriores del mismo cliente.** El segundo plan de un titular ya registrado no crea fila, así que `plan_holders` conserva el `session_id` del **primero** y la búsqueda del dashboard solo encuentra ese. Verificado con dos planes del mismo email: la búsqueda por nombre, email y teléfono devuelve siempre la primera sesión. Corrección: relación 1:N titular→sesiones, o actualizar la fila con la sesión más reciente. **[2026-07-30] CORREGIDO EN CÓDIGO (v40):** migración `2026-07-30_0003_plan_holders_por_sesion.sql` sustituye `uq_plan_holders_email` por `UNIQUE (email, session_id)` → una fila por viaje, con evidencia de consentimiento por viaje. Sin cambios de código (el buscador ya deduplica). **Pendiente de que infra aplique la migración.** | ✅ **RESUELTO** (verificado en vivo 2026-07-30) |
+
+> ⚠️ **Hallazgo colateral del E2E de v40 — ventana de carrera al refinar.** Si se refina un plan
+> **inmediatamente** después de recibirlo (≈1,5 s), la RUTA B responde `Sesión no encontrada`
+> (HTTP 400): n8n vuelca el `staticData` de la sesión a su BD de forma **asíncrona**, y el
+> refinamiento lee antes de que aterrice. Con unos segundos de margen funciona (verificado: mismo
+> caso a 8 s → `revision_count: 2`). No lo causa v40 —es cómo n8n persiste `staticData`— y en la
+> UI real el usuario tarda en escribir su ajuste, pero conviene documentarlo: el frontend ya
+> maneja ese 400 como `session_expired` sin romperse, aunque el mensaje que muestra
+> ("la sesión ha caducado") es engañoso en este caso concreto. No es un problema de cumplimiento;
+> se anota aquí porque salió del mismo E2E.
 
 > **Confirmado en vivo el #13:** la respuesta cruda del webhook sigue devolviendo `_debug`,
 > `_supabase_record` y `_skip_supabase` a quien llame directo. El frontend los descarta al
 > mapear, pero la superficie expuesta por ngrok es real y ahora son dos webhooks.
+
+### 0.7 Tercera ronda de `/code-review` (2026-07-30) — diff completo de la rama
+
+Revisión del diff `master...HEAD` (80 ficheros) antes del PR, ya con la v40 publicada y las
+cuatro migraciones aplicadas. **Seis hallazgos, los seis corregidos en la misma rama**; dos son
+de cumplimiento (#32 y #34), el resto de correción funcional. Ninguno estaba en la tabla de la §1.
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| **32** | **PII del titular enviada a OpenAI en cada plan (RGPD 5.1.c / 28 / ROPA Act. 6).** `Validar Formulario` arrastra `travel_brief.holder` —nombre, teléfono y email del cliente— como passthrough para `plan_holders`, pero el `session_state` seguía hasta el prompt del planificador, que lo serializa entero (`{{ JSON.stringify($json.session_state) }}`). Contradecía la nota del propio nodo ("el planificador no lo usa"), el recorte que el frontend ya hace en `bodyForLlm` y la Actividad 6 del ROPA, que declara **Supabase como único destinatario** del titular. Sin base jurídica para esa comunicación y sin DPA que la cubra (#16). | `04_preparar_motor.js` reenvía una **copia** del `session_state` sin `holder`. Es la única entrada al motor, común a las rutas A y B. La rama de `plan_holders` no se ve afectada (lee la salida de `Validar Formulario`) y `travel_plans` nunca recibió el titular. Cubierto por asserts en `_smoketest.js`. Ver `n8n/docs/Planificador_Viajes_v40_Arquitectura.md` §7.1. | ✅ **RESUELTO y VERIFICADO EN VIVO** (plan real del 2026-07-30 con titular: su email no aparece ni en la salida de `Preparar Motor Planificador` ni en el nodo del agente de OpenAI) |
+| **33** | **El "Deshacer el ajuste" no revierte la sesión de n8n.** El deshacer recién añadido restaura el plan en el frontend, pero `Validar Output del Planificador` ya escribió el plan refinado en el `staticData` y `Cargar Sesión` parte **siempre** de ahí (ignora cualquier `current_plan` del cuerpo), así que el siguiente ajuste reaplicaba en silencio lo deshecho. | No hay arreglo posible desde el frontend (no guarda el plan crudo — D3 de la spec). Se hace **visible**: el panel avisa de la divergencia mientras dura (`refineBaseOutOfSync`) y sugiere crear un plan nuevo para partir del que se ve. El arreglo de fondo es de backend (contrato de `travel-refine`) → Rodrigo. | 🟡 **MITIGADO** (avisado, no revertido) |
+| **34** | **`/api/holders/search` era un oráculo de subcadenas sobre `plan_holders` (RGPD 32).** El endpoint autenticaba pero **no** comprobaba que los `session_id` fueran del solicitante, al contrario que `/api/refine-trip` en esta misma rama. Con prefijos crecientes ("a", "ab", "abc"…) contra un `session_id` ajeno, el booleano casa/no-casa **reconstruye el email o el teléfono del titular carácter a carácter**, aunque la respuesta solo devuelva `session_id`. Invalida el riesgo que la spec del buscador había documentado como *aceptado*. | El endpoint exige `refine_token` **por plan** y verifica cada uno contra el `uid` de la cookie (misma prueba que el refinamiento, `lib/refineToken`); descarta el resto antes de llamar a n8n, y filtra la respuesta contra los ids acreditados. Sin `REFINE_TOKEN_SECRET` responde 503 (falla cerrado). Cambio de contrato del endpoint interno (`sessions[]`), enmendado en la spec del buscador. | ✅ **RESUELTO** |
+| **35** | **El chip de India rompía el ancla geográfica de las actividades.** `New Delhi` estaba en `cityToIata` pero no en `cityToGps`, así que `destination_city_ll` salía `null` y los resultados de Maps aparecían en otra ubicación (el system prompt marca ese campo como CRÍTICO). | `'new delhi'` añadido a `cityToGps`. Verificado que **los 67 valores de chip de ciudad** resuelven ahora en las dos tablas; era el único asimétrico. Assert en `_smoketest.js`. | ✅ **RESUELTO** |
+| **36** | **Resultados de búsqueda obsoletos en el dashboard.** Si `/api/holders/search` respondía distinto de 200, el efecto salía sin limpiar `serverMatchIds`: las coincidencias de la consulta **anterior** seguían mostrándose —y contando en la fila de estadísticas— para la consulta nueva. Falso positivo silencioso. | Se limpia el conjunto también en la rama de error. | ✅ **RESUELTO** |
+| **37** | **`N8N_HOLDERS_SEARCH_WEBHOOK_URL` solo en la plantilla de la raíz.** La lee el frontend, y Next **no** lee el `.env` de la raíz: quien montara el entorno desde `frontend/.env.local.example` se quedaba sin búsqueda persistente (503) sin pista de por qué. | Añadida a `frontend/.env.local.example` con su explicación; nota en `.env.example` de que también hace falta en el frontend. | ✅ **RESUELTO** |
+
+### 0.8 Cuarta ronda de `/code-review` (2026-07-30) — sobre los arreglos de la §0.7
+
+Revisión de los dos commits propios de la rama sobre su padre. Cuatro hallazgos, **los cuatro
+corregidos**. Los dos primeros son de n8n y salieron de leer el motor de ejecución, no el grafo.
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| **38** | **Quitar el `onError` de `Supabase — Guardar Plan` (#30) hacía que se perdiera el lead del titular.** n8n recorre las ramas en **profundidad** y un nodo que falla sin `onError` hace `break`, descartando la pila pendiente. La rama del titular esperaba ahí su turno, así que un fallo del insert del plan la dejaba **sin ejecutar** — rompiendo justo lo que esa rama existía para garantizar ("que el lead se guarde aunque la planificación no llegue a `plan_ready`"). **Confirmado en la BD de n8n**, ejecución 78: `runData` no contiene `Preparar Payload Titular` y la pila al abortar era `['Supabase — Guardar Plan', 'Preparar Payload Titular']`. La prueba en vivo del runbook no lo vio porque hizo fallar los dos nodos a la vez y dio por ejecutado el segundo. | La persistencia del titular pasa a una **sub-ejecución** del mismo workflow (dos nodos nuevos, mismo id, `waitForSubWorkflow: false`), lanzada **antes** de la planificación. Aislamiento en los dos sentidos: el plan no puede matar al lead ni el lead al plan. Ver §7.3 del doc de arquitectura de v40 y **D4** de la spec de persistencia. | ✅ **RESUELTO y VERIFICADO EN VIVO** (paso 7 del runbook reejecutado: ejecución 83 `webhook`/`error` con la pila pendiente reducida a su propio nodo + ejecución 84 `integrated`/`error` con los 3 nodos del titular ejecutados; y en el camino feliz, 85/86 en `success` con 1 fila en cada tabla) |
+| **39** | **La invariante documentada estaba al revés.** El doc de arquitectura afirmaba que bajo `executionOrder: v1` el orden lo decide el **índice de la conexión** y que por eso reordenar el canvas era inocuo. Falso: las dos ramas del fan-out salen del **mismo `main[0]`** y el orden lo decide la **posición** (verificado en el comparador de `workflow-execute.js`: `y` menor primero, empate por `x` menor). Con esa creencia, el commit `707c938` ("reordena el canvas sin tocar la lógica") pudo haber hecho que un fallo de Supabase costara el plan al usuario. | §3 reescrita con la regla real y la advertencia de que **reordenar el canvas cambia el orden de ejecución**; corregida también la descripción de la prueba en vivo en el runbook. La verificación de topología comprueba ahora las dos precedencias que importan. | ✅ **RESUELTO** |
+| **40** | **El aviso de divergencia con n8n (#33) aparecía en el viaje equivocado.** `refineBaseOutOfSync` era un booleano global y `setCurrentTripById` no lo limpiaba: tras deshacer en el viaje A, el aviso salía también en el B, sin forma de quitarlo. | El estado pasa a guardar el `trip_id` afectado; el aviso solo se muestra en ese viaje. | ✅ **RESUELTO** |
+| **41** | **El guardarraíl recortado dejó de detectar un `itinerary` vacío.** Al eliminar la comparación de longitudes, `isPlaceholderItinerary` (que exige `length === 1`) no cubre el array vacío, que antes caía por longitud. | Comprobación explícita de "vacío o ausente" —no de "menos días que antes"—, con la misma justificación que la de vuelos: el mapper nunca lo devuelve vacío y la vista accede a `itinerary[0]` sin guarda. | ✅ **RESUELTO** |
+
+### 0.9 Quinta ronda de `/code-review` (2026-07-30) — pila completa contra `develop`
+
+Revisión de los 16 commits de la pila (~4,7k líneas). Cuatro hallazgos, los cuatro corregidos;
+tres son del estado de divergencia introducido en §0.8 y uno es de coherencia documental.
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| **42** | **El descarte del guardarraíl no marcaba la divergencia.** Cuando se rechaza un refinamiento incompleto, n8n **ya** lo había escrito en su `staticData` (lo hace `Validar Output del Planificador` antes de responder), pero no se marcaba `outOfSyncTripId`: se le decía al usuario "tu plan sigue intacto" —cierto solo en el navegador— y el siguiente ajuste partía del plan rechazado. Es el mismo escenario del que `undoRefine` sí avisaba. | Se marca la divergencia también al descartar, y el aviso del panel se reescribe para cubrir **las dos** vías sin mencionar cuál fue (antes decía "has deshecho un ajuste", falso en este caso). El mensaje de error deja de prometer intacto sin matices. | ✅ **RESUELTO** |
+| **43** | **Carrera al navegar durante un refinamiento.** `setCurrentTrip(refined)` corría tras un `await` de varios segundos sin comprobar que el usuario siguiera en ese viaje: cambiando de viaje a media petición, `/trip/B` pintaba el contenido del viaje A. | `setCurrentTrip` pasa a la forma funcional y solo sustituye si el viaje mostrado sigue siendo el refinado. `saveTrip` se mantiene siempre (va indexado por `trip_id`, así que persistir es correcto en cualquier caso). | ✅ **RESUELTO** |
+| **44** | **`generateTrip` borraba la divergencia de otros viajes.** Limpiaba `outOfSyncTripId` en global, deshaciendo en parte el arreglo por-viaje de #40. | Se limpia solo si el marcador es del viaje nuevo. El snapshot de deshacer sí se sigue descartando entero, y queda anotado por qué: solo se ofrece dentro del mensaje de éxito del panel, que muere al salir de la pantalla. | ✅ **RESUELTO** |
+| **45** | **Dos celdas de la Actividad 6 del ROPA se contradecían**: una daba el job `purge_plan_holders_24m` por activo y **verificado en `cron.job`** (lo que exige acceso SQL) y la de al lado seguía diciendo que la migración que crea la RLS estaba **pendiente de aplicar por infra**. En un artefacto de cumplimiento, una de las dos sobra. | Se elimina la contradicción con lo que **sí** consta (tabla en uso, escritura por `service_role` verificada el 2026-07-30, dedup de la 0003 en vigor, job verificado por SQL ese día) y se deja explícito lo que **no** se puede verificar desde el repo: el flag de RLS no es legible por REST y el `.env` local no tiene clave `anon`. El **A VERIFICAR** se cerró el mismo día: `SELECT relrowsecurity FROM pg_class WHERE relname = 'plan_holders'` → **`true`** (Enrique, SQL Editor de Supabase). La RLS de `plan_holders` está **aplicada y verificada**; no confundir con `travel_plans`, que sigue **sin** RLS por decisión del equipo (#8/#9). | ✅ **RESUELTO y VERIFICADO** |
+
+> **Revisado y sin hallazgo** en esta quinta ronda: el diseño de la prueba de propiedad, el
+> contrato nuevo de `holders/search`, `withRefreshedDates` y la topología de la sub-ejecución del
+> titular. Verificado además que la extracción de `lib/n8nPlan.ts` es un movimiento fiel (las
+> únicas adiciones de comportamiento son `session_id` en el viaje mapeado, las constantes de
+> relleno compartidas y `ensureWarnings`), que `requireSession` es equivalente a los chequeos que
+> sustituye, y que los 12 Code nodes coinciden byte a byte con el `jsCode` incrustado en la v40.
+
+> **Revisado y sin hallazgo** en la cuarta ronda (§0.8): la comprobación de propiedad de
+> `/api/holders/search` (incluido el filtro final contra los ids acreditados), los type guards y el
+> rechazo de `changeme` en `verifyRefineToken`, la guarda de fechas incoherentes de
+> `withRefreshedDates`, el strip de PII de `04_preparar_motor.js` (ningún prompt vuelve a ver el
+> `holder` y la rama de `plan_holders` sigue leyendo `Validar Formulario`) y las tres migraciones
+> SQL (idempotentes; `session_id` es `NOT NULL`, así que el UNIQUE parcial `(email, session_id)`
+> deduplica de verdad).
+
+> **Revisado y sin hallazgo** en la tercera ronda (§0.7): el HMAC de `refineToken` (falla cerrado con
+> `changeme`, comparación en tiempo constante, con type guards), la guarda de fechas incoherentes
+> de `withRefreshedDates`, el guardarraíl de no-regresión ya recortado del refinamiento, las
+> ventanas de negación de `sensitiveData`, el round-trip de los 12 Code nodes y la eliminación del
+> `onError` en los dos nodos de Supabase (respaldada por la prueba en vivo de §3 del doc de
+> arquitectura: la respuesta sale antes de la rama de persistencia).
 
 ---
 
@@ -231,7 +328,7 @@ largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo*
 | 12 | **RGPD 25/32 – protección de `/results` por middleware** | Matcher del proxy = `['/dashboard','/planner','/trip']` en `frontend/src/proxy.ts:30-32` → **`/results` NO está protegido** | **PARCIAL** | `/results` no pasa por el proxy. Mitigante: `/results` no lee datos de servidor, se hidrata desde `TripContext`/localStorage cliente (`frontend/src/app/results/page.tsx:20-31`) y `/api/plan-trip` sí exige sesión (`route.ts:994-1013`). Aun así, añadir `/results` al matcher por coherencia. |
 | 13 | **RGPD 32 – fuga de `_debug`/`_supabase_record`** | Responder n8n: `responseBody = JSON.stringify($json)` en `n8n/workflows/Planificador_de_Viajes_v38.json:342-343`; el nodo previo "Preparar Payload Supabase" alimenta **a la vez** al Responder y a Supabase (`…v38.json:769-783`); añade `_supabase_record`/`_skip_supabase` (`n8n/nodes-code/08_preparar_payload_supabase.js:42-46`) y `_debug` (`n8n/nodes-code/07_logger_metricas.js:24-35`) | **FALTA** | La respuesta del webhook devuelve campos internos: `_debug` (métricas), `_supabase_record` (copia exacta del registro persistido), `_skip_supabase`, y `session_state`/`travel_brief`. El frontend remapea a `TripData` limpio (`route.ts:504-991`), pero **quien llame directo al webhook (expuesto por ngrok) recibe todo**. Corrección: en `…v38.json:343` serializar solo los campos públicos del plan, o insertar un nodo "sanitize" que borre `_*`, `session_state`, `travel_brief` antes de responder. **[2026-07-23]** El nuevo webhook `travel-refine` (RUTA B, §0.3) comparte este patrón → aplicar el saneo a **ambos** webhooks. |
 | 14 | **RGPD 25/32 – tests** | No hay suite automatizada; solo `n8n/nodes-code/_smoketest.js` y `frontend/test-frontend.ps1` (scripts manuales); `verify.ps1` hace tsc+lint | **PARCIAL** | Sin tests de la lógica de mapeo/auth/sanitización, un cambio puede reintroducir la fuga (#13). Añadir tests unitarios de `/api/plan-trip` (auth, sanitize) y de los nodos code. |
-| 15 | **RGPD 25/32 – migraciones/DDL versionadas** | `git ls-files` no devuelve ningún `.sql`/migración; el esquema solo se describe en prosa (`n8n/docs/Planificador_Viajes_v38_Arquitectura.md:392`) | **FALTA** | El esquema de `travel_plans` (incl. RLS) no está versionado. Crear `supabase/migrations/*.sql` con la DDL y las políticas RLS. |
+| 15 | **RGPD 25/32 – migraciones/DDL versionadas** | `git ls-files` no devuelve ningún `.sql`/migración; el esquema solo se describe en prosa (`n8n/docs/Planificador_Viajes_v38_Arquitectura.md:392`) | **FALTA** | El esquema de `travel_plans` (incl. RLS) no está versionado. Crear `supabase/migrations/*.sql` con la DDL y las políticas RLS. **[2026-07-23]** Cerrado para `plan_holders` (`2026-07-23_0001_plan_holders.sql`). **[2026-07-30]** Cerrado para `travel_plans` (`2026-07-30_0002_travel_plans_revisiones.sql`): su DDL deja de vivir solo en prosa de un doc archivado. Las **políticas RLS** siguen fuera a propósito (ver #8/#9, decisión del equipo), así que el hallazgo queda **PARCIAL** por esa parte, no por el DDL. |
 | 16 | **RGPD 28 – DPA con encargados** | `frontend/src/app/privacy/page.tsx:79-92` los llama "encargados"; **ningún DPA en el repo** | **FALTA** | No hay contrato/registro de DPA con OpenAI, Anthropic, Supabase, SerpAPI, Tavily, Google. Recopilar y registrar (Artefacto 4). |
 | 17 | **RGPD 30 – ROPA/RAT** | Sin evidencia | **FALTA** | No existe ROPA. Crear (Artefacto 2). |
 | 18 | **RGPD 35 – EIPD** | Sin evidencia | **FALTA (procede)** | Concurren **nuevas tecnologías (LLM)**, posible art. 9 (#4) y **transferencias a EEUU** (#19) → EIPD recomendable. Redactar (Artefacto 3). **A VERIFICAR** contra la lista de la AEPD de tratamientos que requieren EIPD. |

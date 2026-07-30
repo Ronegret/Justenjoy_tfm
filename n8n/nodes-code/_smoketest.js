@@ -54,10 +54,63 @@ console.log('  destination_city_ll:', b.destination_city_ll);
 console.log('  destination_airport_name:', b.destination_airport_name);
 
 // Asserts minimos
-const ok =
+const okCadena =
   b.origin_city_iata === 'AMS' &&
   b.destination_city_iata === 'CDG' &&
   b.destination_city_ll === '@48.8566,2.3522,15z' &&
   b.destination_airport_name === 'Paris Charles de Gaulle Airport';
+
+// 4) El titular (PII) NO puede llegar al motor planificador
+// El prompt del agente serializa entero el session_state que sale de Preparar
+// Motor, asi que un holder ahi acaba en OpenAI. Debe sobrevivir en la salida de
+// Validar Formulario (lo necesita la rama de plan_holders) y desaparecer en la de
+// Preparar Motor. Se inyecta aqui y no en examples/input-formulario.json para no
+// meter datos de contacto en un fichero de ejemplo.
+const inputConTitular = {
+  ...input,
+  holder: {
+    first_name: 'Test',
+    last_name: 'Titular',
+    phone: '+34600000000',
+    email: 'titular@example.com',
+    consent_at: '2026-07-30T10:00:00.000Z',
+    consent_version: 'v1'
+  }
+};
+const val = runNode('01_validar_formulario.js', inputConTitular)[0].json;
+const motor = runNode('04_preparar_motor.js', val)[0].json;
+const holderEnValidar = val.session_state.travel_brief.holder;
+const serializadoMotor = JSON.stringify(motor);
+console.log('\n== Titular (PII) ==');
+console.log('  pasa por Validar Formulario (plan_holders):', !!holderEnValidar);
+console.log('  presente en session_state de Preparar Motor:', 'holder' in motor.session_state.travel_brief);
+console.log('  aparece el email en TODA la salida del motor:', serializadoMotor.includes('titular@example.com'));
+const okTitular =
+  !!holderEnValidar &&
+  !('holder' in motor.session_state.travel_brief) &&
+  !('holder' in motor.travel_brief) &&
+  !serializadoMotor.includes('titular@example.com');
+
+// 5) 'New Delhi' (valor del chip de India) resuelve IATA **y** GPS
+// Estaba solo en cityToIata: el ll salia null y la busqueda de actividades perdia
+// el ancla que el system prompt marca como CRITICA.
+const inputDelhi = { ...input, destination_city: ['New Delhi'] };
+const delhi = runNode(
+  '05_convertir_iata.js',
+  runNode('04_preparar_motor.js', runNode('01_validar_formulario.js', inputDelhi)[0].json)[0].json
+)[0].json.session_state.travel_brief;
+console.log('\n== New Delhi ==');
+console.log('  destination_city_iata:', delhi.destination_city_iata);
+console.log('  destination_city_ll:', delhi.destination_city_ll);
+const okDelhi =
+  delhi.destination_city_iata === 'DEL' &&
+  delhi.destination_city_ll === '@28.6139,77.2090,15z';
+
+const ok = okCadena && okTitular && okDelhi;
 console.log('\nRESULTADO:', ok ? 'PASS' : 'FAIL');
+if (!ok) {
+  console.log('  cadena IATA:', okCadena ? 'PASS' : 'FAIL');
+  console.log('  titular fuera del motor:', okTitular ? 'PASS' : 'FAIL');
+  console.log('  New Delhi:', okDelhi ? 'PASS' : 'FAIL');
+}
 process.exit(ok ? 0 : 1);
