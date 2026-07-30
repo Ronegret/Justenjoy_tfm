@@ -38,6 +38,11 @@ export type GenerateTripResult =
  * y el hallazgo #4 de `docs/auditoria-cumplimiento-legal-seguridad.md`.
  */
 export type RefineTripResult =
+  // Ningún estado distinto de `ok` deja el plan a medias: en todos ellos se
+  // conserva intacto el plan mostrado. Y revertir un `ok` no se modela aquí — el
+  // plan previo lo guarda `TripContext`, que expone `canUndoRefine`/`undoRefine`
+  // (deshacer de un paso, solo en memoria; ver la enmienda de alcance en
+  // docs/specs/2026-07-23-refinamiento-plan-frontend.md).
   | { status: 'ok'; tripId: string }
   | { status: 'needs_user_input'; warnings: N8nWarning[] }
   | { status: 'session_expired' }

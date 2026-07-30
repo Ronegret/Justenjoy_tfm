@@ -16,6 +16,13 @@ interface TripContextType {
   activeLoadingStep: number;
   generateTrip: (prefs: TripPreferences) => Promise<GenerateTripResult>;
   refineTrip: (feedbackText: string) => Promise<RefineTripResult>;
+  /** ¿Hay un plan previo al último refinamiento al que volver? (ver `undoRefine`) */
+  canUndoRefine: boolean;
+  /**
+   * Restaura el plan tal y como estaba ANTES del último refinamiento. Devuelve
+   * `false` si no hay nada que deshacer. Un solo paso: no es un historial.
+   */
+  undoRefine: () => boolean;
   saveTrip: (trip: TripData) => void;
   deleteTrip: (id: string) => void;
   setCurrentTripById: (id: string) => boolean;
@@ -38,6 +45,12 @@ const LOADING_STEPS = [
 export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [savedTrips, setSavedTrips] = useState<TripData[]>([]);
   const [currentTrip, setCurrentTrip] = useState<TripData | null>(null);
+  // Copia del plan tal y como estaba antes del último refinamiento, para poder
+  // deshacerlo. Vive SOLO en memoria (no se serializa a localStorage) por dos
+  // razones: el snapshot conserva el `holder`, que es PII y por diseño no se
+  // guarda en el navegador (ver `stripHolderForStorage`), y deshacer solo tiene
+  // sentido dentro de la misma sesión, justo después de ver el resultado.
+  const [previousTrip, setPreviousTrip] = useState<TripData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -203,6 +216,8 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (customizedTrip) {
       saveTrip(customizedTrip);
       setCurrentTrip(customizedTrip);
+      // Plan nuevo: el "deshacer el ajuste" del plan anterior ya no aplica.
+      setPreviousTrip(null);
     }
     setIsLoading(false);
     return { status: 'ok', tripId: generatedId };
@@ -279,18 +294,31 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { status: 'error', message: data?.message || 'No se pudo refinar el plan.' };
       }
 
-      // Guardarraíl de no-regresión. El refinamiento re-ejecuta SOLO los pasos
-      // afectados, así que si la respuesta pierde bloques que el plan actual sí
-      // tenía (p. ej. vuelve solo con hoteles y sin vuelos), no es un plan mejor:
-      // es una respuesta incompleta. Como `saveTrip` sobrescribe en sitio y no hay
-      // deshacer, se descarta y se conserva el plan bueno.
-      // OJO: no basta con mirar `length`. El mapper NUNCA devuelve `hotels` ni
-      // `itinerary` vacíos: cuando n8n no trae hotel o días, mete un RELLENO
-      // (hotel "pendiente de confirmar", un día genérico) para que la vista no
-      // reviente. Comparar longitudes solo detectaría la pérdida de vuelos, y un
-      // refinamiento que perdiera el hotel sobrescribiría uno real con el
-      // placeholder de 0 €/0★ sin que nadie lo notase. Por eso se compara contra
-      // los marcadores compartidos (`lib/planPlaceholders`).
+      // Guardarraíl de no-regresión, deliberadamente MÍNIMO. Solo frena los casos
+      // INEQUÍVOCOS de respuesta vacía; del resto decide el usuario, que ahora
+      // puede revertir el refinamiento con `undoRefine`.
+      //
+      // Antes también se comparaba el nº de días del itinerario (usando el rango
+      // de fechas como árbitro) para detectar un truncamiento de n8n. Se ha
+      // eliminado: era simultáneamente demasiado laxo y demasiado estricto y no
+      // tiene arreglo, porque "junta el día 3 y el 4" y "n8n truncó el JSON"
+      // llegan al frontend con la MISMA forma (menos días) y ningún dato los
+      // distingue: el truncamiento real también reescribe las fechas, así que
+      // el árbitro tampoco servía. Resultado: rechazaba ajustes legítimos con un
+      // "llegó incompleto" que nunca se podía superar reintentando, y aun así se
+      // le escapaba el truncamiento de verdad. Ver la enmienda de alcance en
+      // docs/specs/2026-07-23-refinamiento-plan-frontend.md.
+      //
+      // Lo que SÍ queda, porque no admite lectura alternativa:
+      //  - Relleno donde había dato real. El mapper NUNCA devuelve `hotels` ni
+      //    `itinerary` vacíos: cuando n8n no trae hotel o días, mete un RELLENO
+      //    (hotel "pendiente de confirmar", un día genérico) para que la vista no
+      //    reviente. Sin esta comprobación, perder el hotel lo sustituiría por el
+      //    placeholder de 0 €/0★ sin que nadie lo notase. Se comparan los
+      //    marcadores compartidos (`lib/planPlaceholders`).
+      //  - Cero vuelos. Aquí no hay relleno equivalente (`mapN8nToTripData` deja
+      //    el array vacío), y la vista del viaje accede a `flights[0]` sin
+      //    guarda: aceptarlo rompería la página, no solo la empeoraría.
       const refinedTrip = data.trip as TripData;
       const teniaHotelReal = trip.hotels?.some((h) => !isPlaceholderHotel(h)) ?? false;
       const conservaHotelReal = refinedTrip.hotels?.some((h) => !isPlaceholderHotel(h)) ?? false;
@@ -302,20 +330,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (teniaHotelReal && !conservaHotelReal) {
         lost.push('hotel');
       }
-      // Itinerario: dos formas de perderlo. La obvia es que vuelva el día de
-      // relleno. La sutil es que vuelvan MENOS días de los que había — un viaje
-      // de 10 días que regresa con 2. Eso solo es sospechoso si el refinamiento
-      // NO acortó el viaje: si el usuario pidió "recórtalo a 3 días", tener menos
-      // días es justo lo que pidió. Se usa el rango de fechas como árbitro.
-      const mismasFechas =
-        trip.user_preferences?.dates?.start === refinedTrip.user_preferences?.dates?.start &&
-        trip.user_preferences?.dates?.end === refinedTrip.user_preferences?.dates?.end;
-      const perdioDias =
-        mismasFechas && (refinedTrip.itinerary?.length ?? 0) < (trip.itinerary?.length ?? 0);
-      if (
-        (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) ||
-        perdioDias
-      ) {
+      if (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) {
         lost.push('itinerario');
       }
       if (lost.length > 0) {
@@ -344,6 +359,10 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refined.user_preferences = { ...refined.user_preferences, holder: trip.user_preferences.holder };
       }
 
+      // Antes de sobrescribir, se guarda el plan que se va a reemplazar para que
+      // el usuario pueda deshacer el ajuste si no le convence. `trip` sigue en
+      // memoria intacto (incluido el `holder`), así que no hay que releer nada.
+      setPreviousTrip(trip);
       saveTrip(refined);
       setCurrentTrip(refined);
       return { status: 'ok', tripId: refined.trip_id };
@@ -351,6 +370,22 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('refineTrip failed:', error);
       return { status: 'error', message: 'No se pudo contactar con el servicio de refinamiento. Inténtalo de nuevo.' };
     }
+  };
+
+  // Solo se puede deshacer sobre el MISMO viaje que se refinó: si el usuario
+  // navega a otro plan, el snapshot deja de ofrecerse (restaurarlo ahí crearía
+  // una copia del viaje viejo pisando el que se está viendo).
+  const canUndoRefine = previousTrip !== null && previousTrip.trip_id === currentTrip?.trip_id;
+
+  // Deshacer el ajuste: devuelve el plan al estado anterior al último
+  // refinamiento, tanto en pantalla como en localStorage. Un solo paso; tras
+  // usarlo no hay nada que deshacer (ni rehacer).
+  const undoRefine = (): boolean => {
+    if (!canUndoRefine || !previousTrip) return false;
+    saveTrip(previousTrip);
+    setCurrentTrip(previousTrip);
+    setPreviousTrip(null);
+    return true;
   };
 
   return (
@@ -364,6 +399,8 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeLoadingStep,
         generateTrip,
         refineTrip,
+        canUndoRefine,
+        undoRefine,
         saveTrip,
         deleteTrip,
         setCurrentTripById
