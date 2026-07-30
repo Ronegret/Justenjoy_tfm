@@ -196,8 +196,16 @@ Ejecutados **todos los comportamientos de los tres webhooks** contra la instanci
 punta y se **cierran dos bugs** que seguían anotados como abiertos (truncamiento en viajes
 largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo**:
 
-> **Actualización 2026-07-30 — corregidos en la rama `fix/persistencia-revisiones-y-titular`
-> (workflow v40), PENDIENTES DE APLICAR POR INFRA.** El arreglo son dos migraciones SQL +
+> ✅ **RESUELTOS Y VERIFICADOS EN VIVO el 2026-07-30** (rama `fix/persistencia-revisiones-y-titular`,
+> workflow v40 publicado y las dos migraciones aplicadas en Supabase).
+>
+> **Evidencia #30:** plan + refinamiento sobre la misma sesión → **2 filas** en `travel_plans`,
+> con `plan.revision_snapshot` 0 y 2, y coste 1165 → 289 USD. Antes: 1 fila.
+> **Evidencia #31:** dos viajes del mismo titular (`marta.lopez.v40@example.com`, Lisboa y Oporto)
+> → **2 filas** en `plan_holders`, y `holders-search` devuelve **ambos** `session_id` buscando por
+> nombre y por email. Antes: 1 fila y solo la primera sesión.
+>
+> _(Redacción previa, ya superada: corregidos en la rama, pendientes de aplicar por infra.)_ El arreglo son dos migraciones SQL +
 > quitar el `onError` de los dos nodos de escritura; ver
 > [spec](specs/2026-07-30-persistencia-revisiones-y-titular-por-sesion.md) y
 > [runbook](runbooks/2026-07-30-activacion-v40-revisiones.md). El DDL **no se puede aplicar por
@@ -207,8 +215,18 @@ largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo*
 
 | # | Hallazgo | Estado |
 |---|---|---|
-| **30** | **El refinamiento no se persiste y el fallo se silencia.** `Supabase — Guardar Plan` es un `create`; el segundo guardado de una sesión ya existente se rechaza y `onError: continueRegularOutput` se lo traga, así que el webhook responde 200 con el plan refinado que **nunca se guardó**. Verificado: tras refinar, `travel_plans` mantiene 1 fila con `created_at == updated_at`. Viola AGENTS.md §5 (no silenciar errores) y deja el plan refinado sin copia server-side. Corrección: `upsert` por `session_id` (o insertar una revisión nueva) y **dejar de tragarse el error**. **[2026-07-30] CORREGIDO EN CÓDIGO (v40):** migración `2026-07-30_0002_travel_plans_revisiones.sql` quita el `UNIQUE` de `session_id` (cada `plan_ready` deja su fila; el nº de revisión ya viaja en `plan.revision_snapshot`) y se elimina el `onError` del nodo. **Pendiente de que infra aplique la migración.** | 🟡 **CORREGIDO, sin aplicar** |
-| **31** | **La dedup de `plan_holders` por email oculta los viajes posteriores del mismo cliente.** El segundo plan de un titular ya registrado no crea fila, así que `plan_holders` conserva el `session_id` del **primero** y la búsqueda del dashboard solo encuentra ese. Verificado con dos planes del mismo email: la búsqueda por nombre, email y teléfono devuelve siempre la primera sesión. Corrección: relación 1:N titular→sesiones, o actualizar la fila con la sesión más reciente. **[2026-07-30] CORREGIDO EN CÓDIGO (v40):** migración `2026-07-30_0003_plan_holders_por_sesion.sql` sustituye `uq_plan_holders_email` por `UNIQUE (email, session_id)` → una fila por viaje, con evidencia de consentimiento por viaje. Sin cambios de código (el buscador ya deduplica). **Pendiente de que infra aplique la migración.** | 🟡 **CORREGIDO, sin aplicar** |
+| **30** | **El refinamiento no se persiste y el fallo se silencia.** `Supabase — Guardar Plan` es un `create`; el segundo guardado de una sesión ya existente se rechaza y `onError: continueRegularOutput` se lo traga, así que el webhook responde 200 con el plan refinado que **nunca se guardó**. Verificado: tras refinar, `travel_plans` mantiene 1 fila con `created_at == updated_at`. Viola AGENTS.md §5 (no silenciar errores) y deja el plan refinado sin copia server-side. Corrección: `upsert` por `session_id` (o insertar una revisión nueva) y **dejar de tragarse el error**. **[2026-07-30] CORREGIDO EN CÓDIGO (v40):** migración `2026-07-30_0002_travel_plans_revisiones.sql` quita el `UNIQUE` de `session_id` (cada `plan_ready` deja su fila; el nº de revisión ya viaja en `plan.revision_snapshot`) y se elimina el `onError` del nodo. **Pendiente de que infra aplique la migración.** | ✅ **RESUELTO** (verificado en vivo 2026-07-30) |
+| **31** | **La dedup de `plan_holders` por email oculta los viajes posteriores del mismo cliente.** El segundo plan de un titular ya registrado no crea fila, así que `plan_holders` conserva el `session_id` del **primero** y la búsqueda del dashboard solo encuentra ese. Verificado con dos planes del mismo email: la búsqueda por nombre, email y teléfono devuelve siempre la primera sesión. Corrección: relación 1:N titular→sesiones, o actualizar la fila con la sesión más reciente. **[2026-07-30] CORREGIDO EN CÓDIGO (v40):** migración `2026-07-30_0003_plan_holders_por_sesion.sql` sustituye `uq_plan_holders_email` por `UNIQUE (email, session_id)` → una fila por viaje, con evidencia de consentimiento por viaje. Sin cambios de código (el buscador ya deduplica). **Pendiente de que infra aplique la migración.** | ✅ **RESUELTO** (verificado en vivo 2026-07-30) |
+
+> ⚠️ **Hallazgo colateral del E2E de v40 — ventana de carrera al refinar.** Si se refina un plan
+> **inmediatamente** después de recibirlo (≈1,5 s), la RUTA B responde `Sesión no encontrada`
+> (HTTP 400): n8n vuelca el `staticData` de la sesión a su BD de forma **asíncrona**, y el
+> refinamiento lee antes de que aterrice. Con unos segundos de margen funciona (verificado: mismo
+> caso a 8 s → `revision_count: 2`). No lo causa v40 —es cómo n8n persiste `staticData`— y en la
+> UI real el usuario tarda en escribir su ajuste, pero conviene documentarlo: el frontend ya
+> maneja ese 400 como `session_expired` sin romperse, aunque el mensaje que muestra
+> ("la sesión ha caducado") es engañoso en este caso concreto. No es un problema de cumplimiento;
+> se anota aquí porque salió del mismo E2E.
 
 > **Confirmado en vivo el #13:** la respuesta cruda del webhook sigue devolviendo `_debug`,
 > `_supabase_record` y `_skip_supabase` a quien llame directo. El frontend los descarta al

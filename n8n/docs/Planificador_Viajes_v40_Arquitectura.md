@@ -106,6 +106,19 @@ errores— fallaría ruidosamente en cada refinamiento contra el `UNIQUE` todav�
 Procedimiento completo en
 [`../../docs/runbooks/2026-07-30-activacion-v40-revisiones.md`](../../docs/runbooks/2026-07-30-activacion-v40-revisiones.md).
 
+## §5.1 — Ventana de carrera al refinar (comportamiento de n8n, no de v40)
+
+Detectado en el E2E de v40: refinar un plan **~1,5 s** después de recibirlo devuelve
+`Sesión no encontrada` (HTTP 400). n8n vuelca el `staticData` de la sesión a su base de datos
+de forma **asíncrona** al terminar la ejecución, y el refinamiento —que lo lee de ahí— llega
+antes. Con unos segundos de margen funciona (verificado: el mismo caso a 8 s devolvió
+`revision_count: 2`).
+
+No lo introduce v40 y no tiene arreglo desde el workflow. En la UI real el usuario tarda en
+escribir su ajuste, así que es difícil de alcanzar; y si ocurre, el frontend ya trata ese 400
+como `session_expired` y conserva el plan intacto. El único matiz es que el mensaje
+("la sesión ha caducado") no describe bien esta situación concreta.
+
 ## §6 — Lo que NO cambia
 
 Contrato de los webhooks (entradas y salidas), Code nodes, motor planificador, rutas A/B,
