@@ -64,6 +64,14 @@ No se pueden por REST (son DDL). En el **SQL Editor de Supabase** (o `psql`), en
 
 Ambas son idempotentes; se pueden reejecutar sin efecto.
 
+3. `supabase/migrations/2026-07-30_0004_travel_plans_retencion_24m.sql` — conservación a
+   **24 meses** por `created_at` + job `pg_cron` mensual (`purge_travel_plans_24m`). Decidido el
+   2026-07-30. Requiere la extensión `pg_cron` habilitada; verificar después con:
+   `SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'purge_%';` → deben salir
+   los dos jobs, el de `plan_holders` y el de `travel_plans`.
+
+> La 0004 **no** condiciona la publicación de la v40: se puede aplicar antes o después.
+
 ## 3. Verificar el esquema por REST (antes de tocar n8n)
 ```bash
 HOST="tu-proyecto.supabase.co"          # = SUPABASE_HOST sin https://
@@ -152,6 +160,7 @@ de ahora un fallo de persistencia es visible en vez de desaparecer.
 - [ ] Credencial verificada como `service_role`
 - [ ] Migración 0002 aplicada
 - [ ] Migración 0003 aplicada
+- [ ] Migración 0004 aplicada y job `purge_travel_plans_24m` visible en `cron.job`
 - [ ] Esquema verificado por REST (dos inserts con el mismo `session_id` → 201/201) y basura borrada
 - [ ] v40 publicada, 3 webhooks visibles, nombre "— v40"
 - [ ] Humo #30: 2 filas tras refinar

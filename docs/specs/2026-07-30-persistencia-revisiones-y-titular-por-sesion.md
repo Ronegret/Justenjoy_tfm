@@ -49,7 +49,8 @@ Los dos comparten causa: **un `UNIQUE` que el workflow trata como si no existier
 - **No** activa RLS en `travel_plans`: hay decisión explícita del equipo de dejarla sin RLS
   (gaps #8/#9, abiertos a propósito). Esta spec no la contradice.
 - **No** añade columnas: ver la restricción de compatibilidad de abajo.
-- **No** programa el borrado por retención. Se documenta el hueco (ver riesgos), no se decide.
+- **No** deja el borrado por retención sin decidir: el plazo de la Actividad 3 se cierra en
+  **24 meses** (ver riesgos) y se agenda por `pg_cron` en la migración 0004.
 - **No** cambia el contrato de los webhooks ni la respuesta al cliente.
 
 ## Decisiones
@@ -78,11 +79,11 @@ columnas, y **no escribe en `plan_holders`**.
   revés, la v40 ya sin `onError` fallaría ruidosamente en cada refinamiento. Lo fija el runbook.
 - **La BD es compartida** por el equipo: la migración se aplica una vez y la ven los tres,
   corran v38 o v40. Por eso el SQL es idempotente.
-- **Volumen y retención.** Con revisiones, un plan muy refinado guarda N copias del `plan`
-  jsonb, que según el ROPA puede reflejar indirectamente categorías del art. 9. El plazo de
-  supresión de la Actividad 3 está literalmente en `[COMPLETAR]`. Se propone alinearlo con los
-  **24 meses** de `plan_holders`, pero **queda pendiente de firma del equipo**: es decisión
-  legal, no técnica.
+- **Volumen y retención — RESUELTO el 2026-07-30.** Con revisiones, un plan muy refinado guarda
+  N copias del `plan` jsonb, que según el ROPA puede reflejar indirectamente categorías del
+  art. 9, y el plazo de la Actividad 3 estaba en `[COMPLETAR]`. **Decidido: 24 meses desde
+  `created_at`**, igual que `plan_holders`, con job `pg_cron` mensual
+  (`2026-07-30_0004_travel_plans_retencion_24m.sql`). Cada revisión caduca por separado.
 - **Más PII retenida por persona** (#31): una fila de titular por viaje en vez de una por
   persona. Contrapartida aceptada a cambio de la evidencia de consentimiento por viaje; hay que
   reflejarlo en el ROPA.
@@ -92,8 +93,9 @@ columnas, y **no escribe en `plan_holders`**.
 
 ## Ficheros que toca
 
-- `supabase/migrations/2026-07-30_0002_travel_plans_revisiones.sql` y
-  `2026-07-30_0003_plan_holders_por_sesion.sql` (nuevos) + el índice del `README.md`.
+- `supabase/migrations/2026-07-30_0002_travel_plans_revisiones.sql`,
+  `2026-07-30_0003_plan_holders_por_sesion.sql` y `2026-07-30_0004_travel_plans_retencion_24m.sql`
+  (nuevos) + el índice del `README.md`.
 - `n8n/workflows/Planificador_de_Viajes_v40.json` (nuevo) y v39 → `archive/`.
 - Arrastre de la subida de versión: `docker-compose.yml` (ruta hardcodeada del import),
   `n8n/nodes-code/_inject.py`, `n8n/nodes-code/README.md`, `n8n/workflows/archive/README.md`,
