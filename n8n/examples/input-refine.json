@@ -1,0 +1,5 @@
+{
+  "_comment": "Entrada del webhook de REFINAMIENTO POST /webhook/travel-refine tal y como la envía el frontend. El endpoint autenticado /api/refine-trip (server-side) reenvía este cuerpo cuando el usuario escribe un ajuste en texto libre desde la página de detalle del viaje /trip/[id]. n8n reconstruye el plan actual desde su memoria interna indexada por session_id (nodo 'Cargar Sesión'), así que el frontend NO envía current_plan (la webhook lo admite opcionalmente, pero la memoria de n8n es la fuente de verdad). La salida es un plan con el mismo esquema que la RUTA A y revision_count incrementado; ver n8n/examples/output-plan-v39-e2e-refinamiento.json. Ver docs/ARCHITECTURE.md §Refinamiento y n8n/docs/Planificador_Viajes_v34_Arquitectura.md §10.",
+  "session_id": "session_1758000000000_abc123def",
+  "feedback_text": "Hazlo más barato: prefiero un hotel algo más sencillo y menos actividades de pago."
+}
