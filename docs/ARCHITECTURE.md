@@ -187,6 +187,23 @@ reconstruye desde su memoria. Env `N8N_REFINE_WEBHOOK_URL`.
 > jurídica de la política de privacidad (no la sustituye). Ver hallazgo #4 de
 > `docs/auditoria-cumplimiento-legal-seguridad.md`.
 
+> 🔒 **Prueba de propiedad del plan.** Autenticar no basta: el `session_id` lo
+> aporta el cliente, así que sin más comprobación cualquier usuario con cuenta
+> podría refinar —y por tanto **leer entero**— el plan de otra persona con solo
+> conocer su `session_id`. Al crear el plan, `/api/plan-trip` firma el par
+> (`uid` de Firebase, `session_id`) con HMAC-SHA256 y `REFINE_TOKEN_SECRET`
+> (server-only) y devuelve la firma como `refine_token` dentro de `TripData`;
+> `/api/refine-trip` la recalcula con el `uid` de la cookie y rechaza con
+> `not_refinable` si no casa. El token no contiene datos —solo prueba la
+> asociación— y es inútil desde otra cuenta. **Falla cerrado:** sin secreto
+> configurado no se emiten tokens y el refinamiento queda deshabilitado. Los
+> planes guardados antes de esta medida no llevan token y hay que recrearlos.
+> Ver `frontend/src/lib/refineToken.ts`.
+
+**Nota:** el `refine_token` viaja solo entre el navegador y `/api/refine-trip`;
+a n8n se le sigue enviando únicamente `{ session_id, feedback_text }`, así que el
+contrato del webhook no cambia.
+
 Ejemplos: `n8n/examples/input-refine.json` (entrada desde el frontend) /
 `output-plan-v39-e2e-refinamiento.json` (salida real, `revision_count: 2`).
 

@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/requireSession';
 import { TripPreferences } from '@/types/trip';
 import { isUnusableN8nPlan, mapN8nToTripData, getErrorMessage, ensureWarnings, type N8nResponse } from '@/lib/n8nPlan';
 import { scanForSpecialCategoryData } from '@/lib/sensitiveData';
+import { isRefineTokenConfigured, verifyRefineToken } from '@/lib/refineToken';
 
 // Ruta interna de REFINAMIENTO (RUTA B de n8n, webhook `travel-refine`).
 //
@@ -25,6 +26,9 @@ interface RefineRequestBody {
   // el mismo `mapN8nToTripData` (origen/destino/fechas/viajeros y cálculo de
   // presupuesto salen de aquí). Viajan desde el viaje mostrado en el frontend.
   user_preferences?: TripPreferences;
+  // Firma que acredita que este `session_id` pertenece al usuario autenticado.
+  // La emite /api/plan-trip al crear el plan (ver lib/refineToken).
+  refine_token?: string;
 }
 
 // Tope de longitud del texto de refinamiento. Es una instrucción de ajuste, no un
@@ -77,17 +81,35 @@ function withRefreshedDates(prefs: TripPreferences, rawData: N8nResponse): TripP
 
 export async function POST(req: NextRequest) {
   // Autenticación obligatoria: mismo gate que /api/plan-trip.
-  const authError = await requireSession(req, 'refine-trip');
-  if (authError) return authError;
+  const session = await requireSession(req, 'refine-trip');
+  if (session.error) return session.error;
 
   try {
     const body: RefineRequestBody = await req.json();
-    const { session_id, feedback_text, user_preferences } = body;
+    const { session_id, feedback_text, user_preferences, refine_token } = body;
 
     // Sin `session_id` real de n8n no hay nada que refinar (planes de fallback).
     // El frontend ya oculta el control en ese caso; esto es defensa en profundidad.
     if (!session_id) {
       return NextResponse.json({ status: 'session_expired' });
+    }
+
+    // PROPIEDAD del plan. Autenticar no basta: el `session_id` lo aporta el
+    // cliente, así que sin esto cualquier usuario con cuenta podría refinar —y
+    // por tanto leer entero— el plan de otra persona. El token acredita que este
+    // `session_id` se emitió para este `uid` (ver lib/refineToken).
+    if (!isRefineTokenConfigured()) {
+      // Falla cerrado: sin secreto no se puede acreditar nada, y refinar sin
+      // comprobar propiedad es justo el agujero que esto cierra.
+      console.error('[refine-trip] REFINE_TOKEN_SECRET no configurada; refinamiento deshabilitado');
+      return NextResponse.json(
+        { status: 'error', message: 'El refinamiento no está disponible en este entorno.' },
+        { status: 503 }
+      );
+    }
+    if (!verifyRefineToken(refine_token, session.uid, session_id)) {
+      console.warn('[refine-trip] Token de refinamiento ausente o no válido para la sesión autenticada.');
+      return NextResponse.json({ status: 'not_refinable' }, { status: 403 });
     }
     if (!feedback_text || !feedback_text.trim()) {
       return NextResponse.json(

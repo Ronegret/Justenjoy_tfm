@@ -163,6 +163,29 @@ Ficheros de la mitigación: `frontend/src/lib/sensitiveData.ts` (nuevo),
 `frontend/src/components/trip/RefineTripPanel.tsx`, `frontend/src/types/planResult.ts`,
 `docs/ARCHITECTURE.md`.
 
+### 0.5 Control de acceso al plan en el refinamiento (2026-07-23) — RGPD art. 32
+
+Detectado en la revisión de la propia rama, **antes de fusionar**: `/api/refine-trip`
+autenticaba la petición pero **no comprobaba que el `session_id` fuera del usuario que lo
+enviaba**. Como el identificador lo aporta el cliente y la ruta devuelve el plan completo
+mapeado, cualquier usuario con cuenta que conociera un `session_id` ajeno podía **leer el
+itinerario de otra persona** (destino, fechas, hotel, vuelos, presupuesto) y además provocar
+una revisión nueva en Supabase bajo esa sesión. Agravante: el `session_id` se genera con
+`Math.random()` (`n8n/nodes-code/01_validar_formulario.js:9`), no con un CSPRNG.
+
+**Corregido en la misma rama:** `/api/plan-trip` firma el par (`uid` de Firebase,
+`session_id`) con HMAC-SHA256 y un secreto server-only (`REFINE_TOKEN_SECRET`) y lo devuelve
+como `refine_token`; `/api/refine-trip` lo verifica contra el `uid` de la cookie y rechaza con
+`not_refinable` si no casa. Falla cerrado si no hay secreto. El `session_id` deja de
+registrarse en logs. Ficheros: `frontend/src/lib/refineToken.ts` (nuevo),
+`frontend/src/lib/requireSession.ts`, `frontend/src/app/api/plan-trip/route.ts`,
+`frontend/src/app/api/refine-trip/route.ts`.
+
+> **Pendiente relacionado (no bloqueante):** generar el `session_id` con `crypto.randomUUID()`
+> en el nodo de n8n — es del backend (Rodrigo). Con la firma en vigor ya no es explotable
+> desde el portal, pero sigue siendo un identificador débil para quien llame al webhook directo
+> (ver #13).
+
 ---
 
 ## 1. Detalle de hallazgos (evidencia y acción)

@@ -86,6 +86,13 @@ una pantalla intermedia que el usuario abandona al pulsar "Ver plan completo".
 | D4 | Ruta interna | Nueva `/api/refine-trip` (separa responsabilidades) | Ampliar `/api/plan-trip` con un modo `refine` |
 | D5 | Nueva env var | `N8N_REFINE_WEBHOOK_URL` (+ `.env.example`) | Derivarla de `N8N_WEBHOOK_URL` por reemplazo de path |
 | D6 | Fallback si no hay `session_id` real (plan mock/OpenAI) | Ocultar el control (refinamiento solo para planes de n8n) | Degradar a replanificación completa (RUTA A) |
+| D7 | ¿Cómo se acredita que el plan es de quien lo refina? | **Token firmado en el frontend** (`refine_token` = HMAC de `uid`+`session_id` con `REFINE_TOKEN_SECRET`), sin tocar n8n ni Supabase | Validar el `uid` en n8n (cambia el contrato del webhook) · columna de propietario en Supabase (DDL nuevo) |
+
+> **D7 se añadió durante la implementación**, tras detectar en la revisión que autenticar no
+> basta: el `session_id` lo aporta el cliente, así que sin firma cualquier usuario con cuenta
+> podría refinar —y leer— el plan de otro. Implica **campo nuevo** `refine_token` en `TripData`
+> (contrato interno) y **env nueva** `REFINE_TOKEN_SECRET`. Los planes ya guardados no llevan
+> token y dejan de ser refinables (hay que recrearlos). Ver auditoría §0.5.
 
 > **D3 es la decisión crítica.** La RUTA B espera `current_plan`, pero también hace
 > `Cargar Sesión` desde su memoria interna indexada por `session_id`. Si la memoria es la

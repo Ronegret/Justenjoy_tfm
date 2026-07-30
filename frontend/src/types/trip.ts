@@ -179,6 +179,11 @@ export interface TripData {
   // (refineTrip) y src/app/api/refine-trip. Para planes de n8n coincide con
   // `trip_id`, pero se guarda explícito para no depender de esa coincidencia.
   session_id?: string;
+  // Firma (uid + session_id) emitida por /api/plan-trip que acredita que este
+  // plan es de quien lo pide. /api/refine-trip la exige para no dejar que un
+  // usuario refine —y de paso lea— el plan de otro. No contiene datos: es solo
+  // una firma, inútil desde otra cuenta. Ver src/lib/refineToken.
+  refine_token?: string;
   user_preferences: TripPreferences;
   justgo_score: JustGoScore;
   best_option: TripOption;

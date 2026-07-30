@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/requireSession';
+import { withRefineToken } from '@/lib/refineToken';
 import { mockTrips } from '@/data/mockTripData';
 import { TripPreferences } from '@/types/trip';
 import { holderToN8nPayload } from '@/lib/holder';
@@ -251,8 +252,8 @@ function mapPreferencesToN8n(prefs: TripPreferences) {
 export async function POST(req: NextRequest) {
   // Autenticación obligatoria: cierra la API abierta y el vector de coste
   // (llamadas anónimas a LLM/n8n). Gate compartido con /api/refine-trip.
-  const authError = await requireSession(req, 'plan-trip');
-  if (authError) return authError;
+  const session = await requireSession(req, 'plan-trip');
+  if (session.error) return session.error;
 
   try {
     const body: TripPreferences = await req.json();
@@ -334,7 +335,10 @@ export async function POST(req: NextRequest) {
               }
               console.log('Detected n8n G7 workflow schema. Mapping to TripData...');
               const mappedData = await mapN8nToTripData(n8nData, body);
-              return NextResponse.json(mappedData);
+              // Se firma (uid, session_id) para que /api/refine-trip pueda
+              // comprobar que quien refina es el dueño del plan. Solo los planes
+              // de n8n llevan session_id; los de fallback salen sin token.
+              return NextResponse.json(withRefineToken(mappedData, session.uid));
             } else {
               console.log('n8n response does not match G7 schema; returning directly as TripData.');
               return NextResponse.json(n8nData);

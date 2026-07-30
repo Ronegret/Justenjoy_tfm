@@ -41,5 +41,9 @@ export type RefineTripResult =
   | { status: 'ok'; tripId: string }
   | { status: 'needs_user_input'; warnings: N8nWarning[] }
   | { status: 'session_expired' }
+  // El plan no acredita pertenecer a quien lo pide: falta el `refine_token` o no
+  // casa con la sesión. Le pasa a los planes guardados antes de que existiera el
+  // token y a cualquier intento de refinar un plan ajeno. Ver `lib/refineToken`.
+  | { status: 'not_refinable' }
   | { status: 'blocked_sensitive'; categories: string[] }
   | { status: 'error'; message: string };

@@ -29,6 +29,7 @@ type FeedbackState =
   | { kind: 'success' }
   | { kind: 'warnings'; warnings: N8nWarning[] }
   | { kind: 'session_expired' }
+  | { kind: 'not_refinable' }
   | { kind: 'blocked_sensitive'; categories: string[] }
   | { kind: 'error'; message: string };
 
@@ -54,6 +55,8 @@ export const RefineTripPanel: React.FC = () => {
       setFeedback({ kind: 'warnings', warnings: result.warnings });
     } else if (result.status === 'session_expired') {
       setFeedback({ kind: 'session_expired' });
+    } else if (result.status === 'not_refinable') {
+      setFeedback({ kind: 'not_refinable' });
     } else if (result.status === 'blocked_sensitive') {
       // No se ha enviado nada a los servicios de búsqueda; el texto se conserva
       // para que el usuario lo reformule sin datos personales sensibles.
@@ -199,6 +202,17 @@ export const RefineTripPanel: React.FC = () => {
           <span>
             La sesión de este plan ha caducado, así que no podemos refinarlo ahora. Tu plan actual se
             mantiene intacto. Para introducir cambios, crea un plan nuevo desde el planificador.
+          </span>
+        </div>
+      )}
+
+      {feedback.kind === 'not_refinable' && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-brand-dark dark:text-brand-white">
+          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <span>
+            No podemos confirmar que este plan sea tuyo, así que no lo refinamos. Suele pasar con
+            planes guardados antes de esta mejora: créalo de nuevo desde el planificador y ya podrás
+            ajustarlo. Tu plan actual se mantiene intacto.
           </span>
         </div>
       )}

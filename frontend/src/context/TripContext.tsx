@@ -219,6 +219,11 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // debería haberse mostrado. Se conserva el plan actual.
       return { status: 'session_expired' };
     }
+    // Planes guardados antes de que existiera el token de propiedad: la ruta los
+    // rechazaría igualmente, así que nos ahorramos la ida y vuelta.
+    if (!trip.refine_token) {
+      return { status: 'not_refinable' };
+    }
 
     // Pre-chequeo de categorías especiales (RGPD art. 9 — hallazgo #4) en cliente:
     // evita la ida y vuelta a la red cuando el texto revela datos sensibles. La
@@ -241,6 +246,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: trip.session_id,
+          // Acredita que este plan es nuestro; sin él la ruta responde
+          // `not_refinable` (ver lib/refineToken).
+          refine_token: trip.refine_token,
           feedback_text: feedbackText,
           user_preferences: prefsForRefine
         })
@@ -253,6 +261,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // o 'error'.
       if (data?.status === 'session_expired') {
         return { status: 'session_expired' };
+      }
+      if (data?.status === 'not_refinable') {
+        return { status: 'not_refinable' };
       }
       if (data?.status === 'blocked_sensitive') {
         return { status: 'blocked_sensitive', categories: Array.isArray(data.categories) ? data.categories : [] };
@@ -288,6 +299,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...refinedTrip,
         trip_id: trip.trip_id,
         session_id: trip.session_id,
+        // El plan refinado se mapea igual que el original y no trae token: se
+        // conserva el del plan actual para poder seguir refinando.
+        refine_token: trip.refine_token,
         share: { ...refinedTrip.share, private_url: `/trip/${trip.trip_id}` }
       };
       // El titular (PII) no se serializa ni lo devuelve n8n: se conserva el del
