@@ -6,7 +6,7 @@
   aprobarla. Cubre lo que AGENTS.md §3.2 exige aprobar: cambio de nodos del workflow y del
   esquema de la base de datos. **El contrato de los webhooks NO cambia** (ni entradas ni
   salidas), así que el frontend no se toca.
-- **Rama (prevista):** `fix/persistencia-revisiones-y-titular`
+- **Rama (prevista):** `bugfix/persistencia-revisiones-y-titular`
 
 ## Contexto
 

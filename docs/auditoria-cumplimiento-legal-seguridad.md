@@ -205,7 +205,7 @@ Ejecutados **todos los comportamientos de los tres webhooks** contra la instanci
 punta y se **cierran dos bugs** que seguían anotados como abiertos (truncamiento en viajes
 largos y `travelers_count=0`). Dos hallazgos nuevos, ambos de **backend/Rodrigo**:
 
-> ✅ **RESUELTOS Y VERIFICADOS EN VIVO el 2026-07-30** (rama `fix/persistencia-revisiones-y-titular`,
+> ✅ **RESUELTOS Y VERIFICADOS EN VIVO el 2026-07-30** (rama `bugfix/persistencia-revisiones-y-titular`,
 > workflow v40 publicado y las dos migraciones aplicadas en Supabase).
 >
 > **Evidencia #30:** plan + refinamiento sobre la misma sesión → **2 filas** en `travel_plans`,
