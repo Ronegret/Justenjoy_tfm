@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/requireSession';
 import { TripPreferences } from '@/types/trip';
-import { isUnusableN8nPlan, mapN8nToTripData, getErrorMessage, ensureWarnings } from '@/lib/n8nPlan';
+import { isUnusableN8nPlan, mapN8nToTripData, getErrorMessage, ensureWarnings, type N8nResponse } from '@/lib/n8nPlan';
 import { scanForSpecialCategoryData } from '@/lib/sensitiveData';
 
 // Ruta interna de REFINAMIENTO (RUTA B de n8n, webhook `travel-refine`).
@@ -27,6 +27,54 @@ interface RefineRequestBody {
   user_preferences?: TripPreferences;
 }
 
+// Tope de longitud del texto de refinamiento. Es una instrucción de ajuste, no un
+// documento: por encima de esto no aporta señal al agente y solo infla el coste
+// de tokens del LLM aguas abajo. El textarea aplica el mismo límite, pero el
+// autoritativo es este (el cliente no es de fiar).
+const MAX_FEEDBACK_CHARS = 500;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function firstIsoDate(...candidates: Array<string | undefined>): string | undefined {
+  return candidates.find((d): d is string => typeof d === 'string' && ISO_DATE.test(d));
+}
+
+/**
+ * Devuelve las preferencias con las FECHAS EFECTIVAS del plan refinado.
+ *
+ * El agente de refinamiento puede mover las fechas ("sal un día antes"), pero el
+ * cliente nos envía las preferencias del plan viejo. `mapN8nToTripData` deriva de
+ * ahí tanto la cabecera del viaje como los días que factura de comida en el
+ * presupuesto, así que sin esto el plan mostraría vuelos y hotel nuevos con las
+ * fechas antiguas y un total descuadrado.
+ *
+ * n8n no devuelve `travel_brief` en el refinamiento (verificado en
+ * `n8n/examples/output-plan-v39-e2e-refinamiento.json`), así que las fechas reales
+ * se leen del propio plan: el hotel primero (check-in/check-out son las fechas de
+ * estancia) y los vuelos como respaldo. Si no hay ninguna utilizable se conservan
+ * las del cliente, que es el comportamiento anterior.
+ */
+function withRefreshedDates(prefs: TripPreferences, rawData: N8nResponse): TripPreferences {
+  const segment = rawData.plan?.segments?.[0];
+  const start = firstIsoDate(
+    segment?.hotel?.check_in,
+    segment?.flights?.outbound?.departure_datetime?.split('T')[0]
+  );
+  const end = firstIsoDate(
+    segment?.hotel?.check_out,
+    segment?.flights?.return?.departure_datetime?.split('T')[0]
+  );
+  if (!start && !end) return prefs;
+  return {
+    ...prefs,
+    dates: {
+      ...prefs.dates,
+      start: start || prefs.dates.start,
+      end: end || prefs.dates.end
+    }
+  };
+}
+
 export async function POST(req: NextRequest) {
   // Autenticación obligatoria: mismo gate que /api/plan-trip.
   const authError = await requireSession(req, 'refine-trip');
@@ -44,6 +92,15 @@ export async function POST(req: NextRequest) {
     if (!feedback_text || !feedback_text.trim()) {
       return NextResponse.json(
         { status: 'error', message: 'Escribe qué te gustaría cambiar del plan.' },
+        { status: 400 }
+      );
+    }
+    if (feedback_text.trim().length > MAX_FEEDBACK_CHARS) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: `El ajuste es demasiado largo (máximo ${MAX_FEEDBACK_CHARS} caracteres). Resúmelo en una o dos frases.`
+        },
         { status: 400 }
       );
     }
@@ -86,7 +143,10 @@ export async function POST(req: NextRequest) {
 
     const n8nBody = { session_id, feedback_text: feedback_text.trim() };
 
-    console.log('[refine-trip] Reenviando refinamiento a n8n para session_id:', session_id);
+    // No se registra el `session_id`: mientras no haya comprobación de propiedad,
+    // quien lo posee puede leer y mutar ese plan, así que se comporta como una
+    // credencial y no debe quedar en logs. Tampoco se registra el `feedback_text`.
+    console.log('[refine-trip] Reenviando refinamiento a n8n.');
 
     let response: Response;
     try {
@@ -124,21 +184,44 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
-    const n8nData = JSON.parse(rawText);
-    const rawData = Array.isArray(n8nData) ? n8nData[0] : n8nData;
+    // Cuerpo ilegible o con una forma que no es un plan (p. ej. `[]`, `null` o
+    // texto plano de un proxy): se corta aquí con un error propio. Si se dejara
+    // caer al catch general, el usuario vería el mensaje interno de la excepción.
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      console.warn('[refine-trip] n8n devolvió un cuerpo que no es JSON.');
+      return NextResponse.json(
+        { status: 'error', message: 'El servicio de refinamiento devolvió una respuesta ilegible.' },
+        { status: 502 }
+      );
+    }
+    const unwrapped = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!unwrapped || typeof unwrapped !== 'object') {
+      console.warn('[refine-trip] n8n devolvió una respuesta sin plan utilizable.');
+      return NextResponse.json(
+        { status: 'error', message: 'El servicio de refinamiento devolvió una respuesta vacía.' },
+        { status: 502 }
+      );
+    }
+    const rawData = unwrapped as N8nResponse & { error_detail?: unknown; detail?: unknown };
 
     // El motor puede devolver 200 con `status: "error"` por fallos que NO son de
     // sesión (p. ej. JSON del planificador truncado en viajes largos). Se propaga
     // como error genuino con su detalle — NO como session_expired (eso solo lo es
     // el HTTP 400 de arriba), para no dar un mensaje/recuperación equivocados.
-    if (rawData?.status === 'error') {
+    if (rawData.status === 'error') {
+      // El detalle de n8n es diagnóstico interno (trazas del motor, estado de la
+      // sesión): se registra, pero al usuario se le da un mensaje accionable. Es
+      // el mismo criterio que aplica /api/plan-trip, que nunca lo propaga.
       const detail =
         typeof rawData.error_detail === 'string' ? rawData.error_detail
         : typeof rawData.detail === 'string' ? rawData.detail
         : null;
       console.warn('[refine-trip] n8n status=error en el cuerpo:', detail);
       return NextResponse.json(
-        { status: 'error', message: detail || 'No hemos podido aplicar el ajuste al plan. Inténtalo de nuevo o reformúlalo.' },
+        { status: 'error', message: 'No hemos podido aplicar el ajuste al plan. Inténtalo de nuevo o reformúlalo.' },
         { status: 502 }
       );
     }
@@ -159,13 +242,15 @@ export async function POST(req: NextRequest) {
     // aportan origen/destino/fechas/viajeros para el mapeo y el presupuesto.
     // Se devuelve un sobre explícito { status: 'ok', trip } para que el cliente no
     // tenga que inferir el éxito por ausencia de campo de control.
-    const trip = await mapN8nToTripData(n8nData, user_preferences);
+    const trip = await mapN8nToTripData(rawData, withRefreshedDates(user_preferences, rawData));
     console.log('[refine-trip] Plan refinado mapeado correctamente.');
     return NextResponse.json({ status: 'ok', trip });
   } catch (error: unknown) {
-    console.error('[refine-trip] Error en la ruta de refinamiento:', error);
+    // El mensaje real solo va al log: puede contener rutas, nombres de campo o
+    // trazas internas que no tienen por qué llegar al navegador.
+    console.error('[refine-trip] Error en la ruta de refinamiento:', getErrorMessage(error));
     return NextResponse.json(
-      { status: 'error', message: getErrorMessage(error) },
+      { status: 'error', message: 'No hemos podido completar el refinamiento. Inténtalo de nuevo.' },
       { status: 500 }
     );
   }

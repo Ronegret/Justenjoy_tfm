@@ -99,16 +99,30 @@ function normalize(text: string): string {
     .replace(/\p{Diacritic}/gu, ''); // elimina diacríticos combinantes (á→a, ñ→n)
 }
 
+// Negador seguido del hueco hasta la coincidencia (capturado para inspeccionarlo).
+// La ventana es corta a propósito: negar una condición cercana es una NO-revelación
+// y no hay que bloquearla, pero un "no" lejano en la frase no debe amnistiar una
+// revelación real. La puntuación ya corta la ventana porque el hueco solo admite
+// `[\w\s]`.
+const NEGATION_BEFORE = /\b(?:no|sin|ni|ningun[oa]?|tampoco|jamas|nunca)\b([\w\s]{0,16})$/;
+
+// Conjunciones que abren una oración NUEVA: si aparecen entre el negador y la
+// coincidencia, la negación pertenece a la oración anterior y no alcanza a esta.
+// Sin esto, "sin gluten y soy celiaco" o "sin escaleras y tengo movilidad
+// reducida" se daban por negados y el texto llegaba al LLM y a los buscadores,
+// que es justo lo que este módulo existe para evitar.
+const CLAUSE_BREAK = /\b(?:y|e|o|u|pero|aunque)\b/;
+
 /**
- * ¿La coincidencia en `index` viene negada? Mira una ventana corta (~16 car.)
- * justo antes en busca de un negador ("no tengo alergias", "sin problemas de
- * movilidad"). Ventana corta a propósito: negar una condición cercana es una
- * NO-revelación (no hay que bloquearla), pero no queremos dejar pasar una
- * revelación real solo porque haya un "no" lejano en la frase.
+ * ¿La coincidencia en `index` viene negada? Busca un negador en la ventana previa
+ * ("no tengo alergias", "sin alergias conocidas") y comprueba que la negación no
+ * se haya quedado en una oración anterior (ver CLAUSE_BREAK).
  */
 function precededByNegation(haystack: string, index: number): boolean {
   const before = haystack.slice(Math.max(0, index - 20), index);
-  return /\b(?:no|sin|ni|ningun[oa]?|tampoco|jamas|nunca)\b[\w\s]{0,16}$/.test(before);
+  const negated = NEGATION_BEFORE.exec(before);
+  if (!negated) return false;
+  return !CLAUSE_BREAK.test(negated[1]);
 }
 
 /**

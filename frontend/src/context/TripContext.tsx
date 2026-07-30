@@ -264,13 +264,31 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { status: 'error', message: data?.message || 'No se pudo refinar el plan.' };
       }
 
+      // Guardarraíl de no-regresión. El refinamiento re-ejecuta SOLO los pasos
+      // afectados, así que si la respuesta pierde bloques que el plan actual sí
+      // tenía (p. ej. vuelve solo con hoteles y sin vuelos), no es un plan mejor:
+      // es una respuesta incompleta. Como `saveTrip` sobrescribe en sitio y no hay
+      // deshacer, se descarta y se conserva el plan bueno.
+      const refinedTrip = data.trip as TripData;
+      const lost = (['flights', 'hotels', 'itinerary'] as const).filter(
+        (block) => (trip[block]?.length ?? 0) > 0 && (refinedTrip[block]?.length ?? 0) === 0
+      );
+      if (lost.length > 0) {
+        console.warn('refineTrip: respuesta incompleta, se conserva el plan actual. Faltan:', lost.join(', '));
+        return {
+          status: 'error',
+          message:
+            'El ajuste llegó incompleto y habría empeorado tu plan, así que lo hemos descartado. Tu plan sigue intacto: prueba a pedir el cambio de otra forma.'
+        };
+      }
+
       // Éxito: reemplaza el viaje mostrado EN SITIO (mismo trip_id/session_id) en
       // vez de crear uno nuevo.
       const refined: TripData = {
-        ...(data.trip as TripData),
+        ...refinedTrip,
         trip_id: trip.trip_id,
         session_id: trip.session_id,
-        share: { ...(data.trip as TripData).share, private_url: `/trip/${trip.trip_id}` }
+        share: { ...refinedTrip.share, private_url: `/trip/${trip.trip_id}` }
       };
       // El titular (PII) no se serializa ni lo devuelve n8n: se conserva el del
       // plan actual para no perderlo al refinar.

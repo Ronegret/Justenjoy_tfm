@@ -12,6 +12,10 @@ import { N8nWarning } from '@/types/planResult';
 
 // Sugerencias rápidas: rellenan la caja de texto (no envían solas), para que el
 // usuario pueda matizar antes de refinar.
+// Mismo tope que aplica /api/refine-trip (que es el autoritativo): aquí solo
+// evita que el usuario escriba de más y reciba un error al enviar.
+const MAX_FEEDBACK_CHARS = 500;
+
 const QUICK_SUGGESTIONS = [
   'Hazlo más barato',
   'Menos caminatas entre actividades',
@@ -95,14 +99,23 @@ export const RefineTripPanel: React.FC = () => {
         ))}
       </div>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        disabled={isRefining}
-        rows={3}
-        placeholder="¿Qué cambiarías de este plan? Ej: prefiero un hotel junto a la playa y actividades más tranquilas."
-        className="w-full resize-none rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark p-3 text-xs text-brand-dark dark:text-brand-white placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40 disabled:opacity-60"
-      />
+      <div className="flex flex-col gap-1">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          disabled={isRefining}
+          rows={3}
+          maxLength={MAX_FEEDBACK_CHARS}
+          placeholder="¿Qué cambiarías de este plan? Ej: prefiero un hotel junto a la playa y actividades más tranquilas."
+          className="w-full resize-none rounded-xl border border-brand-dark/10 dark:border-brand-white/10 bg-brand-white dark:bg-brand-dark p-3 text-xs text-brand-dark dark:text-brand-white placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40 disabled:opacity-60"
+        />
+        {/* El contador solo aparece cerca del tope, para no distraer al escribir. */}
+        {text.length > MAX_FEEDBACK_CHARS * 0.8 && (
+          <span className="self-end text-[10px] text-text-muted">
+            {text.length}/{MAX_FEEDBACK_CHARS}
+          </span>
+        )}
+      </div>
 
       {/* Aviso de privacidad (RGPD art. 9): el texto lo procesa una IA y servicios
           de búsqueda externos. Se pide expresamente NO incluir datos personales
