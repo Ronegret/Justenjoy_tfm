@@ -14,6 +14,9 @@
 > · **Revisión 2.3:** 2026-07-30 (E2E del workflow → §0.6; tercera ronda de `/code-review` sobre
 > el diff completo de la rama → **§0.7**, con dos hallazgos de cumplimiento: #32 PII del titular
 > al LLM y #34 oráculo de subcadenas en la búsqueda de clientes)
+> · **Revisión 2.4:** 2026-07-30 (cuarta ronda, sobre los propios arreglos → **§0.8**: #38 el lead
+> del titular se perdía al fallar el guardado del plan, #39 invariante de orden de ejecución
+> documentada al revés, #40 y #41 en el frontend)
 > **Método:** revisión estática del repositorio con cita `fichero:línea` en cada afirmación sobre el código.
 > **Normas evaluadas:** RGPD (arts. 6, 9, 13/14, 22, 25/32, 28, 30, 33/34, 35, Cap. V), LSSI art. 22.2,
 > Reglamento de IA (RIA) arts. 4 y 50, Ley 3/1991 de Competencia Desleal / TRLGDCU, y Ley 1/2019 de Secretos Comerciales.
@@ -250,7 +253,27 @@ de cumplimiento (#32 y #34), el resto de correción funcional. Ninguno estaba en
 | **36** | **Resultados de búsqueda obsoletos en el dashboard.** Si `/api/holders/search` respondía distinto de 200, el efecto salía sin limpiar `serverMatchIds`: las coincidencias de la consulta **anterior** seguían mostrándose —y contando en la fila de estadísticas— para la consulta nueva. Falso positivo silencioso. | Se limpia el conjunto también en la rama de error. | ✅ **RESUELTO** |
 | **37** | **`N8N_HOLDERS_SEARCH_WEBHOOK_URL` solo en la plantilla de la raíz.** La lee el frontend, y Next **no** lee el `.env` de la raíz: quien montara el entorno desde `frontend/.env.local.example` se quedaba sin búsqueda persistente (503) sin pista de por qué. | Añadida a `frontend/.env.local.example` con su explicación; nota en `.env.example` de que también hace falta en el frontend. | ✅ **RESUELTO** |
 
-> **Revisado y sin hallazgo** en la misma ronda: el HMAC de `refineToken` (falla cerrado con
+### 0.8 Cuarta ronda de `/code-review` (2026-07-30) — sobre los arreglos de la §0.7
+
+Revisión de los dos commits propios de la rama sobre su padre. Cuatro hallazgos, **los cuatro
+corregidos**. Los dos primeros son de n8n y salieron de leer el motor de ejecución, no el grafo.
+
+| # | Hallazgo | Corrección | Estado |
+|---|---|---|---|
+| **38** | **Quitar el `onError` de `Supabase — Guardar Plan` (#30) hacía que se perdiera el lead del titular.** n8n recorre las ramas en **profundidad** y un nodo que falla sin `onError` hace `break`, descartando la pila pendiente. La rama del titular esperaba ahí su turno, así que un fallo del insert del plan la dejaba **sin ejecutar** — rompiendo justo lo que esa rama existía para garantizar ("que el lead se guarde aunque la planificación no llegue a `plan_ready`"). **Confirmado en la BD de n8n**, ejecución 78: `runData` no contiene `Preparar Payload Titular` y la pila al abortar era `['Supabase — Guardar Plan', 'Preparar Payload Titular']`. La prueba en vivo del runbook no lo vio porque hizo fallar los dos nodos a la vez y dio por ejecutado el segundo. | La persistencia del titular pasa a una **sub-ejecución** del mismo workflow (dos nodos nuevos, mismo id, `waitForSubWorkflow: false`), lanzada **antes** de la planificación. Aislamiento en los dos sentidos: el plan no puede matar al lead ni el lead al plan. Ver §7.3 del doc de arquitectura de v40 y **D4** de la spec de persistencia. | ✅ **RESUELTO** |
+| **39** | **La invariante documentada estaba al revés.** El doc de arquitectura afirmaba que bajo `executionOrder: v1` el orden lo decide el **índice de la conexión** y que por eso reordenar el canvas era inocuo. Falso: las dos ramas del fan-out salen del **mismo `main[0]`** y el orden lo decide la **posición** (verificado en el comparador de `workflow-execute.js`: `y` menor primero, empate por `x` menor). Con esa creencia, el commit `707c938` ("reordena el canvas sin tocar la lógica") pudo haber hecho que un fallo de Supabase costara el plan al usuario. | §3 reescrita con la regla real y la advertencia de que **reordenar el canvas cambia el orden de ejecución**; corregida también la descripción de la prueba en vivo en el runbook. La verificación de topología comprueba ahora las dos precedencias que importan. | ✅ **RESUELTO** |
+| **40** | **El aviso de divergencia con n8n (#33) aparecía en el viaje equivocado.** `refineBaseOutOfSync` era un booleano global y `setCurrentTripById` no lo limpiaba: tras deshacer en el viaje A, el aviso salía también en el B, sin forma de quitarlo. | El estado pasa a guardar el `trip_id` afectado; el aviso solo se muestra en ese viaje. | ✅ **RESUELTO** |
+| **41** | **El guardarraíl recortado dejó de detectar un `itinerary` vacío.** Al eliminar la comparación de longitudes, `isPlaceholderItinerary` (que exige `length === 1`) no cubre el array vacío, que antes caía por longitud. | Comprobación explícita de "vacío o ausente" —no de "menos días que antes"—, con la misma justificación que la de vuelos: el mapper nunca lo devuelve vacío y la vista accede a `itinerary[0]` sin guarda. | ✅ **RESUELTO** |
+
+> **Revisado y sin hallazgo** en esta cuarta ronda: la comprobación de propiedad de
+> `/api/holders/search` (incluido el filtro final contra los ids acreditados), los type guards y el
+> rechazo de `changeme` en `verifyRefineToken`, la guarda de fechas incoherentes de
+> `withRefreshedDates`, el strip de PII de `04_preparar_motor.js` (ningún prompt vuelve a ver el
+> `holder` y la rama de `plan_holders` sigue leyendo `Validar Formulario`) y las tres migraciones
+> SQL (idempotentes; `session_id` es `NOT NULL`, así que el UNIQUE parcial `(email, session_id)`
+> deduplica de verdad).
+
+> **Revisado y sin hallazgo** en la tercera ronda (§0.7): el HMAC de `refineToken` (falla cerrado con
 > `changeme`, comparación en tiempo constante, con type guards), la guarda de fechas incoherentes
 > de `withRefreshedDates`, el guardarraíl de no-regresión ya recortado del refinamiento, las
 > ventanas de negación de `sensitiveData`, el round-trip de los 12 Code nodes y la eliminación del

@@ -51,7 +51,8 @@ Los dos comparten causa: **un `UNIQUE` que el workflow trata como si no existier
 - **No** añade columnas: ver la restricción de compatibilidad de abajo.
 - **No** deja el borrado por retención sin decidir: el plazo de la Actividad 3 se cierra en
   **24 meses** (ver riesgos) y se agenda por `pg_cron` en la migración 0004.
-- **No** cambia el contrato de los webhooks ni la respuesta al cliente.
+- **No** cambia el contrato de los webhooks ni la respuesta al cliente. (Sí añade dos nodos al
+  workflow, por **D4**; el alcance original solo cambiaba parámetros de nodos existentes.)
 
 ## Decisiones
 
@@ -60,6 +61,18 @@ Los dos comparten causa: **un `UNIQUE` que el workflow trata como si no existier
 | D1 | **#30 = historial de revisiones** (una fila por `plan_ready`) | Upsert por `session_id` vía HTTP Request a PostgREST — el nodo Supabase de n8n v1 no tiene `upsert` |
 | D2 | **#31 = una fila por `(email, session_id)`** | Tabla hija 1:N `plan_holder_sessions` (mejor en minimización, pero obliga a join en la lectura y `ON DELETE CASCADE`); upsert last-wins (no resuelve "ver todos sus viajes") |
 | D3 | **Workflow nuevo v40**, mismo id `8Kym9GIgNKp7Nrdh` | Parchear v39 en sitio |
+| **D4** | **El titular se persiste en una SUB-EJECUCIÓN** del mismo workflow (`Lanzar Guardado del Titular` + `Trigger — Guardar Titular`, `waitForSubWorkflow: false`) | Subir la rama del titular por encima del motor en el canvas (un Supabase caído dejaría al usuario **sin plan**); devolver el `onError` al nodo del titular (vuelve a silenciar su fallo, que es lo que D1/#30 arregla); workflow aparte (obliga a tocar `docker-compose.yml` y a un id nuevo) |
+
+> **D4 se añadió el 2026-07-30**, aprobada por Enrique en la cuarta ronda de revisión, al
+> descubrir que quitar el `onError` de `Supabase — Guardar Plan` (arriba) tenía un efecto
+> colateral no previsto: **la rama paralela del titular dejaba de ejecutarse**. n8n recorre las
+> ramas en profundidad y un nodo que falla sin `onError` hace `break` descartando la pila
+> pendiente, donde el titular esperaba su turno. Es decir, esta misma spec rompía sin saberlo la
+> intención declarada de la rama del titular ("que el lead se guarde aunque la planificación no
+> llegue a `plan_ready`"). Confirmado en la ejecución 78 de la BD de n8n: `Preparar Payload
+> Titular` no aparece en `runData`. La sub-ejecución es la única de las alternativas que da
+> aislamiento en **los dos** sentidos. Detalle en §7.3 del doc de arquitectura de v40; el
+> workflow pasa de 33 a 35 nodos, **sin cambio de contrato**.
 
 ## Compatibilidad con `master` (restricción de diseño)
 

@@ -552,17 +552,17 @@
     },
     {
       "parameters": {
-        "jsCode": "// Preparar el registro del titular/cliente para Supabase (tabla plan_holders).\n// Corre justo tras validar el formulario, en RAMA PARALELA a la planificación,\n// para que el lead se guarde aunque la planificación posterior no llegue a\n// plan_ready (captación). Los datos del titular son OPCIONALES: si el viajero\n// omitió el paso en el frontend, este nodo no emite ítems (return []).\n//\n// DEDUP POR (EMAIL, SESSION_ID) desde v40. NO se hace aquí con una consulta HTTP\n// (frágil en el sandbox del code node), sino a nivel de BD: índice UNIQUE parcial\n// sobre plan_holders(email, session_id) — migración 2026-07-30_0003.\n//\n// ANTES (v39) el índice era solo sobre (email), con semántica \"un lead por persona,\n// first-wins\". Se cambió porque ocultaba los viajes POSTERIORES del mismo cliente:\n// su segundo plan no creaba fila y el buscador del dashboard solo encontraba el\n// primero (hallazgo #31 de la auditoría). Ahora hay una fila POR VIAJE, y sigue sin\n// duplicarse el mismo viaje si el nodo se reintenta.\n//\n// OJO: el nodo Supabase ya NO lleva onError=continueRegularOutput (v40). Un choque\n// contra el UNIQUE deja la ejecución en FALLIDA en vez de ignorarse en silencio;\n// es deliberado (AGENTS.md §5), pero en operación normal no puede ocurrir: el\n// session_id es distinto en cada ejecución.\n// Ver n8n/docs/Planificador_Viajes_v40_Arquitectura.md §2.\nconst input = $input.first().json;\nconst holderRaw = input.session_state?.travel_brief?.holder || null;\nconst sessionId = input.session_id || null;\n\n// Recortar y decidir \"hay datos\" sobre los valores ya recortados (mismo criterio\n// que el frontend). Sin ningún dato real → no insertar.\nconst holder = holderRaw\n  ? {\n      first_name: (holderRaw.first_name || '').trim(),\n      last_name: (holderRaw.last_name || '').trim(),\n      phone: (holderRaw.phone || '').trim(),\n      email: (holderRaw.email || '').trim(),\n      // Evidencia de consentimiento (RGPD 6.1.a): el frontend la sella al marcar\n      // la casilla. `consent_at` es el momento (ISO), `consent_version` la versión\n      // de la política aceptada.\n      consent_at: (holderRaw.consent_at || '').trim(),\n      consent_version: (holderRaw.consent_version || '').trim()\n    }\n  : null;\nconst hasAny = holder && (holder.first_name || holder.last_name || holder.phone || holder.email);\nif (!hasAny) {\n  return [];\n}\n// RGPD 6.1.a: no persistir PII del titular sin evidencia de consentimiento. El\n// frontend ya bloquea el envío sin marcar la casilla; esta es la segunda barrera.\nif (!holder.consent_at) {\n  return [];\n}\n\n// Columnas de la tabla plan_holders (autoMapInputData en el nodo Supabase).\nconst record = {\n  session_id: sessionId,\n  first_name: holder.first_name || null,\n  last_name: holder.last_name || null,\n  phone: holder.phone || null,\n  email: holder.email || null,\n  consent_at: holder.consent_at,\n  consent_version: holder.consent_version || null\n};\n\nreturn [{ json: record }];"
+        "jsCode": "// Preparar el registro del titular/cliente para Supabase (tabla plan_holders).\n// Corre en una SUB-EJECUCIÓN propia (entra por `Trigger — Guardar Titular`, que\n// lanza `Lanzar Guardado del Titular` justo tras validar el formulario), para que\n// el lead se guarde aunque la planificación posterior no llegue a plan_ready\n// (captación). Los datos del titular son OPCIONALES: si el viajero omitió el paso\n// en el frontend, este nodo no emite ítems (return []).\n//\n// POR QUÉ UNA SUB-EJECUCIÓN Y NO UNA RAMA PARALELA (hallazgo #38): en la misma\n// ejecución, n8n recorre las ramas en PROFUNDIDAD y un nodo que falla sin onError\n// hace `break`, descartando la pila pendiente. Con el titular como rama paralela,\n// un fallo del insert del PLAN —que ocurre al final de la cadena— dejaba este nodo\n// sin ejecutar y el lead se perdía. Verificado en la ejecución 78 de la BD de n8n:\n// `Preparar Payload Titular` no aparecía en `runData` y seguía en la pila al\n// abortar. Aislado en su propia ejecución, ni el plan puede matar al lead ni el\n// lead al plan. Ver n8n/docs/Planificador_Viajes_v40_Arquitectura.md §7.3.\n//\n// DEDUP POR (EMAIL, SESSION_ID) desde v40. NO se hace aquí con una consulta HTTP\n// (frágil en el sandbox del code node), sino a nivel de BD: índice UNIQUE parcial\n// sobre plan_holders(email, session_id) — migración 2026-07-30_0003.\n//\n// ANTES (v39) el índice era solo sobre (email), con semántica \"un lead por persona,\n// first-wins\". Se cambió porque ocultaba los viajes POSTERIORES del mismo cliente:\n// su segundo plan no creaba fila y el buscador del dashboard solo encontraba el\n// primero (hallazgo #31 de la auditoría). Ahora hay una fila POR VIAJE, y sigue sin\n// duplicarse el mismo viaje si el nodo se reintenta.\n//\n// OJO: el nodo Supabase ya NO lleva onError=continueRegularOutput (v40). Un choque\n// contra el UNIQUE deja la ejecución en FALLIDA en vez de ignorarse en silencio;\n// es deliberado (AGENTS.md §5), pero en operación normal no puede ocurrir: el\n// session_id es distinto en cada ejecución.\n// Ver n8n/docs/Planificador_Viajes_v40_Arquitectura.md §2.\nconst input = $input.first().json;\nconst holderRaw = input.session_state?.travel_brief?.holder || null;\nconst sessionId = input.session_id || null;\n\n// Recortar y decidir \"hay datos\" sobre los valores ya recortados (mismo criterio\n// que el frontend). Sin ningún dato real → no insertar.\nconst holder = holderRaw\n  ? {\n      first_name: (holderRaw.first_name || '').trim(),\n      last_name: (holderRaw.last_name || '').trim(),\n      phone: (holderRaw.phone || '').trim(),\n      email: (holderRaw.email || '').trim(),\n      // Evidencia de consentimiento (RGPD 6.1.a): el frontend la sella al marcar\n      // la casilla. `consent_at` es el momento (ISO), `consent_version` la versión\n      // de la política aceptada.\n      consent_at: (holderRaw.consent_at || '').trim(),\n      consent_version: (holderRaw.consent_version || '').trim()\n    }\n  : null;\nconst hasAny = holder && (holder.first_name || holder.last_name || holder.phone || holder.email);\nif (!hasAny) {\n  return [];\n}\n// RGPD 6.1.a: no persistir PII del titular sin evidencia de consentimiento. El\n// frontend ya bloquea el envío sin marcar la casilla; esta es la segunda barrera.\nif (!holder.consent_at) {\n  return [];\n}\n\n// Columnas de la tabla plan_holders (autoMapInputData en el nodo Supabase).\nconst record = {\n  session_id: sessionId,\n  first_name: holder.first_name || null,\n  last_name: holder.last_name || null,\n  phone: holder.phone || null,\n  email: holder.email || null,\n  consent_at: holder.consent_at,\n  consent_version: holder.consent_version || null\n};\n\nreturn [{ json: record }];"
       },
       "id": "a1c2e3f4-7b8c-4d9e-9f01-2a3b4c5d6e7f",
       "name": "Preparar Payload Titular",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        32,
-        256
+        -240,
+        416
       ],
-      "notes": "Construye el registro para plan_holders desde session_state.travel_brief.holder. Si no hay titular emite [] (no inserta). Corre en paralelo a la planificación tras validar el formulario."
+      "notes": "Construye el registro para plan_holders desde session_state.travel_brief.holder. Si no hay titular emite [] (no inserta). Corre en una SUB-EJECUCION propia, aislada de la planificacion."
     },
     {
       "parameters": {
@@ -576,8 +576,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        256
+        -16,
+        416
       ],
       "credentials": {
         "supabaseApi": {
@@ -585,7 +585,7 @@
           "name": "Supabase - JustEnjoy"
         }
       },
-      "notes": "Crea un registro en plan_holders por cada viaje del titular (dedup por email+session_id, migracion 0003), asi que un cliente recurrente es localizable en TODOS sus viajes. Sin onError: un fallo debe verse como ejecucion fallida. No bloquea la planificacion: corre en rama paralela."
+      "notes": "Crea un registro en plan_holders por cada viaje del titular (dedup por email+session_id, migracion 0003), asi que un cliente recurrente es localizable en TODOS sus viajes. Sin onError: un fallo debe verse como ejecucion fallida. Al vivir en una sub-ejecucion, ese fallo NO afecta al plan del usuario ni al reves."
     },
     {
       "parameters": {
@@ -663,6 +663,44 @@
         800
       ],
       "notes": "Devuelve { matching_session_ids } al frontend. Sin PII."
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "8Kym9GIgNKp7Nrdh",
+          "mode": "id",
+          "cachedResultName": "Planificador de Viajes — v40"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "c3e4a5b6-9d0e-4f12-b345-6c7d8e9f0a11",
+      "name": "Lanzar Guardado del Titular",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        -80
+      ],
+      "notes": "Lanza el guardado del titular en una SUB-EJECUCION del mismo workflow (mismo id) y no espera (waitForSubWorkflow=false). Va antes del motor a proposito: si fuera detras, un fallo del insert del plan abortaria la ejecucion y la rama del titular se descartaria sin correr (hallazgo #38)."
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "d4f5b6c7-0e1f-4023-c456-7d8e9f0a1b22",
+      "name": "Trigger — Guardar Titular",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -464,
+        416
+      ],
+      "notes": "Entrada de la sub-ejecucion que persiste el titular. n8n arranca por aqui cuando el workflow se invoca como sub-workflow (findSubworkflowStart busca este nodo antes que los webhooks). passthrough = recibe el item tal cual lo manda el llamante."
     }
   ],
   "pinData": {},
@@ -727,7 +765,7 @@
             "index": 0
           },
           {
-            "node": "Preparar Payload Titular",
+            "node": "Lanzar Guardado del Titular",
             "type": "main",
             "index": 0
           }
@@ -982,6 +1020,17 @@
         [
           {
             "node": "Responder — Titulares",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger — Guardar Titular": {
+      "main": [
+        [
+          {
+            "node": "Preparar Payload Titular",
             "type": "main",
             "index": 0
           }

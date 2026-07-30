@@ -63,7 +63,10 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // webhook `travel-refine` no acepta un `current_plan` del cliente, así que el
   // frontend no puede corregirlo. Se avisa en la UI en vez de fingir que el deshacer
   // llegó también al backend.
-  const [refineBaseOutOfSync, setRefineBaseOutOfSync] = useState(false);
+  // Guarda el `trip_id` del viaje afectado, no un booleano: la divergencia es de UNA
+  // sesión de n8n concreta, así que un booleano global sacaba el aviso también en los
+  // demás viajes, donde además no había forma de quitarlo.
+  const [outOfSyncTripId, setOutOfSyncTripId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -232,7 +235,7 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Plan nuevo: el "deshacer el ajuste" del plan anterior ya no aplica, y su
       // sesión de n8n nace sincronizada con lo que se muestra.
       setPreviousTrip(null);
-      setRefineBaseOutOfSync(false);
+      setOutOfSyncTripId(null);
     }
     setIsLoading(false);
     return { status: 'ok', tripId: generatedId };
@@ -331,9 +334,10 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       //    reviente. Sin esta comprobación, perder el hotel lo sustituiría por el
       //    placeholder de 0 €/0★ sin que nadie lo notase. Se comparan los
       //    marcadores compartidos (`lib/planPlaceholders`).
-      //  - Cero vuelos. Aquí no hay relleno equivalente (`mapN8nToTripData` deja
-      //    el array vacío), y la vista del viaje accede a `flights[0]` sin
-      //    guarda: aceptarlo rompería la página, no solo la empeoraría.
+      //  - Un bloque que vuelve VACÍO donde había datos (cero vuelos, cero días).
+      //    Aquí no hay relleno que lo disimule y la vista accede a `flights[0]` /
+      //    `itinerary[0]` sin guarda: aceptarlo rompería la página, no solo la
+      //    empeoraría. Es "vacío o no", nunca "menos que antes".
       const refinedTrip = data.trip as TripData;
       const teniaHotelReal = trip.hotels?.some((h) => !isPlaceholderHotel(h)) ?? false;
       const conservaHotelReal = refinedTrip.hotels?.some((h) => !isPlaceholderHotel(h)) ?? false;
@@ -345,7 +349,19 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (teniaHotelReal && !conservaHotelReal) {
         lost.push('hotel');
       }
-      if (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) {
+      // Itinerario: el relleno donde había días reales, o el itinerario directamente
+      // vacío/ausente. Lo segundo lo cubría de refilón la comparación de longitudes
+      // que se ha eliminado, y `isPlaceholderItinerary` no lo ve porque exige
+      // `length === 1`. No es una comparación de nº de días —solo "vacío o no"— y es
+      // igual de inequívoco que el caso de los vuelos: el mapper nunca devuelve el
+      // itinerario vacío (mete el día de relleno) y `ItineraryTimeline` accede a
+      // `itinerary[0]`, así que aceptarlo rompería la vista.
+      const teniaDias = (trip.itinerary?.length ?? 0) > 0;
+      const refinadoSinDias = (refinedTrip.itinerary?.length ?? 0) === 0;
+      if (
+        (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) ||
+        (teniaDias && refinadoSinDias)
+      ) {
         lost.push('itinerario');
       }
       if (lost.length > 0) {
@@ -380,8 +396,8 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPreviousTrip(trip);
       saveTrip(refined);
       setCurrentTrip(refined);
-      // Lo que se muestra vuelve a ser lo último que n8n tiene en la sesión.
-      setRefineBaseOutOfSync(false);
+      // Lo que se muestra vuelve a ser lo último que n8n tiene en esta sesión.
+      setOutOfSyncTripId((id) => (id === refined.trip_id ? null : id));
       return { status: 'ok', tripId: refined.trip_id };
     } catch (error) {
       console.warn('refineTrip failed:', error);
@@ -394,6 +410,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // una copia del viaje viejo pisando el que se está viendo).
   const canUndoRefine = previousTrip !== null && previousTrip.trip_id === currentTrip?.trip_id;
 
+  // La divergencia con n8n solo se avisa en el viaje que se deshizo.
+  const refineBaseOutOfSync = outOfSyncTripId !== null && outOfSyncTripId === currentTrip?.trip_id;
+
   // Deshacer el ajuste: devuelve el plan al estado anterior al último
   // refinamiento, tanto en pantalla como en localStorage. Un solo paso; tras
   // usarlo no hay nada que deshacer (ni rehacer).
@@ -403,8 +422,9 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentTrip(previousTrip);
     setPreviousTrip(null);
     // El deshacer NO llega a n8n: su sesión sigue con el plan refinado, así que el
-    // próximo ajuste partirá de la versión descartada. Se marca para avisarlo.
-    setRefineBaseOutOfSync(true);
+    // próximo ajuste partirá de la versión descartada. Se marca ESTE viaje para
+    // avisarlo solo aquí.
+    setOutOfSyncTripId(previousTrip.trip_id);
     return true;
   };
 

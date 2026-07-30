@@ -12,16 +12,17 @@
 ## Relación con v39
 
 v40 se construye **directamente sobre v39**, con el que comparte id de workflow, los tres
-webhooks (`travel-planner` / `travel-refine` / `holders-search`), los 33 nodos y **todos sus
-UUIDs**. v39 queda congelado en
+webhooks (`travel-planner` / `travel-refine` / `holders-search`) y **todos los UUIDs** de sus 33
+nodos; v40 tiene **35** porque añade los dos de la sub-ejecución del titular (§7.3). v39 queda
+congelado en
 [`../workflows/archive/Planificador_de_Viajes_v39.json`](../workflows/archive/Planificador_de_Viajes_v39.json)
 y toda su arquitectura sigue descrita en
 [`Planificador_Viajes_v39_Arquitectura.md`](Planificador_Viajes_v39_Arquitectura.md).
 
-**No hay nodos nuevos, ni conexiones nuevas, ni cambios en el contrato de los webhooks.** v40
-corrige **cómo persiste** lo que ya calculaba (con dos migraciones de esquema que son la mitad
-del arreglo) y, en la segunda ronda de revisión, el cuerpo de dos Code nodes: la PII del
-titular ya no entra al motor y `New Delhi` resuelve coordenadas (§7).
+**El contrato de los webhooks no cambia** (mismas entradas y mismas salidas). v40 corrige **cómo
+persiste** lo que ya calculaba —con dos migraciones de esquema que son la mitad del arreglo— y,
+en las rondas de revisión de la rama, el cuerpo de dos Code nodes y **la topología de la rama del
+titular**, que pasa a una sub-ejecución propia (§7).
 
 ### Cambios en v40
 
@@ -29,10 +30,14 @@ titular ya no entra al motor y `New Delhi` resuelve coordenadas (§7).
 |---|---|---|
 | `Supabase — Guardar Plan` | Se elimina `onError: continueRegularOutput`; nota corregida | Hallazgo **#30** |
 | `Supabase — Guardar Titular` | Se elimina `onError: continueRegularOutput`; nota corregida | Hallazgo **#31** |
-| `Preparar Motor Planificador` | Quita `travel_brief.holder` del `session_state` que reenvía | §7 — PII del titular al LLM |
-| `Convertir Ciudades a IATA` | Añade `'new delhi'` a `cityToGps` | §7 — `ll` nulo en India |
+| `Preparar Motor Planificador` | Quita `travel_brief.holder` del `session_state` que reenvía | §7.1 — PII del titular al LLM |
+| `Convertir Ciudades a IATA` | Añade `'new delhi'` a `cityToGps` | §7.2 — `ll` nulo en India |
+| **`Lanzar Guardado del Titular`** (nuevo) | Lanza la persistencia del titular como sub-ejecución, sin esperarla | §7.3 — hallazgo **#38** |
+| **`Trigger — Guardar Titular`** (nuevo) | Entrada de esa sub-ejecución (`passthrough`) | §7.3 |
+| `Preparar Payload Titular` · `Supabase — Guardar Titular` | Se re-cuelgan del trigger nuevo; cambian de posición y de nota. **Sin cambios de lógica** | §7.3 |
 
-Diff frente a v39: **8 líneas** de persistencia + los dos Code nodes de §7.
+Diff frente a v39: **8 líneas** de persistencia + los dos Code nodes de §7.1/§7.2 + los dos nodos
+y la reconexión de §7.3.
 
 ## §1 — #30: el plan refinado ya se persiste
 
@@ -76,32 +81,43 @@ En v40, `supabase/migrations/2026-07-30_0003_plan_holders_por_sesion.sql` sustit
 Ambos nodos de escritura llevaban `onError: continueRegularOutput`, que es exactamente lo que
 AGENTS.md §5 y §9.4 prohíben: el error desaparecía y la ejecución salía verde.
 
-**Quitarlo es seguro para el cliente.** El fan-out de `Preparar Payload Supabase` conecta
-`Responder — Plan Listo` en el **índice 0** y `¿Guardar en Supabase?` en el **1**; con
-`executionOrder: v1` el orden por índice y por posición en el canvas coinciden, así que **el
-HTTP 200 ya se ha enviado** cuando corre la rama de persistencia:
+**Quitarlo es seguro para el cliente**, porque el HTTP 200 ya se ha enviado cuando corre la rama
+de persistencia:
 
 ```
 Preparar Payload Supabase
-  ├─[0] Responder — Plan Listo      ← el usuario ya tiene su plan
-  └─[1] ¿Guardar en Supabase? → Extraer Record → Supabase — Guardar Plan
+  ├── Responder — Plan Listo      (y=96)   ← el usuario ya tiene su plan
+  └── ¿Guardar en Supabase? (y=288) → Extraer Record → Supabase — Guardar Plan
 ```
 
 A partir de v40, un fallo de guardado **marca la ejecución como fallida** en n8n, visible en la
 lista de ejecuciones, sin afectar a la respuesta del usuario. Es un cambio de operativa: lo que
 antes se perdía en silencio ahora se ve.
 
-**Verificado en vivo el 2026-07-30**, y no solo razonado sobre el grafo. Se apuntó
-`SUPABASE_HOST` a un host inexistente y se lanzó un plan **con titular**, de modo que fallasen
-los dos nodos de escritura:
+> ⚠️ **La invariante es la POSICIÓN en el canvas, no el índice de la conexión.** Este documento
+> afirmó lo contrario ("el orden lo manda el índice de la conexión, así que reordenar nodos no
+> altera qué rama corre primero") y **era falso en los dos sentidos**: las dos ramas del fan-out
+> salen del **mismo `main[0]`** (son hermanas en un único array, no índices 0 y 1), y lo que las
+> ordena es la posición. Comprobado en el comparador real de
+> `n8n-core/dist/execution-engine/workflow-execute.js` (n8n 2.25.7): con `executionOrder: v1` los
+> hermanos se ordenan por `position[1]` descendente y se encolan con `unshift` sobre una pila que
+> se consume con `shift`, de modo que **ejecuta primero el de `y` MENOR** (empate → `x` menor).
+> Consecuencia práctica: **reordenar el canvas cambia el orden de ejecución.** Mover
+> `¿Guardar en Supabase?` por encima de `Responder — Plan Listo` haría que un fallo de Supabase
+> le costase el plan al usuario. Hay un chequeo de esto en la verificación de topología (§7.3).
+
+**Verificado en vivo el 2026-07-30**: se apuntó `SUPABASE_HOST` a un host inexistente y se lanzó
+un plan **con titular**:
 
 - el usuario recibió su plan **completo** (HTTP 200, `plan_ready`, hotel y 5 días de itinerario);
 - la ejecución quedó en **`error`** en la lista de n8n.
 
-Esto descarta la duda razonable de que el fallo del titular pudiera abortar la planificación
-entera: bajo `executionOrder: v1` el orden lo manda el **índice de la conexión** (0 =
-`Preparar Motor Planificador`), no la posición en el canvas, así que reordenar nodos **no**
-altera qué rama corre primero. La prueba es el paso 7 del runbook.
+> **Corrección de esa prueba (2026-07-30, tercera lectura).** El runbook decía que fallaron "los
+> dos nodos de escritura". No es cierto: `Supabase — Guardar Titular` **nunca llegó a ejecutarse**.
+> En la ejecución 78 de la BD de n8n, `runData` no contiene ni `Preparar Payload Titular` ni
+> `Supabase — Guardar Titular`, y la pila pendiente al abortar era
+> `['Supabase — Guardar Plan', 'Preparar Payload Titular']`. Es decir: el fallo del insert del
+> plan **descartó la rama del titular**. Ese es el hallazgo #38, corregido en §7.3.
 
 ## §4 — Compatibilidad con v38 (la versión de `master`)
 
@@ -140,11 +156,13 @@ Contrato de los webhooks (entradas y salidas), motor planificador, rutas A/B, va
 enriquecimiento de coordenadas y el frontend. `travel_plans` **sigue sin RLS** por decisión del
 equipo (gaps #8/#9 de la auditoría, abiertos a propósito); v40 no lo cambia.
 
-## §7 — Segunda ronda de revisión: dos Code nodes
+## §7 — Rondas de revisión de la rama: dos Code nodes y la sub-ejecución del titular
 
-Dos hallazgos del `/code-review` de la rama, ambos dentro del `jsCode` (sin nodos ni conexiones
-nuevas, sin cambio de contrato). Editados en `n8n/nodes-code/*.js` y reinyectados con
-`_inject.py`; cubiertos por asserts nuevos en `n8n/nodes-code/_smoketest.js`.
+Tres hallazgos del `/code-review` de la rama. Los dos primeros (§7.1 y §7.2) viven dentro del
+`jsCode`, sin nodos ni conexiones nuevas; el tercero (§7.3) **sí añade dos nodos**, aunque sin
+tocar el contrato de los webhooks. Los Code nodes se editan en `n8n/nodes-code/*.js` y se
+reinyectan con `_inject.py`; §7.1 y §7.2 están cubiertos por asserts en
+`n8n/nodes-code/_smoketest.js` y §7.3 por la verificación de topología que describe.
 
 ### 7.1 — La PII del titular ya no entra al motor planificador
 
@@ -174,3 +192,52 @@ así que `destination_city_ll` salía `null` y la búsqueda de actividades perd�
 system prompt marca como CRÍTICA (los resultados aparecen en otra ubicación). Añadido
 `'new delhi'` a `cityToGps`. Verificado que **los 67 valores de chip de ciudad** resuelven ahora
 en las dos tablas; era el único asimétrico.
+
+### 7.3 — El titular se persiste en su propia SUB-EJECUCIÓN (#38)
+
+**El problema.** `Preparar Payload Titular` colgaba de `¿Error Formulario?` como rama paralela a
+la planificación, con la intención de que el lead se guardase *aunque la planificación no llegara
+a `plan_ready`*. No lo cumplía. n8n recorre las ramas en **profundidad**: al abrirse el fan-out,
+la rama del motor (y=96) se ejecuta antes que la del titular (y=256), que queda al fondo de la
+pila; la cadena de planificación se consume entera —incluido `Supabase — Guardar Plan`, ya sin
+`onError`— y un nodo que falla hace `break` del bucle **descartando la pila pendiente**. Resultado:
+si el insert del plan fallaba, el lead se perdía. **Confirmado en la BD de n8n** (ejecución 78,
+la de la prueba en vivo de §3): `Preparar Payload Titular` no aparece en `runData` y seguía en la
+pila al abortar.
+
+**La solución (aprobada el 2026-07-30): sub-ejecución del mismo workflow.** Se descartaron las dos
+alternativas de una línea porque cada una empeoraba algo: subir el titular por encima del motor
+hace que un Supabase caído deje al usuario **sin plan** (aborta antes de `Responder`), y devolver
+el `onError` al nodo del titular vuelve a silenciar su fallo, que es justo lo que v40 arregló.
+
+```
+¿Error Formulario? (false)
+  ├── Lanzar Guardado del Titular (y=-80)  ← corre PRIMERO, no espera
+  │      └─(sub-ejecución, mismo id 8Kym9GIgNKp7Nrdh)
+  │           Trigger — Guardar Titular → Preparar Payload Titular → Supabase — Guardar Titular
+  └── Preparar Motor Planificador (y=96) → … → Responder — Plan Listo → Supabase — Guardar Plan
+```
+
+- **Dos nodos nuevos**, sin cambio de contrato de webhooks: `Lanzar Guardado del Titular`
+  (`executeWorkflow` 1.2, `mode: once`, `options.waitForSubWorkflow: false`) y
+  `Trigger — Guardar Titular` (`executeWorkflowTrigger` 1.1, `inputSource: passthrough`).
+- **Mismo workflow y mismo id**: el destino es este propio workflow. `findSubworkflowStart`
+  (verificado en `n8n/dist/utils.js`) busca el nodo `executeWorkflowTrigger` **antes** que
+  cualquier webhook, así que la sub-ejecución entra por ahí y no hay recursión (el trigger no es
+  destino de ninguna conexión). Por eso **no hace falta un workflow nuevo ni tocar el compose**.
+- **El despachador va primero a propósito** (`y=-80` < `y=96`): si fuera detrás, seguiría en la
+  pila cuando el insert del plan aborta y no se lanzaría nada — el bug de partida.
+- **Aislamiento en los dos sentidos.** Un fallo del insert del plan no toca al lead (ya se lanzó);
+  un fallo del lead marca **su** sub-ejecución como fallida y el usuario recibe su plan igual.
+  Ninguno de los dos nodos Supabase silencia errores.
+- **Contrapartida:** si el id del workflow no existiese, el despachador fallaría al principio y
+  **ninguna** planificación funcionaría. Es un error de configuración, ruidoso y no un fallo
+  intermitente; se deja sin `onError` a propósito.
+- `11_preparar_payload_titular.js` **no cambia de lógica** (el trigger le entrega el mismo item);
+  solo se actualiza su cabecera.
+
+**Verificación de topología** (script de asserts, PASS el 2026-07-30): ids únicos (35 nodos), sin
+conexiones colgando, `Preparar Payload Titular` alimentado **solo** por el trigger, trigger sin
+padres (no hay recursión), `y` del despachador < `y` del motor, `y` de `Responder — Plan Listo` <
+`y` de `¿Guardar en Supabase?`, `workflowId` == id del workflow, `waitForSubWorkflow: false`,
+`inputSource: passthrough` y ningún `onError` en los nodos de Supabase.

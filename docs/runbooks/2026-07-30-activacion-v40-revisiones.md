@@ -159,10 +159,20 @@ lanzar un plan y comprobar que:
 Restaurar la variable al terminar. Este paso es el que valida el cambio de operativa: a partir
 de ahora un fallo de persistencia es visible en vez de desaparecer.
 
-> ✅ **Ya ejecutado el 2026-07-30** contra la instancia local, con titular incluido para que
-> fallasen los dos nodos de escritura: el usuario recibió su plan completo (200, `plan_ready`)
-> y la ejecución salió `error`. Confirma además que un fallo al guardar el titular **no**
-> cuesta el plan al usuario.
+> ✅ **Ya ejecutado el 2026-07-30** contra la instancia local, con titular incluido: el usuario
+> recibió su plan completo (200, `plan_ready`) y la ejecución salió `error`.
+>
+> ⚠️ **Corrección (misma fecha, tercera lectura).** Este párrafo decía que habían fallado "los dos
+> nodos de escritura" y que la prueba confirmaba que un fallo del titular no cuesta el plan.
+> **Ninguna de las dos cosas era cierta:** `Supabase — Guardar Titular` no llegó a ejecutarse. En
+> la ejecución 78 de la BD de n8n, `runData` no contiene ni `Preparar Payload Titular` ni
+> `Supabase — Guardar Titular`, y la pila pendiente al abortar era
+> `['Supabase — Guardar Plan', 'Preparar Payload Titular']`: el fallo del insert del plan
+> **descartó la rama del titular** y el lead se perdió (hallazgo #38). Corregido moviendo esa
+> persistencia a una **sub-ejecución** (§7.3 del doc de arquitectura), lo que **sí** da el
+> aislamiento en los dos sentidos. Al repetir este paso, comprobar ahora **dos** cosas: que el plan
+> llega al usuario y que la **sub-ejecución** del titular aparece por separado en la lista (fallida
+> si Supabase está caído, correcta si no).
 
 ---
 

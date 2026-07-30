@@ -131,8 +131,10 @@ Campo **opcional** `holder` (`{ first_name, last_name, phone, email, consent_at,
 datos del titular/cliente del plan (novedad de **v39**). Solo se envía con **consentimiento
 explícito** (RGPD 6.1.a): `consent_at` (ISO) y `consent_version` son la evidencia; sin ellos el
 frontend no manda el `holder` y n8n no lo persiste. Si viene informado, se persiste en la tabla
-`plan_holders` de Supabase (rama paralela, no bloqueante; ver §9.1 de
-`n8n/docs/Planificador_Viajes_v39_Arquitectura.md`). Ejemplo:
+`plan_holders` de Supabase. Desde v40 eso ocurre en una **sub-ejecución propia** del workflow
+(`Lanzar Guardado del Titular` → `Trigger — Guardar Titular` → …), no en una rama paralela: así ni
+un fallo al guardar el plan tumba el lead ni un fallo al guardar el lead tumba el plan del usuario
+(§7.3 de `n8n/docs/Planificador_Viajes_v40_Arquitectura.md`). Ejemplo:
 `n8n/examples/input-formulario-con-titular.json`. Contiene PII → tratar según `docs/legal/`.
 **No entra al motor planificador:** desde v40, `Preparar Motor Planificador` lo quita del
 `session_state` que reenvía, porque el prompt del agente lo serializa entero y el titular acabaría

@@ -1,8 +1,18 @@
 // Preparar el registro del titular/cliente para Supabase (tabla plan_holders).
-// Corre justo tras validar el formulario, en RAMA PARALELA a la planificación,
-// para que el lead se guarde aunque la planificación posterior no llegue a
-// plan_ready (captación). Los datos del titular son OPCIONALES: si el viajero
-// omitió el paso en el frontend, este nodo no emite ítems (return []).
+// Corre en una SUB-EJECUCIÓN propia (entra por `Trigger — Guardar Titular`, que
+// lanza `Lanzar Guardado del Titular` justo tras validar el formulario), para que
+// el lead se guarde aunque la planificación posterior no llegue a plan_ready
+// (captación). Los datos del titular son OPCIONALES: si el viajero omitió el paso
+// en el frontend, este nodo no emite ítems (return []).
+//
+// POR QUÉ UNA SUB-EJECUCIÓN Y NO UNA RAMA PARALELA (hallazgo #38): en la misma
+// ejecución, n8n recorre las ramas en PROFUNDIDAD y un nodo que falla sin onError
+// hace `break`, descartando la pila pendiente. Con el titular como rama paralela,
+// un fallo del insert del PLAN —que ocurre al final de la cadena— dejaba este nodo
+// sin ejecutar y el lead se perdía. Verificado en la ejecución 78 de la BD de n8n:
+// `Preparar Payload Titular` no aparecía en `runData` y seguía en la pila al
+// abortar. Aislado en su propia ejecución, ni el plan puede matar al lead ni el
+// lead al plan. Ver n8n/docs/Planificador_Viajes_v40_Arquitectura.md §7.3.
 //
 // DEDUP POR (EMAIL, SESSION_ID) desde v40. NO se hace aquí con una consulta HTTP
 // (frágil en el sandbox del code node), sino a nivel de BD: índice UNIQUE parcial
