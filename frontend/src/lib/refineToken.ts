@@ -68,9 +68,13 @@ export function withRefineToken(trip: TripData, uid: string): TripData {
  * ¿El token acredita que este `session_id` pertenece a este `uid`? Comparación en
  * tiempo constante para no filtrar cuánto prefijo de la firma se ha acertado.
  */
-export function verifyRefineToken(token: string | undefined, uid: string, sessionId: string): boolean {
+export function verifyRefineToken(token: unknown, uid: string, sessionId: string): boolean {
   const secret = getSecret();
-  if (!secret || !token) return false;
+  // `token` llega del cuerpo JSON de la petición, así que puede ser cualquier cosa:
+  // un número, un objeto, null. Sin esta comprobación `Buffer.from(5)` lanza
+  // ERR_INVALID_ARG_TYPE y la ruta acabaría devolviendo un 500 en vez del 403 que
+  // corresponde. Un tipo inesperado es simplemente un token que no vale.
+  if (!secret || typeof token !== 'string' || !token) return false;
   const expected = Buffer.from(computeSignature(secret, uid, sessionId));
   const received = Buffer.from(token);
   if (expected.length !== received.length) return false;

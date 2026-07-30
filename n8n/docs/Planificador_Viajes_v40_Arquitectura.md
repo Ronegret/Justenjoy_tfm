@@ -88,6 +88,18 @@ A partir de v40, un fallo de guardado **marca la ejecución como fallida** en n8
 lista de ejecuciones, sin afectar a la respuesta del usuario. Es un cambio de operativa: lo que
 antes se perdía en silencio ahora se ve.
 
+**Verificado en vivo el 2026-07-30**, y no solo razonado sobre el grafo. Se apuntó
+`SUPABASE_HOST` a un host inexistente y se lanzó un plan **con titular**, de modo que fallasen
+los dos nodos de escritura:
+
+- el usuario recibió su plan **completo** (HTTP 200, `plan_ready`, hotel y 5 días de itinerario);
+- la ejecución quedó en **`error`** en la lista de n8n.
+
+Esto descarta la duda razonable de que el fallo del titular pudiera abortar la planificación
+entera: bajo `executionOrder: v1` el orden lo manda el **índice de la conexión** (0 =
+`Preparar Motor Planificador`), no la posición en el canvas, así que reordenar nodos **no**
+altera qué rama corre primero. La prueba es el paso 7 del runbook.
+
 ## §4 — Compatibilidad con v38 (la versión de `master`)
 
 `master` sigue en v38, que escribe en `travel_plans` con `autoMapInputData` y **exactamente 11

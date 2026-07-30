@@ -119,7 +119,9 @@ export async function POST(req: NextRequest) {
       console.warn('[refine-trip] Token de refinamiento ausente o no válido para la sesión autenticada.');
       return NextResponse.json({ status: 'not_refinable' }, { status: 403 });
     }
-    if (!feedback_text || !feedback_text.trim()) {
+    // `feedback_text` viene del cuerpo JSON: comprobar el TIPO antes de llamar a
+    // .trim(), o un número/objeto reventaría con un 500 en vez de un 400 claro.
+    if (typeof feedback_text !== 'string' || !feedback_text.trim()) {
       return NextResponse.json(
         { status: 'error', message: 'Escribe qué te gustaría cambiar del plan.' },
         { status: 400 }
@@ -152,9 +154,14 @@ export async function POST(req: NextRequest) {
     // Necesitamos las preferencias del plan actual para mapear la respuesta. Se
     // valida que `travelers.adults/children` sean numéricos: mapN8nToTripData los
     // suma para el presupuesto, y un objeto malformado produciría totales NaN.
+    // `dates.end` es tan obligatoria como `start`: `withRefreshedDates` la lee y,
+    // si faltara, la guarda de coherencia compararía contra `undefined` —que
+    // siempre da false— y no saltaría nunca; el plan acabaría guardado sin fecha
+    // de vuelta y `computeTripDays` devolvería 0.
     const travelers = user_preferences?.travelers;
     if (
       !user_preferences?.dates?.start ||
+      !user_preferences?.dates?.end ||
       typeof travelers?.adults !== 'number' ||
       typeof travelers?.children !== 'number'
     ) {

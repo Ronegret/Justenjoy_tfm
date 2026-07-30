@@ -144,6 +144,11 @@ lanzar un plan y comprobar que:
 Restaurar la variable al terminar. Este paso es el que valida el cambio de operativa: a partir
 de ahora un fallo de persistencia es visible en vez de desaparecer.
 
+> ✅ **Ya ejecutado el 2026-07-30** contra la instancia local, con titular incluido para que
+> fallasen los dos nodos de escritura: el usuario recibió su plan completo (200, `plan_ready`)
+> y la ejecución salió `error`. Confirma además que un fallo al guardar el titular **no**
+> cuesta el plan al usuario.
+
 ---
 
 ## Rollback

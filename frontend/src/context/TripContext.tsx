@@ -220,11 +220,14 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // debería haberse mostrado. Se conserva el plan actual.
       return { status: 'session_expired' };
     }
-    // Planes guardados antes de que existiera el token de propiedad: la ruta los
-    // rechazaría igualmente, así que nos ahorramos la ida y vuelta.
-    if (!trip.refine_token) {
-      return { status: 'not_refinable' };
-    }
+    // NO se corta aquí cuando falta el `refine_token`. Es tentador (la ruta lo
+    // rechazaría igual y nos ahorraríamos la ida y vuelta), pero el cliente no
+    // puede distinguir DOS causas muy distintas de que un plan no lleve token:
+    //   a) el plan es viejo, anterior al token → "créalo de nuevo" es buen consejo;
+    //   b) el entorno no tiene REFINE_TOKEN_SECRET → NINGÚN plan tendrá token
+    //      nunca, así que "créalo de nuevo" manda al usuario a un bucle infinito.
+    // Solo el servidor sabe cuál es: responde 503 "no disponible en este entorno"
+    // en el caso (b) y 403 `not_refinable` en el (a). Dejamos que decida él.
 
     // Pre-chequeo de categorías especiales (RGPD art. 9 — hallazgo #4) en cliente:
     // evita la ida y vuelta a la red cuando el texto revela datos sensibles. La
@@ -299,7 +302,20 @@ export const TripProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (teniaHotelReal && !conservaHotelReal) {
         lost.push('hotel');
       }
-      if (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) {
+      // Itinerario: dos formas de perderlo. La obvia es que vuelva el día de
+      // relleno. La sutil es que vuelvan MENOS días de los que había — un viaje
+      // de 10 días que regresa con 2. Eso solo es sospechoso si el refinamiento
+      // NO acortó el viaje: si el usuario pidió "recórtalo a 3 días", tener menos
+      // días es justo lo que pidió. Se usa el rango de fechas como árbitro.
+      const mismasFechas =
+        trip.user_preferences?.dates?.start === refinedTrip.user_preferences?.dates?.start &&
+        trip.user_preferences?.dates?.end === refinedTrip.user_preferences?.dates?.end;
+      const perdioDias =
+        mismasFechas && (refinedTrip.itinerary?.length ?? 0) < (trip.itinerary?.length ?? 0);
+      if (
+        (!isPlaceholderItinerary(trip.itinerary) && isPlaceholderItinerary(refinedTrip.itinerary)) ||
+        perdioDias
+      ) {
         lost.push('itinerario');
       }
       if (lost.length > 0) {
