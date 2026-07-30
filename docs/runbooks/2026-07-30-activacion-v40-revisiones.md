@@ -25,11 +25,34 @@ Rama con la v40 fusionada (o checkout de la rama de trabajo), de forma que
 
 ## 1. Verificar que la credencial de n8n es `service_role` (NO `anon`)
 ```bash
-# Debe imprimir exactamente: service_role
-node -e "console.log(JSON.parse(Buffer.from((process.env.SUPABASE_SERVICE_ROLE_KEY||'').split('.')[1]||'','base64').toString()||'{}').role)"
+# La clave vive en .env, NO exportada en el shell. Soporta los DOS formatos que
+# usa Supabase: el nuevo (`sb_secret_...`, sin puntos) y el JWT legacy (3 partes).
+KEY=$(grep -h '^SUPABASE_SERVICE_ROLE_KEY=' .env | cut -d= -f2- | tr -d '\r')
+case "$KEY" in
+  sb_secret_*)      echo "OK — clave SECRETA (formato nuevo)";;
+  sb_publishable_*) echo "PARA — es la clave PUBLICABLE, no la secreta";;
+  *.*.*)            node -e "const r=JSON.parse(Buffer.from(process.argv[1].split('.')[1],'base64').toString()).role; console.log(r==='service_role' ? 'OK — service_role (JWT legacy)' : 'PARA — rol '+r)" "$KEY";;
+  '')               echo "PARA — SUPABASE_SERVICE_ROLE_KEY no definida en .env";;
+  *)                echo "PARA — formato de clave no reconocido";;
+esac
 ```
-Si imprime `anon` o vacío → **PARA**: sin `service_role` la escritura fallaría, y ahora además
-de forma visible.
+
+> ⚠️ **No imprimas la clave.** El bloque de arriba solo evalúa el prefijo; evita
+> `echo "$KEY"` o cualquier variante que muestre el valor: es una credencial que
+> **salta RLS** y acaba en el historial del terminal.
+
+Comprobación funcional (la que de verdad importa): la clave debe poder leer una tabla
+con RLS activa. `plan_holders` tiene RLS **sin políticas**, así que solo una clave con
+bypass devuelve algo distinto de un 401:
+
+```bash
+HOST=$(grep -h '^SUPABASE_HOST=' .env | cut -d= -f2- | tr -d '\r' | sed 's#https://##; s#/$##')
+curl -sS --ssl-no-revoke -o /dev/null -w "service_role -> %{http_code} (debe ser 200)\n" \
+  "https://$HOST/rest/v1/plan_holders?select=id&limit=1" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY"
+```
+Si sale cualquier `PARA` → detente: sin la clave secreta la escritura fallaría, y ahora
+además de forma visible.
 
 ## 2. Aplicar las dos migraciones
 No se pueden por REST (son DDL). En el **SQL Editor de Supabase** (o `psql`), en este orden:
