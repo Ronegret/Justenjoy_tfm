@@ -431,6 +431,14 @@ El usuario recibe su respuesta independientemente de lo que ocurra con Supabase.
 
 **Operación:** `Create` (no upsert — la versión del nodo Supabase nativo disponible no lo soporta). Cada `plan_ready` genera un nuevo registro; los refinamientos generan un registro adicional con el mismo `session_id` pero distinto `id`, preservando el historial de evolución del plan.
 
+> ⚠️ **Corregido el 2026-07-30: el párrafo anterior era FALSO.** Con `session_id TEXT UNIQUE`
+> (§9, arriba) el segundo insert de una sesión se rechazaba, y `onError: continueRegularOutput`
+> se tragaba el error: **los refinamientos nunca se guardaban** (hallazgo #30 de la auditoría,
+> verificado por E2E y confirmado con una violación `23505` contra la instancia real). El
+> historial que este texto describe solo existe a partir de **v40**, que quita ese `UNIQUE` con
+> `supabase/migrations/2026-07-30_0002_travel_plans_revisiones.sql`. Ver
+> [`Planificador_Viajes_v40_Arquitectura.md`](Planificador_Viajes_v40_Arquitectura.md) §1.
+
 **El `plan` guardado en JSONB incluye las coordenadas por día** (`lat`, `lng`, `coordinate_source`) generadas por el nodo de geocoding — quedan disponibles para la Fase 2 del proyecto (búsqueda tipo RAG sobre planes ya generados).
 
 ---

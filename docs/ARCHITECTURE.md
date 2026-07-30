@@ -70,7 +70,7 @@ La lógica vive en herramientas de orquestación y en LLMs, conectados mediante 
 
 ### 2. n8n — Orquestador (Curación + Transacción)
 - **Rol:** motor del sistema. Gestiona toda la lógica condicional y las llamadas a APIs.
-- **Versión canónica:** v39 (ver `n8n/docs/Planificador_Viajes_v39_Arquitectura.md`).
+- **Versión canónica:** v40 (ver `n8n/docs/Planificador_Viajes_v40_Arquitectura.md`).
   El código de sus 11 nodos Code vive versionado en `n8n/nodes-code/`. Las versiones
   anteriores (v24–v38) están congeladas en `n8n/workflows/archive/`.
 - **Despliegue:** self-hosted. URL expuesta via ngrok en desarrollo.
