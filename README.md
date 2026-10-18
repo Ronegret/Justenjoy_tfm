@@ -1,3 +1,32 @@
+<div align="center">
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=20,12,24&height=170&section=header&text=Just%20Enjoy&fontSize=42&fontColor=ffffff&fontAlignY=38&desc=Hyperautomation%20travel%20planner&descSize=16&descAlignY=60&animation=fadeIn" alt="Just Enjoy" />
+
+</div>
+
+## 🧭 Overview
+An automated travel-planning platform built with AI agents and real data — the final project (TFM) of the Master in AI Agents & Hyperautomation.
+
+## ✨ Features
+- AI agents orchestrated with n8n (27 nodes)
+- Real travel data (SerpAPI, Tavily)
+- GPT-4.1 reasoning
+- Next.js front-end, Supabase + Firebase
+
+## 🛠️ Built with
+`n8n` · `GPT-4.1` · `Next.js` · `Supabase` · `Firebase` · `SerpAPI` · `Tavily`
+
+## 🚀 Run locally
+```bash
+npm install
+npm run dev
+```
+
+## 📚 Project documentation
+
+<details>
+<summary>Original project README</summary>
+
 # Just Enjoy — Plataforma de Hiperautomatización para Viajes
 
 **TFM Grupo 7 · EBIS Business TechSchool · 2026**
@@ -202,3 +231,13 @@ Abre un issue en GitHub con:
 
 **Si el problema es de seguridad** (posible fuga de secretos, etc.),
 **no abras un issue público**: contacta directamente con un integrante del grupo.
+
+</details>
+
+
+---
+
+<div align="center">
+<sub>Made by <b>Rodrigo Negrete</b> — AI Product Designer &amp; Automation Architect<br/>
+<a href="https://www.rodrigonegrete.es">Portfolio</a> · <a href="https://linkedin.com/in/rodrigonegretearos">LinkedIn</a> · <a href="https://github.com/Ronegret">GitHub</a></sub>
+</div>
